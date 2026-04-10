@@ -1,0 +1,156 @@
+C51 COMPILER V9.54   DELAY                                                                 04/10/2026 17:18:33 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE DELAY
+NO OBJECT MODULE REQUESTED
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE src\delay.c LARGE OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Li
+                    -stings\delay.lst) TABS(2) SRC(.\Objects\delay.SRC)
+
+line level    source
+
+   1          /**
+   2          *   @file       delay.c
+   3          *   @brief      Polling Delay subroutine
+   4          *   @author     Application Team, ABOV Semiconductor Co., Ltd.
+   5          *   @version    V1.00
+   6          *   @date       29. MAY. 2020
+   7          *
+   8          * Copyright(C) 2020, ABOV Semiconductor
+   9          * All rights reserved.
+  10          *
+  11          ********************************************************************************
+  12          * ABOV Disclaimer
+  13          *
+  14          *IMPORTANT NOTICE - PLEASE READ CAREFULLY
+  15          *ABOV Semiconductor ("ABOV") reserves the right to make changes, corrections, enhancements, 
+  16          *modifications, and improvements to ABOV products and/or to this document at any time without notice. 
+  17          *ABOV does not give warranties as to the accuracy or completeness of the information included herein.
+  18          *Purchasers should obtain the latest relevant information of ABOV products before placing orders. 
+  19          *Purchasers are entirely responsible for the choice, selection, and use of ABOV products and 
+  20          *ABOV assumes no liability for application assistance or the design of purchasers' products. No license, 
+  21          *express or implied, to any intellectual property rights is granted by ABOV herein. 
+  22          *ABOV disclaims all express and implied warranties and shall not be responsible or
+  23          *liable for any injuries or damages related to use of ABOV products in such unauthorized applications. 
+  24          *ABOV and the ABOV logo are trademarks of ABOV.
+  25          *All other product or service names are the property of their respective owners. 
+  26          *Information in this document supersedes and replaces the information previously
+  27          *supplied in any former versions of this document.
+  28          *2020 ABOV Semiconductor  All rights reserved
+  29          *
+  30          */
+  31          
+  32          /* Includes ------------------------------------------------------------------*/
+  33          #include    "typedef.h"
+  34          #include    "Intrins.h"
+  35          #include    "delay.h"       //
+  36          /* Private Pre-processor Definition & Macro ----------------------------------*/
+  37          /* Private Typedef -----------------------------------------------------------*/
+  38          /* Private Variable ----------------------------------------------------------*/
+  39          /* Private Function Prototype ------------------------------------------------*/
+  40          /* Public Variable -----------------------------------------------------------*/
+  41          /* Public Function -----------------------------------------------------------*/
+  42          /**
+  43          * @brief    System NOP 4us Delay rountine. (MCLK = 4MHZ)
+  44          * @note     1 machine cycle comprises 2 system clock cycles. (@ABOV 96 Core Series)
+  45          *           16 system clock delay
+  46          * @param    None
+  47          * @return   None
+  48          */
+  49          volatile void NOP_4us_Delay(void)
+  50          {
+  51   1          // ACALL, LCALL : 2 cycle => 4 system clock cycle
+  52   1          NOP; NOP; NOP; NOP;     // NOP : 1 cycle => 2 sys. clock => 8 sys. clk
+  53   1          // RET : 2 cycle => 4 system clock cycle
+  54   1          // 16 sys. clk @4MHZ = 0.25us x 16 = 4us
+C51 COMPILER V9.54   DELAY                                                                 04/10/2026 17:18:33 PAGE 2   
+
+  55   1      }
+  56          /**
+  57          * @brief    System NOP 20us Delay rountine. (MCLK = 4MHz)
+  58          * @note     1 machine cycle comprises 2 system clock cycles. (@ABOV 96 Core Series)
+  59          *           160 system clock delay
+  60          *           1 machine cycle can be added depending on code optimization.
+  61          *
+  62          *           ex1)    MOV R7,#(Low byte of delay)
+  63          *                   MOV R6,#(high byte of delay)
+  64          *                   LCALL   NOP_20us_Delay
+  65          *
+  66          *           ex2)    MOV A,#(Low byte of delay) // Lower byte and higher byte are the same.
+  67          *                   MOV R7,A
+  68          *                   MOV R6,A
+  69          *                   LCALL   NOP_20us_Delay
+  70          *
+  71          * @param    delay : unsigned int 1~65,355 (delay) * 10us (@System clock = 4MHz)
+  72          * @return   None
+  73          */
+  74          volatile void NOP_20us_Delay(unsigned int delay)
+  75          {
+  76   1          // mov r7 <- low byte of delay      // 1cycle
+  77   1          // mov r6 <- high byte of delay     // 1cycle
+  78   1          // lcall NOP_20us_Delay             // 2cycle
+  79   1          
+  80   1          // dummy assignment to avoid warning
+  81   1          // 'unreferenced local variable'
+  82   1          // Reference Link : http://www.keil.com/support/docs/2622.htm
+  83   1          // delay -> [r6:r7]
+  84   1          
+  85   1          delay = delay;  // dummy
+  86   1                          
+  87   1          #pragma asm
+  88   1              lcall   NOP_4us_Delay
+  89   1              lcall   NOP_4us_Delay
+  90   1              lcall   NOP_4us_Delay
+  91   1              clr     c                           // 1cycle
+  92   1              mov     a,r7                        // 1cycle
+  93   1              subb    a,#2                        // 1cycle
+  94   1              mov     r7,a                        // 1cycle
+  95   1              mov     a,r6                        // 1cycle
+  96   1              subb    a,#0                        // 1cycle
+  97   1              mov     r6,a                        // 1cycle
+  98   1              jc     _nop_20us_delay_loop_end     // 2cycle
+  99   1              
+ 100   1          _nop_20us_delay_loop:
+ 101   1              lcall   NOP_4us_Delay
+ 102   1              lcall   NOP_4us_Delay
+ 103   1              lcall   NOP_4us_Delay
+ 104   1              nop
+ 105   1              nop
+ 106   1              nop
+ 107   1              nop
+ 108   1              nop
+ 109   1              nop
+ 110   1              nop
+ 111   1              
+ 112   1              clr     c                           // 1cycle
+ 113   1              mov     a,r7                        // 1cycle
+ 114   1              subb    a,#1                        // 1cycle
+ 115   1              mov     r7,a                        // 1cycle
+ 116   1              mov     a,r6                        // 1cycle
+C51 COMPILER V9.54   DELAY                                                                 04/10/2026 17:18:33 PAGE 3   
+
+ 117   1              subb    a,#0                        // 1cycle
+ 118   1              mov     r6,a                        // 1cycle
+ 119   1              jnc     _nop_20us_delay_loop        // 2cycle
+ 120   1      
+ 121   1          _nop_20us_delay_loop_end:
+ 122   1              nop                                 // 1cycle
+ 123   1              
+ 124   1          #pragma endasm
+ 125   1                                                  // ret 2cycle
+ 126   1      }
+ 127          
+ 128          /* --------------------------------- End Of File ------------------------------ */
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    114    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

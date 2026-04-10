@@ -1,0 +1,215 @@
+C51 COMPILER V9.54   AUDIO                                                                 04/10/2026 17:18:32 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE AUDIO
+OBJECT MODULE PLACED IN .\Objects\audio.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE src\audio.c LARGE OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Li
+                    -stings\audio.lst) TABS(2) OBJECT(.\Objects\audio.obj)
+
+line level    source
+
+   1          /***************************************************************************//**
+   2          *   @file       Main.c
+   3          *   @brief      A96L41x Main  function file 
+   4          *   @author     Application Team, ABOV Semiconductor Co., Ltd.
+   5          *   @version    V1.00
+   6          *   @date       29. MAY. 2020
+   7          *
+   8          * Copyright(C) 2020, ABOV Semiconductor
+   9          * All rights reserved.
+  10          *
+  11          *   @mainpage   Project : A96L41x (20TSSOP) Timer2 Usage
+  12          *   - Introduction: This is a guide program for using A96L41x Timer2.
+  13          *
+  14          *   @section    Compiler Version
+  15          *   - uVision C51 Compiler ( Version 5.13 )
+  16          *
+  17          *   @section    Configure Option
+  18          *   - Code Read Protection :                Disable
+  19          *   - Code Write Protection :               Disable
+  20          *   - Vector Area (00H~FFH) Protection :    Disable
+  21          *   - Select RESETB pin :                   Disable
+  22          *
+  23          *   @section    Clock Setting
+  24          *   - HFIRC OSC/1 (Internal 4Mhz) 
+  25          *
+  26          *   @section    Project Program Version : V1.00
+  27          *   @section    Modify Infomation
+  28          *   - V1.00 :    First Start.    
+  29          *
+  30          *   @section    Caution
+  31          *   - Nothing special.
+  32          *
+  33          *   @section Common
+  34          *   - ABOV Semiconductor Co.,Ltd.
+  35          *   - URL : <http://www.abovsemi.com>
+  36          *
+  37          ********************************************************************************
+  38          * ABOV Disclaimer
+  39          *
+  40          *IMPORTANT NOTICE - PLEASE READ CAREFULLY
+  41          *ABOV Semiconductor ("ABOV") reserves the right to make changes, corrections, enhancements, 
+  42          *modifications, and improvements to ABOV products and/or to this document at any time without notice. 
+  43          *ABOV does not give warranties as to the accuracy or completeness of the information included herein.
+  44          *Purchasers should obtain the latest relevant information of ABOV products before placing orders. 
+  45          *Purchasers are entirely responsible for the choice, selection, and use of ABOV products and 
+  46          *ABOV assumes no liability for application assistance or the design of purchasers' products. No license, 
+  47          *express or implied, to any intellectual property rights is granted by ABOV herein. 
+  48          *ABOV disclaims all express and implied warranties and shall not be responsible or
+  49          *liable for any injuries or damages related to use of ABOV products in such unauthorized applications. 
+  50          *ABOV and the ABOV logo are trademarks of ABOV.
+  51          *All other product or service names are the property of their respective owners. 
+  52          *Information in this document supersedes and replaces the information previously
+  53          *supplied in any former versions of this document.
+  54          *2020 ABOV Semiconductor  All rights reserved
+C51 COMPILER V9.54   AUDIO                                                                 04/10/2026 17:18:32 PAGE 2   
+
+  55          *
+  56          */
+  57          /* Includes ------------------------------------------------------------------*/
+  58          #include "Intrins.h"
+  59          #include "delay.h"     
+  60          #include "a96l41x_gpio.h"
+  61          #include "a96l41x_clock.h"
+  62          #include "a96l41x_timer0.h"
+  63          #include "a96l41x_timer1.h"
+  64          
+  65          #include "main.h"
+  66          #include "flash.h"
+  67          #include "audio.h"
+  68          //#include "sound_fire1.h"
+  69          
+  70          
+  71          unsigned char write_data[10];
+  72          unsigned char read_data[10];
+  73          
+  74          
+  75          
+  76          /**********************************************************************
+  77           * @brief   Audio_Initial
+  78           * @param     None
+  79           * @return  None
+  80           **********************************************************************/
+  81          void Audio_Initial(void)
+  82          {
+  83   1      
+  84   1        if(SystemStatus==0)
+  85   1          return;
+  86   1        
+  87   1        /* Timer0 PPG port (Alternative function) */
+  88   1        Port_SetAlterFunctionpin(PORT1, PIN1, 0x1);     // PWM
+  89   1        
+  90   1            /* Timer0 initialize @ 4MHz */
+  91   1        Timer0_Initial(T0_PPG_REPEAT_MODE, TIMER0_DIV1);  
+  92   1         /* Timer0 PPG Polarity Start Low */
+  93   1        Timer0_SetPPGPolarity(T0_START_HIGH); 
+  94   1         /* Timer0 PPG Period Counter*/ 
+  95   1          Timer0_SetPPGPeriodCounter(124);        // 125(31.2us, 32khz)   
+  96   1        Timer0_SetPPGDutyCounter(50);
+  97   1        
+  98   1          /* Enable timer0 match INT */   
+  99   1        Timer0_ConfigureInterrupt(FALSE);
+ 100   1        /* Timer0 start */
+ 101   1        //Timer0_Start(); 
+ 102   1      
+ 103   1      
+ 104   1        
+ 105   1            /* Timer1 initialize @ 4MHz */
+ 106   1        Timer1_Initial(T1_PPG_REPEAT_MODE, TIMER1_DIV1);  
+ 107   1         /* Timer1 PPG Polarity Start Low */
+ 108   1        Timer1_SetPPGPolarity(T1_START_HIGH); 
+ 109   1         /* Timer1 PPG Period Counter*/ 
+ 110   1        Timer1_SetPPGPeriodCounter(499);        //500(125us,8khz)
+ 111   1      
+ 112   1        Timer1_SetPPGDutyCounter(100);          
+ 113   1        
+ 114   1          /* Enable timer1 match INT */   
+ 115   1        Timer1_ConfigureInterrupt(TRUE);
+ 116   1        /* Timer1 start */
+C51 COMPILER V9.54   AUDIO                                                                 04/10/2026 17:18:32 PAGE 3   
+
+ 117   1        //Timer1_Start(); 
+ 118   1      
+ 119   1      }
+ 120          
+ 121          
+ 122          
+ 123          
+ 124          void TIMER1_Int(void) interrupt T1_MATCH_VECT
+ 125          {
+ 126   1        uint8_t duty;
+ 127   1      
+ 128   1        Timer1_ClearInterruptFlag();
+ 129   1      
+ 130   1      
+ 131   1        if(Audio_start==0)
+ 132   1        { 
+ 133   2          AUDIO_ON;
+ 134   2          Read(Audio_addr);   
+ 135   2        
+ 136   2          Timer0_SetPPGDutyCounter(0);
+ 137   2          Timer0_Start();
+ 138   2          Audio_start=1;
+ 139   2        }
+ 140   1        else
+ 141   1        {
+ 142   2      
+ 143   2          if(Audio_length < Audio_max_length)
+ 144   2          {
+ 145   3            Read_c(read_data);
+ 146   3            duty = read_data[0];
+ 147   3            duty =duty>>1;
+ 148   3            if(duty >= 124)
+ 149   3              duty= 124;
+ 150   3             Timer0_SetPPGDutyCounter(duty);
+ 151   3             Audio_length++;
+ 152   3             Audio_addr++;
+ 153   3          }
+ 154   2          else
+ 155   2          {
+ 156   3            SLAVEDESELECT;
+ 157   3            AUDIO_OFF;
+ 158   3            Timer0_Stop();
+ 159   3          }
+ 160   2          
+ 161   2        }
+ 162   1          
+ 163   1        
+ 164   1      }
+ 165          
+ 166          
+ 167          
+ 168          void Read_Audio_Length(uint16_t Audio_st_address)
+ 169          {
+ 170   1        unsigned long temp;
+ 171   1      
+ 172   1        Audio_addr=Audio_st_address + 40;
+ 173   1        Read_v(Audio_addr, read_data);
+ 174   1        Audio_max_length = read_data[0];
+ 175   1      
+ 176   1        Audio_addr=Audio_st_address + 41;
+ 177   1        Read_v(Audio_addr, read_data);  
+ 178   1        temp= read_data[0];
+C51 COMPILER V9.54   AUDIO                                                                 04/10/2026 17:18:32 PAGE 4   
+
+ 179   1        temp = (temp << 8)&0xff00;
+ 180   1        Audio_max_length |=temp;
+ 181   1      
+ 182   1      }
+ 183          
+ 184          
+ 185          /* --------------------------------- End Of File ------------------------------ */
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    365    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =     20       2
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

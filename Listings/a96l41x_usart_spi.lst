@@ -1,0 +1,402 @@
+C51 COMPILER V9.54   A96L41X_USART_SPI                                                     04/10/2026 17:18:32 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE A96L41X_USART_SPI
+OBJECT MODULE PLACED IN .\Objects\a96l41x_usart_spi.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE src\a96l41x_usart_spi.c LARGE OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEN
+                    -D PRINT(.\Listings\a96l41x_usart_spi.lst) TABS(2) OBJECT(.\Objects\a96l41x_usart_spi.obj)
+
+line level    source
+
+   1          /**
+   2          *   @file       a96l41x_usart_spi.c
+   3          *   @brief      A96L41x usart spi peripheral function 
+   4          *   @author     Application Team, ABOV Semiconductor Co., Ltd.
+   5          *   @version    V1.00
+   6          *   @date       29. MAY. 2020
+   7          *
+   8          * Copyright(C) 2020, ABOV Semiconductor
+   9          * All rights reserved.
+  10          *
+  11          ********************************************************************************
+  12          * ABOV Disclaimer
+  13          *
+  14          *IMPORTANT NOTICE - PLEASE READ CAREFULLY
+  15          *ABOV Semiconductor ("ABOV") reserves the right to make changes, corrections, enhancements, 
+  16          *modifications, and improvements to ABOV products and/or to this document at any time without notice. 
+  17          *ABOV does not give warranties as to the accuracy or completeness of the information included herein.
+  18          *Purchasers should obtain the latest relevant information of ABOV products before placing orders. 
+  19          *Purchasers are entirely responsible for the choice, selection, and use of ABOV products and 
+  20          *ABOV assumes no liability for application assistance or the design of purchasers' products. No license, 
+  21          *express or implied, to any intellectual property rights is granted by ABOV herein. 
+  22          *ABOV disclaims all express and implied warranties and shall not be responsible or
+  23          *liable for any injuries or damages related to use of ABOV products in such unauthorized applications. 
+  24          *ABOV and the ABOV logo are trademarks of ABOV.
+  25          *All other product or service names are the property of their respective owners. 
+  26          *Information in this document supersedes and replaces the information previously
+  27          *supplied in any former versions of this document.
+  28          *2020 ABOV Semiconductor  All rights reserved
+  29          *
+  30          */
+  31          
+  32          /*******************************************************************************
+  33          * Included File
+  34          *******************************************************************************/
+  35          #include "a96l41x_usart_spi.h"
+  36          
+  37          /*******************************************************************************
+  38          * Private Pre-processor Definition & Macro
+  39          *******************************************************************************/
+  40          
+  41          /*******************************************************************************
+  42          * Private Typedef
+  43          *******************************************************************************/
+  44          
+  45          /*******************************************************************************
+  46          * Private Variable
+  47          *******************************************************************************/
+  48          uint8_t xdata spi_writeBuff0[SPI_MAX_BUFFER_SIZE] _at_ 0x100;
+  49          uint8_t spi_writeNum0 = 0;
+  50          
+  51          uint8_t xdata temp_spi_readBuff0[SPI_MAX_BUFFER_SIZE] _at_ 0x140;
+  52          uint8_t *spi_readBuff0;
+  53          uint8_t spi_readNum0 = 0;
+  54          
+C51 COMPILER V9.54   A96L41X_USART_SPI                                                     04/10/2026 17:18:32 PAGE 2   
+
+  55          /*******************************************************************************
+  56          * Private Function Prototype
+  57          *******************************************************************************/
+  58          
+  59          /*******************************************************************************
+  60          * Public Function
+  61          *******************************************************************************/
+  62          
+  63          /**
+  64          * @brief    Initialize usart(spi) peripheral
+  65          * @param   mode This parameter contains the enable of master or slave mode(SPI). 
+  66          *
+  67          *           - SPI_SLAVE_MODE    = 0
+  68          *           - SPI_MASTER_MODE     = 1
+  69          * @param   speed      This parameter contains the buadrate of SPI.
+  70          * @param   first_bit  This parameter contains the transmitted first as SPI.
+  71          *
+  72          *           - SPI_LSB     = 0
+  73          *         - SPI_MSB   = 1
+  74          * @param   cpol This parameter contains the polarity(CPOL) as SPI. 
+  75          *
+  76          *           - SPI_CPOL_LOW  = 0
+  77          *         - SPI_CPOL_HIGH = 1
+  78          * @param   cpha This parameter contains the phase(CPHA) as SPI. 
+  79          *
+  80          *           - SPI_CPHA_1EDGE = 0
+  81          *         - SPI_CPHA_2EDGE = 1
+  82          * @param   direction  This parameter contains the enable of transmit or receive mode(SPI). 
+  83          *
+  84          *           - SPI_TX_RX_MODE    = 0
+  85          *           - SPI_RX_MODE     = 1
+  86          *         - SPI_TX_MODE       = 2
+  87          * @param   ss_mode  This parameter contains the enable of SS function(SPI).
+  88          *
+  89          *           - SPI_SS_HW_DISABLE     = 0
+  90          *         - SPI_SS_HW_ENABLE      = 1
+  91          * @return   None
+  92          */
+  93          void USART_SPI_Initial(uint8_t mode, uint32_t speed, uint8_t first_bit, uint8_t cpol, uint8_t cpha, uint8_
+             -t direction, uint8_t ss_mode)
+  94          {
+  95   1        uint32_t buadrate_val = 0;
+  96   1        uint8_t temp_reg;
+  97   1        
+  98   1        spi_writeNum0 = 0;
+  99   1        spi_readNum0 = 0;
+ 100   1        
+ 101   1        /*calculate baudrate speed*/
+ 102   1        buadrate_val = ((Clock_GetSystemFreq() / speed )  >> 1) * 10;
+ 103   1        
+ 104   1        buadrate_val = ((buadrate_val + 5) / 10) - 1; //round
+ 105   1          
+ 106   1        temp_reg = USTCR2;
+ 107   1        if(direction == SPI_RX_MODE)
+ 108   1          temp_reg |= RXE;  
+ 109   1        else if(direction == SPI_TX_MODE)
+ 110   1          temp_reg |= TXE;
+ 111   1        else
+ 112   1          temp_reg |= (RXE | TXE);
+ 113   1          
+ 114   1        temp_reg |= USTEN;
+ 115   1          
+C51 COMPILER V9.54   A96L41X_USART_SPI                                                     04/10/2026 17:18:32 PAGE 3   
+
+ 116   1        USTST |= SOFTRST;     // USART block reset
+ 117   1        USTCR1 |= ((0x3 << 6) | (first_bit << 2) | (cpha << 1) | (cpol << 0));  //SPI mode
+ 118   1        USTCR3 |= ((mode << 7) | (ss_mode << 4));
+ 119   1        USTBD = buadrate_val;
+ 120   1        USTCR2 = temp_reg;
+ 121   1        
+ 122   1      }
+ 123          
+ 124          
+ 125          /**
+ 126          * @brief    Enables or disables the SPI peripheral.
+ 127          * @param   enable   This parameter contains the enable of this function. 
+ 128          *
+ 129          *         - FLASE                       = 0
+ 130          *         - TRUE                        = 1
+ 131          * @return   None
+ 132          */
+ 133          void USART_SPI_Enable(uint8_t enable)
+ 134          {
+ 135   1        if(enable == TRUE)
+ 136   1        {
+ 137   2          USTCR2 |= USTEN;
+ 138   2        }
+ 139   1        else
+ 140   1        {
+ 141   2          USTCR2 &= ~USTEN;
+ 142   2        }
+ 143   1      }
+ 144          
+ 145          
+ 146          /**
+ 147          * @brief    Transmit data through the SPI peripheral for polling mode.
+ 148          * @param   send_data   This parameter contains the data to transmit. 
+ 149          * @param   count   This parameter contains the number of data. 
+ 150          * @return   None
+ 151          */
+ 152          void USART_SPI_SendDataWithPolling(uint8_t *send_data, uint8_t count)
+ 153          {
+ 154   1        uint8_t i;
+ 155   1        
+ 156   1        for(i = 0; i < count ; i++)
+ 157   1        {
+ 158   2          USTCR2 |= (DRIE);
+ 159   2          while(!(USTST & (DRE)));
+ 160   2            USTDR = send_data[i];
+ 161   2        }
+ 162   1      
+ 163   1      }
+ 164          
+ 165          /**
+ 166          * @brief    Transmit data through the SPI peripheral for interrupt mode.
+ 167          * @param   send_data   This parameter contains the data to transmit. 
+ 168          * @param   count   This parameter contains the number of data. 
+ 169          * @return   None
+ 170          */
+ 171          void USART_SPI_SendDataWithInterrupt(uint8_t *send_data, uint8_t count)
+ 172          {
+ 173   1        uint8_t i;
+ 174   1        
+ 175   1        USART_SPI_ConfigureInterrupt(SPI_TX_COMPLETE_INT, FALSE);
+ 176   1          
+ 177   1        spi_writeNum0 = count;
+C51 COMPILER V9.54   A96L41X_USART_SPI                                                     04/10/2026 17:18:32 PAGE 4   
+
+ 178   1        for(i = 0; i < count ; i++)
+ 179   1        {
+ 180   2        spi_writeBuff0[i] = send_data[i];
+ 181   2        }
+ 182   1        
+ 183   1        USART_SPI_ConfigureInterrupt(SPI_TX_COMPLETE_INT, TRUE);
+ 184   1        
+ 185   1        USTCR2 |= (DRIE); 
+ 186   1      }
+ 187          
+ 188          /**
+ 189          * @brief    Receive data through the SPI peripheral for polling mode.
+ 190          * @param   receive_data   This parameter contains the data to receive. 
+ 191          * @param   count   This parameter contains the number of data. 
+ 192          * @return   None
+ 193          */
+ 194          void USART_SPI_ReceiveDataWithPolling(uint8_t *receive_data, uint8_t count)
+ 195          {
+ 196   1        uint8_t i;
+ 197   1        
+ 198   1        for(i = 0; i < count; i++)
+ 199   1        {
+ 200   2          USTCR2 |= (DRIE);
+ 201   2          while(!(USTST & (DRE)));
+ 202   2            USTDR = 0xFF; //Dummy data
+ 203   2          while(( USTST & RXC)!= RXC);    // Wait Data in
+ 204   2            receive_data[i] = USTDR;
+ 205   2        }
+ 206   1      }
+ 207          
+ 208          /**
+ 209          * @brief    Receive data through the SPI peripheral for interrupt mode.
+ 210          * @param   receive_data   This parameter contains the data to receive. 
+ 211          * @param   count   This parameter contains the number of data. 
+ 212          * @return   received data
+ 213          */
+ 214          void USART_SPI_ReceiveDataWithInterrupt(uint8_t *receive_data, uint8_t count)
+ 215          {
+ 216   1        
+ 217   1        USART_SPI_ConfigureInterrupt(SPI_RX_COMPLETE_INT, FALSE);
+ 218   1      
+ 219   1        spi_readNum0 = count;
+ 220   1        spi_readBuff0 = (uint8_t*)receive_data; 
+ 221   1        
+ 222   1        USART_SPI_ConfigureInterrupt(SPI_RX_COMPLETE_INT, TRUE);
+ 223   1      
+ 224   1      }
+ 225          
+ 226          /**
+ 227          * @brief    Configure the enable or disable SPI interrupt.
+ 228          * @param   flag   This parameter contains the selection of this function. 
+ 229          *
+ 230          *         - SPI_RX_COMPLETE_INT = 0
+ 231          *         - SPI_TX_COMPLETE_INT = 1
+ 232          *           - SPI_DATA_EMPTY_INT = 2
+ 233          * @param   enable   This parameter contains the enable of this function. 
+ 234          *
+ 235          *         - FLASE                       = 0
+ 236          *         - TRUE                        = 1
+ 237          * @return   None
+ 238          */
+ 239          void USART_SPI_ConfigureInterrupt(uint8_t flag, uint8_t enable)
+C51 COMPILER V9.54   A96L41X_USART_SPI                                                     04/10/2026 17:18:32 PAGE 5   
+
+ 240          {
+ 241   1        uint8_t temp_reg, temp_reg2;
+ 242   1        
+ 243   1        if(flag == SPI_TX_COMPLETE_INT)
+ 244   1          {
+ 245   2            temp_reg = IE2;
+ 246   2            temp_reg &= ~(0x1 << 5);
+ 247   2            temp_reg |= (enable << 5);
+ 248   2            
+ 249   2            temp_reg2 = USTCR2;
+ 250   2            temp_reg2 &= ~(0x1 << (5 + flag));
+ 251   2            temp_reg2 |= (enable << (5 + flag));
+ 252   2            
+ 253   2            IE2 = temp_reg;
+ 254   2            USTCR2 = temp_reg2;
+ 255   2          }
+ 256   1          else if(flag == SPI_RX_COMPLETE_INT)
+ 257   1          {
+ 258   2            temp_reg = IE2;
+ 259   2            temp_reg &= ~(0x1 << 4);
+ 260   2            temp_reg |= (enable << 4);
+ 261   2          
+ 262   2            temp_reg2 = USTCR2;
+ 263   2            temp_reg2 &= ~(0x1 << (5 + flag));
+ 264   2            temp_reg2 |= (enable << (5 + flag));
+ 265   2            
+ 266   2            IE2 = temp_reg;
+ 267   2            USTCR2 = temp_reg2;
+ 268   2          }
+ 269   1          else if(flag == SPI_DATA_EMPTY_INT)
+ 270   1          {
+ 271   2            temp_reg = USTCR2;
+ 272   2            temp_reg &= ~(0x1 << (5 + flag));
+ 273   2            temp_reg |= (enable << (5 + flag));
+ 274   2            
+ 275   2            USTCR2 = temp_reg;
+ 276   2          }
+ 277   1      }
+ 278          
+ 279          /**
+ 280          * @brief    Get the USART interrupt status.
+ 281          * @return   Value of status(interrupt flag)
+ 282          */
+ 283          uint8_t USART_SPI_GetInterruptStatus()
+ 284          {
+ 285   1        return USTST;
+ 286   1      }
+ 287          
+ 288          
+ 289          //==============================================================================
+ 290          // interrupt routines(USI0)
+ 291          //==============================================================================
+ 292          
+ 293          void USART_RXInt_Handler() interrupt USART_RX_VECT
+ 294          {
+ 295   1          uint8_t temp;
+ 296   1      
+ 297   1          // 마스터 모드
+ 298   1          if(USTCR3 & MASTER)
+ 299   1          {
+ 300   2              if(USTST & DOR)
+ 301   2              {
+C51 COMPILER V9.54   A96L41X_USART_SPI                                                     04/10/2026 17:18:32 PAGE 6   
+
+ 302   3                  // 데이터 오버런 처리
+ 303   3                  NOP;
+ 304   3                  temp = USTDR;
+ 305   3              }
+ 306   2      
+ 307   2              // ★ 핵심 변경: for 루프 제거, 1바이트씩 상태머신으로 처리
+ 308   2              if(spi_readNum0 > 0)
+ 309   2              {
+ 310   3                  temp_spi_readBuff0[spi_readNum0 - 1] = USTDR;  // 수신 데이터 저장
+ 311   3                  spi_readNum0--;
+ 312   3      
+ 313   3                  if(spi_readNum0 > 0)
+ 314   3                  {
+ 315   4                      // 다음 바이트 요청: 더미 전송 → 다음 RXC 인터럽트 발생
+ 316   4                      while(!(USTST & (DRE)));
+ 317   4                      USTDR = 0xFF;
+ 318   4                  }
+ 319   3                  else
+ 320   3                  {
+ 321   4                      // 모든 바이트 수신 완료
+ 322   4                      USART_SPI_ConfigureInterrupt(SPI_RX_COMPLETE_INT, FALSE);
+ 323   4                  }
+ 324   3              }
+ 325   2          }
+ 326   1          // 슬레이브 모드
+ 327   1          else
+ 328   1          {
+ 329   2              // ★ 핵심 변경: RXC 대기 제거 (이미 RXC 인터럽트로 진입했으므로 불필요)
+ 330   2              if(USTST & DOR)
+ 331   2              {
+ 332   3                  NOP;
+ 333   3                  temp = USTDR;
+ 334   3              }
+ 335   2      
+ 336   2              temp = USTDR;
+ 337   2              if(temp == 0xFF)
+ 338   2              {
+ 339   3                  while(!(USTST & (DRE)));
+ 340   3                  USTDR = 0x05;
+ 341   3              }
+ 342   2          }
+ 343   1      }
+ 344          
+ 345          
+ 346          void USART_TXInt_Handler() interrupt USART_TX_VECT
+ 347          {
+ 348   1          // ★ 핵심 변경: for 루프 제거, 1바이트씩 처리
+ 349   1          if(spi_writeNum0 > 0)
+ 350   1          {
+ 351   2              spi_writeNum0--;
+ 352   2              while(!(USTST & (DRE)));
+ 353   2              USTDR = spi_writeBuff0[spi_writeNum0];
+ 354   2      
+ 355   2              if(spi_writeNum0 == 0)
+ 356   2              {
+ 357   3                  // 모든 바이트 전송 완료
+ 358   3                  USART_SPI_ConfigureInterrupt(SPI_TX_COMPLETE_INT, FALSE);
+ 359   3                  USTCR2 &= ~(DRIE);
+ 360   3              }
+ 361   2          }
+ 362   1      }
+ 363          
+C51 COMPILER V9.54   A96L41X_USART_SPI                                                     04/10/2026 17:18:32 PAGE 7   
+
+ 364          
+ 365          /* --------------------------------- End Of File ------------------------------ */
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    854    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =      5      28
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

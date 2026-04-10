@@ -1,0 +1,1 @@
+Project 창에서 delay.c 우클릭 → Options for File → Properties 탭 → Generate Assembler SRC File 체크 → Assemble SRC File 체크(체크 지웠다가 다시 체크)

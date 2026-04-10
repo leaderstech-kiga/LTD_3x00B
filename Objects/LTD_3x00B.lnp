@@ -1,0 +1,18 @@
+".\Objects\a96l41x_adc.obj",
+".\Objects\a96l41x_clock.obj",
+".\Objects\a96l41x_gpio.obj",
+".\Objects\a96l41x_opamp.obj",
+".\Objects\a96l41x_timer0.obj",
+".\Objects\a96l41x_timer1.obj",
+".\Objects\a96l41x_timer2.obj",
+".\Objects\a96l41x_usart.obj",
+".\Objects\a96l41x_usart_spi.obj",
+".\Objects\audio.obj",
+".\Objects\delay.obj",
+".\Objects\flash.obj",
+".\Objects\main.obj",
+".\Objects\startup.obj" 
+TO ".\Objects\LTD_3x00B" 
+PRINT(".\Listings\LTD_3x00B.m51") RAMSIZE(256) 
+CODE( 0X0000-0X3FFF )
+XDATA( 0X0000-0X02FF )

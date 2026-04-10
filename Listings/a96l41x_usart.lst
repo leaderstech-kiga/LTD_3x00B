@@ -1,0 +1,484 @@
+C51 COMPILER V9.54   A96L41X_USART                                                         04/10/2026 17:18:32 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE A96L41X_USART
+OBJECT MODULE PLACED IN .\Objects\a96l41x_usart.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE src\a96l41x_usart.c LARGE OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PR
+                    -INT(.\Listings\a96l41x_usart.lst) TABS(2) OBJECT(.\Objects\a96l41x_usart.obj)
+
+line level    source
+
+   1          /**
+   2          *   @file       a96l41x_usart.c
+   3          *   @brief      A96L416 usart peripheral function 
+   4          *   @author     Application Team, ABOV Semiconductor Co., Ltd.
+   5          *   @version    V1.00
+   6          *   @date       29. MAY. 2020
+   7          *
+   8          * Copyright(C) 2020, ABOV Semiconductor
+   9          * All rights reserved.
+  10          *
+  11          ********************************************************************************
+  12          * ABOV Disclaimer
+  13          *
+  14          *IMPORTANT NOTICE - PLEASE READ CAREFULLY
+  15          *ABOV Semiconductor ("ABOV") reserves the right to make changes, corrections, enhancements, 
+  16          *modifications, and improvements to ABOV products and/or to this document at any time without notice. 
+  17          *ABOV does not give warranties as to the accuracy or completeness of the information included herein.
+  18          *Purchasers should obtain the latest relevant information of ABOV products before placing orders. 
+  19          *Purchasers are entirely responsible for the choice, selection, and use of ABOV products and 
+  20          *ABOV assumes no liability for application assistance or the design of purchasers' products. No license, 
+  21          *express or implied, to any intellectual property rights is granted by ABOV herein. 
+  22          *ABOV disclaims all express and implied warranties and shall not be responsible or
+  23          *liable for any injuries or damages related to use of ABOV products in such unauthorized applications. 
+  24          *ABOV and the ABOV logo are trademarks of ABOV.
+  25          *All other product or service names are the property of their respective owners. 
+  26          *Information in this document supersedes and replaces the information previously
+  27          *supplied in any former versions of this document.
+  28          *2020 ABOV Semiconductor  All rights reserved
+  29          *
+  30          */
+  31          
+  32          /*******************************************************************************
+  33          * Included File
+  34          *******************************************************************************/
+  35          #include "a96l41x_usart.h"
+  36          
+  37          /*******************************************************************************
+  38          * Private Pre-processor Definition & Macro
+  39          *******************************************************************************/
+  40          
+  41          /*******************************************************************************
+  42          * Private Typedef
+  43          *******************************************************************************/
+  44          
+  45          /*******************************************************************************
+  46          * Private Variable
+  47          *******************************************************************************/
+  48          char USART_tx_queue[ USART_QUEUE_SIZE ];
+  49          char USART_tx_front, USART_tx_rear;
+  50          
+  51          char USART_rx_queue[ USART_QUEUE_SIZE ];
+  52          char USART_rx_front, USART_rx_rear;
+  53          /*******************************************************************************
+  54          * Private Function Prototype
+C51 COMPILER V9.54   A96L41X_USART                                                         04/10/2026 17:18:32 PAGE 2   
+
+  55          *******************************************************************************/
+  56          char USART_tx_queue_is_full()
+  57          {
+  58   1        return ( (USART_tx_rear + 1 ) % USART_QUEUE_SIZE == USART_tx_front );
+  59   1      }
+  60          
+  61          char USART_tx_queue_is_empty()
+  62          {
+  63   1        return ( USART_tx_rear == USART_tx_front );
+  64   1      }
+  65          
+  66          char USART_rx_queue_is_full()
+  67          {
+  68   1        return ( (USART_rx_rear + 1 ) % USART_QUEUE_SIZE == USART_rx_front );
+  69   1      }
+  70          
+  71          char USART_rx_queue_is_empty()
+  72          {
+  73   1        return ( USART_rx_rear == USART_rx_front );
+  74   1      }
+  75          
+  76          /*******************************************************************************
+  77          * Public Function
+  78          *******************************************************************************/
+  79          
+  80          /**
+  81          * @brief    Initialize usart peripheral(For USART & UART)
+  82          * @param   speed      This parameter contains the buadrate of uart/usart.
+  83          * @param   data_length  This parameter contains the length of data as uart/usart
+  84          *
+  85          *         - USART_DATA_5BIT = 0
+  86          *         - USART_DATA_6BIT = 1
+  87          *         - USART_DATA_7BIT = 2
+  88          *         - USART_DATA_8BIT = 3
+  89          *         - USART_DATA_9BIT = 7
+  90          * @param   stop_bits  This parameter contains the bits of stop as uart/usart. 
+  91          *
+  92          *         - USART_STOP_1BIT = 0
+  93          *         - USART_STOP_2BIT = 1
+  94          * @param   parity This parameter contains the bit of parity as uart. 
+  95          *
+  96          *         - USART_PARITY_NO = 0
+  97          *         - USART_PARITY_EVEN = 2
+  98          *         - USART_PARITY_ODD = 3
+  99          * @param   mode   This parameter contains the enable of transmit or receive mode(uart/usart). 
+ 100          *
+ 101          *         - USART_TX_RX_MODE = 0
+ 102          *           - USART_RX_MODE = 1
+ 103          *         - USART_TX_MODE = 2
+ 104          * @return   None
+ 105          */
+ 106          void USART_Initial(uint32_t speed, uint8_t data_length, uint8_t stop_bits, uint8_t parity, uint8_t mode)
+ 107          {
+ 108   1        uint32_t buadrate_val = 0;
+ 109   1        uint8_t temp_reg, temp_reg2;
+ 110   1        
+ 111   1        temp_reg = USTCR1;
+ 112   1        temp_reg &= ~(0x3 << 6);  
+ 113   1        //operation mode : UART(default), if used USART, set USART_Clock_Initial() + USART_Initial();
+ 114   1        temp_reg |= ((parity << 4) | (data_length <<  1));
+ 115   1        
+ 116   1        temp_reg2 = USTCR2;
+C51 COMPILER V9.54   A96L41X_USART                                                         04/10/2026 17:18:32 PAGE 3   
+
+ 117   1        if(mode == USART_RX_MODE)
+ 118   1          temp_reg2 |= (1 << 2);  
+ 119   1        else if(mode == USART_TX_MODE)
+ 120   1          temp_reg2 |= (1 << 3);
+ 121   1        else
+ 122   1          temp_reg2 |= ((1 << 2) | (1 << 3));
+ 123   1        
+ 124   1        temp_reg2 |= (1 << 1);  
+ 125   1        
+ 126   1        //UCTRL2 |= (0x1 << 0); //if using Double Speed operation, Enable UCTRL2 |= (0x1 << 0)
+ 127   1        if(USTCR2 & 0x1) //Double Speed operation(only UART)
+ 128   1        {
+ 129   2          buadrate_val = ((Clock_GetSystemFreq() / speed )  >> 3) * 10;
+ 130   2        }
+ 131   1        else if(USTCR1 & 0x40) //Synchronous mode(USART)
+ 132   1        {
+ 133   2          buadrate_val = ((Clock_GetSystemFreq() / speed )  >> 1) * 10;
+ 134   2        }
+ 135   1        else  //Normal Speed operation
+ 136   1        {
+ 137   2          buadrate_val = ((Clock_GetSystemFreq() / speed )  >> 4) * 10;
+ 138   2        }
+ 139   1        
+ 140   1        buadrate_val = ((buadrate_val + 5) / 10) - 1; //round
+ 141   1        
+ 142   1        
+ 143   1        if(!(USTCR1 & 0x40)) //Not Synchronous mode(USART)
+ 144   1          USTST |= (1 << 3);      // USART block reset
+ 145   1        
+ 146   1        
+ 147   1        USTCR1 = temp_reg;
+ 148   1        USTCR3 |= (stop_bits<< 2);
+ 149   1        
+ 150   1        USTBD = buadrate_val;
+ 151   1        
+ 152   1        USTCR2 = temp_reg2; 
+ 153   1      }
+ 154          
+ 155          
+ 156          /**
+ 157          * @brief    Initialize the clock of usart peripheral(For only USART)
+ 158          * @param   clock_en This parameter contains the selection of USART mode.
+ 159          *
+ 160          *         - USART_SYNC_DISABLE = 0
+ 161          *         - USART_SYNC_ENABLE  = 1
+ 162          * @param   master_en  This parameter contains the enable of transmit or receive mode(uart/usart). 
+ 163          *
+ 164          *         - USART_SLAVE_MODE    = 0
+ 165          *         - USART_MASTER_MODE = 1
+ 166          * @return   None
+ 167          */
+ 168          void USART_Clock_Initial(uint32_t clock_en, uint8_t master_en)
+ 169          {
+ 170   1        uint8_t temp_reg, temp_reg2;
+ 171   1        
+ 172   1        temp_reg = USTCR1;
+ 173   1        temp_reg &= ~(0x3 << 6);
+ 174   1        temp_reg |= (clock_en << 6);
+ 175   1        
+ 176   1        temp_reg2 = USTCR3;
+ 177   1        temp_reg2 &= ~(0x1 << 7);
+ 178   1        temp_reg2 |= (master_en << 7);
+C51 COMPILER V9.54   A96L41X_USART                                                         04/10/2026 17:18:32 PAGE 4   
+
+ 179   1        
+ 180   1        USTST |= (1 << 3);      // USART block reset
+ 181   1        
+ 182   1        USTCR1 = temp_reg;
+ 183   1        USTCR3 = temp_reg2;
+ 184   1      }
+ 185          
+ 186          /**
+ 187          * @brief    Enables or disables the USART peripheral.
+ 188          * @param   enable   This parameter contains the enable of this function. 
+ 189          *
+ 190          *         - FLASE                       = 0
+ 191          *         - TRUE                        = 1
+ 192          * @return   None
+ 193          */
+ 194          void USART_Enable(uint8_t enable)
+ 195          {
+ 196   1          if(enable == TRUE)
+ 197   1          {
+ 198   2            USTCR2 |= (1 << 1);
+ 199   2          }
+ 200   1          else
+ 201   1          {
+ 202   2            USTCR2 &= ~(1 << 1);
+ 203   2          }
+ 204   1      }
+ 205          
+ 206          
+ 207          /**
+ 208          * @brief    Transmit data through the USART peripheral for polling mode.
+ 209          * @param   send_data   This parameter contains the data to transmit. 
+ 210          * @param   count    This parameter contains the number of write length.
+ 211          * @return   None
+ 212          */
+ 213          void USART_SendDataWithPolling(uint8_t *send_data, uint8_t count)
+ 214          {
+ 215   1        uint8_t i;
+ 216   1        
+ 217   1        for(i = 0; i < count; i++)
+ 218   1        {
+ 219   2          while(!(USTST & ((1 << 7))));
+ 220   2          USTDR = send_data[i];
+ 221   2        }
+ 222   1      }
+ 223          
+ 224          /**
+ 225          * @brief    Transmit data through the USART peripheral for interrupt mode.
+ 226          * @param   send_data   This parameter contains the data to transmit. 
+ 227          * @return   None
+ 228          */
+ 229          void USART_SendDataWithInterrupt(uint8_t send_data)
+ 230          {
+ 231   1        if( (USTCR2 & ((1 << 7))) || (USTCR2 & ((1 << 6))))           
+ 232   1        {
+ 233   2          if ( USART_tx_queue_is_empty() == FALSE )     
+ 234   2          {
+ 235   3            while ( USART_tx_queue_is_full() == TRUE ); 
+ 236   3                                 
+ 237   3                                
+ 238   3          }
+ 239   2      
+ 240   2          USART_ConfigureInterrupt(USART_TX_COMPLETE_INT, FALSE);
+C51 COMPILER V9.54   A96L41X_USART                                                         04/10/2026 17:18:32 PAGE 5   
+
+ 241   2          
+ 242   2          USART_tx_queue [ USART_tx_rear ] = send_data;       
+ 243   2          USART_tx_rear = ++USART_tx_rear % USART_QUEUE_SIZE;           
+ 244   2          USART_ConfigureInterrupt(USART_TX_COMPLETE_INT, TRUE);
+ 245   2          
+ 246   2          USTCR2 |= ((1 << 7)); 
+ 247   2        } 
+ 248   1      }
+ 249          
+ 250          /**
+ 251          * @brief    Receive data through the USART peripheral for polling mode.
+ 252          * @param   receive_data   This parameter contains the data to receive. 
+ 253          * @param   count    This parameter contains the number of receive length.
+ 254          * @return   received data
+ 255          */
+ 256          void USART_ReceiveDataWithPolling(uint8_t *receive_data, uint8_t count)
+ 257          {
+ 258   1        uint8_t i;
+ 259   1        
+ 260   1        for(i = 0; i < count; i++)
+ 261   1        {
+ 262   2          while(( USTST & (1 << 5))!= (1 << 5));    // Wait Data in
+ 263   2          receive_data[i] = USTDR;
+ 264   2        }
+ 265   1      
+ 266   1      }
+ 267          
+ 268          /**
+ 269          * @brief    Receive data through the USART peripheral for interrupt mode.
+ 270          * @return   received data
+ 271          */
+ 272          uint8_t USART_ReceiveDataWithInterrupt(void)
+ 273          {
+ 274   1        uint8_t temp;
+ 275   1        
+ 276   1        while ( USART_rx_queue_is_empty() == TRUE ); 
+ 277   1      
+ 278   1        USART_ConfigureInterrupt(USART_RX_COMPLETE_INT, FALSE);
+ 279   1        temp = USART_rx_queue [ USART_rx_front ];
+ 280   1      
+ 281   1        USART_rx_front = ++USART_rx_front % USART_QUEUE_SIZE;
+ 282   1        USART_ConfigureInterrupt(USART_RX_COMPLETE_INT, TRUE);
+ 283   1      
+ 284   1        return temp;
+ 285   1      }
+ 286          
+ 287          /**
+ 288          * @brief    Configure the enable or disable USART interrupt.
+ 289          * @param   flag   This parameter contains the selection of this function. 
+ 290          *
+ 291          *         - USART_RX_COMPLETE_INT = 0
+ 292          *         - USART_TX_COMPLETE_INT = 1
+ 293          *           - USART_DATA_EMPTY_INT = 2
+ 294          *           - USART_WAKEUP_INT = 3
+ 295          * @param   enable   This parameter contains the enable of this function. 
+ 296          *
+ 297          *         - FLASE                       = 0
+ 298          *         - TRUE                        = 1
+ 299          * @return   None
+ 300          */
+ 301          void USART_ConfigureInterrupt(uint8_t flag, uint8_t enable)
+ 302          {
+C51 COMPILER V9.54   A96L41X_USART                                                         04/10/2026 17:18:32 PAGE 6   
+
+ 303   1        uint8_t temp_reg, temp_reg2;
+ 304   1      
+ 305   1        if(flag == USART_TX_COMPLETE_INT)
+ 306   1        {
+ 307   2          temp_reg = IE2;
+ 308   2          temp_reg &= ~(0x1 << 5);
+ 309   2          temp_reg |= (enable << 5);
+ 310   2          
+ 311   2          temp_reg2 = USTCR2;
+ 312   2          temp_reg2 &= ~(0x1 << (5 + flag));
+ 313   2          temp_reg2 |= (enable << (5 + flag));
+ 314   2          
+ 315   2          IE2 = temp_reg;
+ 316   2          USTCR2 = temp_reg2;
+ 317   2        }
+ 318   1        else if(flag == USART_RX_COMPLETE_INT)
+ 319   1        {
+ 320   2          temp_reg = IE2;
+ 321   2          temp_reg &= ~(0x1 << 4);
+ 322   2          temp_reg |= (enable << 4);
+ 323   2          
+ 324   2          temp_reg2 = USTCR2;
+ 325   2          temp_reg2 &= ~(0x1 << (5 + flag));
+ 326   2          temp_reg2 |= (enable << (5 + flag));
+ 327   2          
+ 328   2          IE2 = temp_reg;
+ 329   2          USTCR2 = temp_reg2;
+ 330   2        }
+ 331   1        else if(flag == USART_DATA_EMPTY_INT)
+ 332   1        {
+ 333   2          temp_reg = USTCR2;
+ 334   2          temp_reg &= ~(0x1 << (5 + flag));
+ 335   2          temp_reg |= (enable << (5 + flag));
+ 336   2          USTCR2 = temp_reg;
+ 337   2        }
+ 338   1        else if(flag == USART_WAKEUP_INT)
+ 339   1        {
+ 340   2          temp_reg = USTCR2;
+ 341   2          temp_reg &= ~(0x1 << 4);
+ 342   2          temp_reg |= (enable << 4);
+ 343   2          USTCR2 = temp_reg;
+ 344   2        }
+ 345   1      }
+ 346          
+ 347          /**
+ 348          * @brief    Get the USART interrupt status.
+ 349          * @return   Value of status(interrupt flag)
+ 350          */
+ 351          uint8_t USART_GetInterruptStatus(void)
+ 352          {
+ 353   1        uint8_t result;
+ 354   1        
+ 355   1        result = USTST;
+ 356   1        
+ 357   1        return result;
+ 358   1      }
+ 359          
+ 360          /**
+ 361          * @brief    Set the function of wake up interrupt.
+ 362          * @param   enable   This parameter contains the enable of this function. 
+ 363          *
+ 364          *         - FLASE                       = 0
+C51 COMPILER V9.54   A96L41X_USART                                                         04/10/2026 17:18:32 PAGE 7   
+
+ 365          *         - TRUE    
+ 366          * @return   None
+ 367          
+ 368          */
+ 369          void USART_ConfigureWakeUp(uint8_t enable)
+ 370          {
+ 371   1        uint8_t temp_reg;
+ 372   1        
+ 373   1        temp_reg = USTCR2;
+ 374   1        temp_reg &= ~(1 << 4);
+ 375   1        temp_reg |= (enable << 4);
+ 376   1        
+ 377   1        USTCR2 = temp_reg;
+ 378   1      }
+ 379          
+ 380          /**
+ 381          * @brief    Clear the flag of wake up interrupt.
+ 382          * @param      None  
+ 383          * @return   None
+ 384          
+ 385          */
+ 386          void USART_ClearWakeUpFlag(void)
+ 387          {
+ 388   1        USTST &= ~(1 << 4);
+ 389   1      }
+ 390          
+ 391          //==============================================================================
+ 392          // interrupt routines
+ 393          //==============================================================================
+ 394          /*
+ 395          void USART_RXInt_Handler() interrupt USART_RX_VECT
+ 396          { 
+ 397            unsigned char temp, temp2;
+ 398            
+ 399            temp    = USTST;
+ 400            temp2   = USTCR2;
+ 401            
+ 402            if ( USART_rx_queue_is_full () )
+ 403            {
+ 404              if ((temp & (1 << 2) )||(temp & (1 << 1) )||(temp & (1 << 0) ))
+ 405              {
+ 406                USART_rx_queue [ USART_rx_rear ] = USTDR;
+ 407                USART_rx_rear = ++USART_rx_rear % USART_QUEUE_SIZE;
+ 408              }
+ 409              USART_rx_queue [ USART_rx_rear ] = USTDR;
+ 410              USART_rx_rear = ++USART_rx_rear % USART_QUEUE_SIZE;
+ 411                
+ 412              USART_rx_front = USART_rx_rear = 0; 
+ 413              USART_rx_queue[ USART_rx_front ] = 0;
+ 414            }
+ 415            else
+ 416            {
+ 417              USART_rx_queue [ USART_rx_rear ] = USTDR;
+ 418              USART_rx_rear = ++USART_rx_rear % USART_QUEUE_SIZE;
+ 419            }
+ 420          }
+ 421          
+ 422          void USART_TXInt_Handler() interrupt USART_TX_VECT
+ 423          {
+ 424            if ( USART_tx_queue_is_empty() == TRUE )
+ 425            {
+ 426              if ( (USTST & ((1 << 6))) )       
+C51 COMPILER V9.54   A96L41X_USART                                                         04/10/2026 17:18:32 PAGE 8   
+
+ 427              {
+ 428                USTCR2  &= ~( ((1 << 7)) | ((1 << 6)) );
+ 429                USTST &= ~( (1 << 7) + (1 << 6) );
+ 430              }
+ 431              else                
+ 432              {
+ 433                USTCR2  &= ~( (1 << 7) );     
+ 434                                
+ 435              }
+ 436            }
+ 437            else
+ 438            {
+ 439              USTDR = USART_tx_queue [ USART_tx_front ];
+ 440              USART_tx_queue [ USART_tx_front ] = 0;
+ 441              USART_tx_front = ++USART_tx_front % USART_QUEUE_SIZE;
+ 442            }
+ 443          }
+ 444          */
+ 445          
+ 446          /* --------------------------------- End Of File ------------------------------ */
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    890    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =     20      27
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

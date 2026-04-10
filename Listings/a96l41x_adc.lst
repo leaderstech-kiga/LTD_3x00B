@@ -1,0 +1,310 @@
+C51 COMPILER V9.54   A96L41X_ADC                                                           04/10/2026 17:18:31 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE A96L41X_ADC
+OBJECT MODULE PLACED IN .\Objects\a96l41x_adc.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE src\a96l41x_adc.c LARGE OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRIN
+                    -T(.\Listings\a96l41x_adc.lst) TABS(2) OBJECT(.\Objects\a96l41x_adc.obj)
+
+line level    source
+
+   1          /**
+   2          * @file       a96l41x_adc.c
+   3          * @brief      A96L41x ADC peripheral function 
+   4          * @author     Application Team, ABOV Semiconductor Co., Ltd.
+   5          * @version    V1.00
+   6          * @date       29. MAY. 2020
+   7          *
+   8          * Copyright(C) 2020, ABOV Semiconductor
+   9          * All rights reserved.
+  10          *
+  11          ********************************************************************************
+  12          * ABOV Disclaimer
+  13          *
+  14          *IMPORTANT NOTICE - PLEASE READ CAREFULLY
+  15          *ABOV Semiconductor ("ABOV") reserves the right to make changes, corrections, enhancements, 
+  16          *modifications, and improvements to ABOV products and/or to this document at any time without notice. 
+  17          *ABOV does not give warranties as to the accuracy or completeness of the information included herein.
+  18          *Purchasers should obtain the latest relevant information of ABOV products before placing orders. 
+  19          *Purchasers are entirely responsible for the choice, selection, and use of ABOV products and 
+  20          *ABOV assumes no liability for application assistance or the design of purchasers' products. No license, 
+  21          *express or implied, to any intellectual property rights is granted by ABOV herein. 
+  22          *ABOV disclaims all express and implied warranties and shall not be responsible or
+  23          *liable for any injuries or damages related to use of ABOV products in such unauthorized applications. 
+  24          *ABOV and the ABOV logo are trademarks of ABOV.
+  25          *All other product or service names are the property of their respective owners. 
+  26          *Information in this document supersedes and replaces the information previously
+  27          *supplied in any former versions of this document.
+  28          *2020 ABOV Semiconductor  All rights reserved
+  29          *
+  30          */
+  31          
+  32          /*******************************************************************************
+  33          * Included File
+  34          *******************************************************************************/
+  35          #include "a96l41x_adc.h"
+  36          
+  37          /*******************************************************************************
+  38          * Private Pre-processor Definition & Macro
+  39          *******************************************************************************/
+  40          
+  41          /*******************************************************************************
+  42          * Private Typedef
+  43          *******************************************************************************/
+  44          
+  45          /*******************************************************************************
+  46          * Private Variable
+  47          *******************************************************************************/
+  48          uint8_t adc_count = 0;
+  49          uint16_t *adc_buff;
+  50          uint8_t buff_cnt = 0;
+  51          /*******************************************************************************
+  52          * Private Function Prototype
+  53          *******************************************************************************/
+  54          
+C51 COMPILER V9.54   A96L41X_ADC                                                           04/10/2026 17:18:31 PAGE 2   
+
+  55          /*******************************************************************************
+  56          * Public Function
+  57          *******************************************************************************/
+  58          
+  59          /**
+  60          * @brief    Initialize ADC peripheral
+  61          * @param   clock_sel      This parameter contains the selection of ADC converter clock (fx <= 8MHz).
+  62          *
+  63          *     - ADC_CLK_4M    = 0
+  64          *     - ADC_CLK_2M    = 1
+  65          *     - ADC_CLK_1M    = 2
+  66          *     - ADC_CLK_0_5M    = 3
+  67          * @param   trigger_sel    This parameter contains the selection of ADC trigger source.
+  68          *
+  69          *     - ADC_SW_TRIG   = 0
+  70          *     - ADC_T0_TRIG     = 1
+  71          * @param   ref_voltage    This parameter contains the selection of ADC reference voltage.
+  72          *
+  73          *     - ADC_INTERNAL_REF  = 0
+  74          *     - ADC_LDO_REF   = 1
+  75          * @param   align_sel    This parameter contains the selection of ADC data align. 
+  76          *
+  77          *     - ADC_MSB       = 0
+  78          *     - ADC_LSB       = 1
+  79          * @return   None
+  80          */
+  81          void ADC_Initial(uint8_t clock_sel, uint8_t trigger_sel, uint8_t ref_voltage, uint8_t align_sel)
+  82          {
+  83   1          /*  The A/D converter needs at least 14 us for conversion time.
+  84   1              So you must set the conversion time more than 14 us.
+  85   1              If the ADC conversion time is set short, the resolution is degraded.
+  86   1          
+  87   1              ** ADC Conversion clock = ADCLK * 28 clocks
+  88   1              
+  89   1          Example)
+  90   1              fx=2Mhz, CKSEL = 2M,  ADC Clock source(@2Mhz) = 0.5us
+  91   1              28 clock x 0.5us = 14us at 2Mhz
+  92   1          */
+  93   1        uint8_t temp_reg, temp_reg2;
+  94   1        
+  95   1          if(clock_sel == 0){
+  96   2          clock_sel =1;
+  97   2        }
+  98   1          
+  99   1        temp_reg = ADCCRH;
+ 100   1        temp_reg &= ~(0xFF);
+ 101   1        temp_reg |= ((trigger_sel << 3) | (align_sel << 2) | (clock_sel << 0));
+ 102   1        
+ 103   1        temp_reg2 = ADCCRL;
+ 104   1        temp_reg2 &= ~(0xFF);
+ 105   1        temp_reg2 |= ((1 << 7) | (ref_voltage << 5));  //ADC Enable + ref_Voltage
+ 106   1        
+ 107   1        ADCCRH = temp_reg;
+ 108   1        ADCCRL = temp_reg2;
+ 109   1        
+ 110   1        /* If the ADC clock is more than 4MHz, ADC module is not initialized. 
+ 111   1           To meet the conversion time spec value, adc clock is under 2MHz recommended.
+ 112   1        */
+ 113   1        /*
+ 114   1        while( (clock_sel >= 1) )
+ 115   1        {
+ 116   1          NOP;  // NOTE : clock_sel <= 2Mhz
+C51 COMPILER V9.54   A96L41X_ADC                                                           04/10/2026 17:18:31 PAGE 3   
+
+ 117   1        }
+ 118   1      */
+ 119   1      
+ 120   1          
+ 121   1      }
+ 122          
+ 123          /**
+ 124          * @brief    Enables or disables the ADC peripheral.
+ 125          * @param   enable   This parameter contains the enable of this function. 
+ 126          *
+ 127          *     - FALSE   = 0
+ 128          *     - TRUE    = 1
+ 129          * @return   None
+ 130          */
+ 131          void ADC_Enable(uint8_t enable)
+ 132          {
+ 133   1        if(enable == TRUE)
+ 134   1        {
+ 135   2          ADCCRL |= (1 << 7);
+ 136   2        }
+ 137   1        else
+ 138   1        {
+ 139   2          ADCCRL &= ~(1 << 7);
+ 140   2        }
+ 141   1      }
+ 142          
+ 143          /**
+ 144          * @brief    Enables the ADC Start conversion(For software trigger).
+ 145          * @param      None
+ 146          * @return   None
+ 147          */
+ 148          void ADC_StartSoftwareTrigger()
+ 149          {
+ 150   1        ADCCRL |= (1 << 6);
+ 151   1      }
+ 152          
+ 153          /**
+ 154          * @brief    Select the ADC Converter Input Channel.
+ 155          * @param   channel    This parameter contains the channel of ADC input.
+ 156          *
+ 157          *     - ADC_CH0   = 0
+ 158          *     - ADC_CH1   = 1
+ 159          *     - ADC_CH2   = 2
+ 160          *     - ADC_CH3   = 3
+ 161          *     - ADC_CH4   = 4
+ 162          *     - ADC_CH5   = 5
+ 163          *     - ADC_CH6   = 6
+ 164          *     - ADC_OP0OUT  = 9
+ 165          *     - ADC_OP1OUT  = 10
+ 166          *     - ADC_VBGR  = 15
+ 167          * @return   None
+ 168          */
+ 169          void ADC_SelectChannel(uint8_t channel)
+ 170          {
+ 171   1        uint8_t temp_reg;
+ 172   1        
+ 173   1        temp_reg = ADCCRL;
+ 174   1        temp_reg &= ~(0xF << 0);
+ 175   1        temp_reg |= channel;
+ 176   1        
+ 177   1        ADCCRL = temp_reg;
+ 178   1      }
+C51 COMPILER V9.54   A96L41X_ADC                                                           04/10/2026 17:18:31 PAGE 4   
+
+ 179          
+ 180          /**
+ 181          * @brief    Get status of ADC conversion.
+ 182          * @param   None
+ 183          * @return   Status of ADC conversion flag.
+ 184          */
+ 185          uint8_t ADC_GetConversionStatus()
+ 186          {
+ 187   1        return (ADCCRL & 0x10);
+ 188   1      }
+ 189          
+ 190          /**
+ 191          * @brief    Get data of ADC conversion for ADC interrupt.
+ 192          * @param   adc_data   This parameter contains the data of conversion ADC.
+ 193          * @param   count    This parameter contains the number of count.
+ 194          * @return   None
+ 195          */
+ 196          void ADC_GetDataWithInterrupt(uint16_t *adc_data, uint8_t count)
+ 197          {
+ 198   1        adc_count = count;
+ 199   1        adc_buff = (uint16_t*)adc_data;
+ 200   1        buff_cnt = 0;
+ 201   1        
+ 202   1        ADC_ConfigureInterrupt(TRUE);
+ 203   1      
+ 204   1        if( ((ADCCRH & 0x08) == 0x00)) //SW trigger
+ 205   1        {
+ 206   2          ADC_StartSoftwareTrigger();
+ 207   2        }
+ 208   1        
+ 209   1        while(0 < adc_count);  //adc interrupt subroutine execute
+ 210   1      
+ 211   1      }
+ 212          
+ 213          /**
+ 214          * @brief    Get data of ADC conversion for ADC polling.
+ 215          * @param   adc_data   This parameter contains the data of conversion ADC.
+ 216          * @param   count    This parameter contains the number of count.
+ 217          * @return   None
+ 218          */
+ 219          void ADC_GetDataWithPolling(uint16_t *adc_data, uint8_t count)
+ 220          {
+ 221   1        uint8_t i;
+ 222   1        
+ 223   1        for(i = 0; i < count; i++)
+ 224   1        {
+ 225   2          if( ((ADCCRH & 0x08) == 0x00) ) //SW trigger
+ 226   2            ADC_StartSoftwareTrigger();
+ 227   2            
+ 228   2          while(!(ADC_GetConversionStatus()));
+ 229   2            
+ 230   2          adc_data[i] = ADCDR;
+ 231   2        }
+ 232   1      }
+ 233          
+ 234          /**
+ 235          * @brief    Configure the enable or disable ADC interrupt.
+ 236          * @param   enable   This parameter contains the enable of this function. 
+ 237          *
+ 238          *     - FALSE = 0
+ 239          *     - TRUE  = 1
+ 240          * @return   None
+C51 COMPILER V9.54   A96L41X_ADC                                                           04/10/2026 17:18:31 PAGE 5   
+
+ 241          */
+ 242          void ADC_ConfigureInterrupt(uint8_t enable)
+ 243          {
+ 244   1        if(enable == TRUE)
+ 245   1        {
+ 246   2          IE1  |= 0x01; 
+ 247   2        }
+ 248   1        else
+ 249   1        {
+ 250   2          ADCCRH &= ~0x80;
+ 251   2          IE1 &= ~0x01;
+ 252   2        }
+ 253   1      }
+ 254          
+ 255          /**
+ 256          * @brief    Clear the ADC interrupt status.
+ 257          * @param      None
+ 258          * @return   None
+ 259          */
+ 260          void ADC_ClearInterruptStatus()
+ 261          {
+ 262   1        ADCCRH &= ~0x80;
+ 263   1      }
+ 264          
+ 265          
+ 266          void ADC_Int_Handler(void) interrupt ADC_VECT
+ 267          {
+ 268   1        if(((ADCCRH & 0x08) == 0x00) && (adc_count != 0)) //SW trigger
+ 269   1          ADC_StartSoftwareTrigger();
+ 270   1        
+ 271   1        adc_count--;
+ 272   1        adc_buff[buff_cnt++] = ADCDR;
+ 273   1        
+ 274   1        if(adc_count == 0)
+ 275   1          ADC_ConfigureInterrupt(FALSE);
+ 276   1      }
+ 277          
+ 278          /* --------------------------------- End Of File ------------------------------ */
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    311    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =      5       7
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

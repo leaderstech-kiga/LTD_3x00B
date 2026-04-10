@@ -1,0 +1,244 @@
+A51 MACRO ASSEMBLER  DELAY                                                                04/10/2026 17:18:33 PAGE     1
+
+
+MACRO ASSEMBLER A51 V8.02c
+OBJECT MODULE PLACED IN .\Objects\delay.OBJ
+ASSEMBLER INVOKED BY: C:\Keil_v5\C51\BIN\A51.EXE .\Objects\delay.src PR(.\Listings\delay.ls1) EP DEBUG
+
+LOC  OBJ            LINE     SOURCE
+
+                       1     ; .\Objects\delay.SRC generated from: src\delay.c
+                       2     ; COMPILER INVOKED BY:
+                       3     ;        C:\Keil_v5\C51\BIN\C51.EXE src\delay.c LARGE OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECT
+                             EXTEND PRINT(.\Listings\delay.lst) TABS(2) SRC(.\Objects\delay.SRC)
+                       4     
+                       5     
+                       6     NAME    DELAY
+                       7     
+                       8     ?PR?NOP_4us_Delay?DELAY                  SEGMENT CODE 
+                       9     ?PR?_NOP_20us_Delay?DELAY                SEGMENT CODE 
+                      10             PUBLIC  _NOP_20us_Delay
+                      11             PUBLIC  NOP_4us_Delay
+                      12     ; /**
+                      13     ; *   @file       delay.c
+                      14     ; *   @brief      Polling Delay subroutine
+                      15     ; *   @author     Application Team, ABOV Semiconductor Co., Ltd.
+                      16     ; *   @version    V1.00
+                      17     ; *   @date       29. MAY. 2020
+                      18     ; *
+                      19     ; * Copyright(C) 2020, ABOV Semiconductor
+                      20     ; * All rights reserved.
+                      21     ; *
+                      22     ; ********************************************************************************
+                      23     ; * ABOV Disclaimer
+                      24     ; *
+                      25     ; *IMPORTANT NOTICE - PLEASE READ CAREFULLY
+                      26     ; *ABOV Semiconductor ("ABOV") reserves the right to make changes, corrections, enhancement
+                             s, 
+                      27     ; *modifications, and improvements to ABOV products and/or to this document at any time wit
+                             hout notice. 
+                      28     ; *ABOV does not give warranties as to the accuracy or completeness of the information incl
+                             uded herein.
+                      29     ; *Purchasers should obtain the latest relevant information of ABOV products before placing
+                              orders. 
+                      30     ; *Purchasers are entirely responsible for the choice, selection, and use of ABOV products 
+                             and 
+                      31     ; *ABOV assumes no liability for application assistance or the design of purchasers' produc
+                             ts. No license, 
+                      32     ; *express or implied, to any intellectual property rights is granted by ABOV herein. 
+                      33     ; *ABOV disclaims all express and implied warranties and shall not be responsible or
+                      34     ; *liable for any injuries or damages related to use of ABOV products in such unauthorized 
+                             applications. 
+                      35     ; *ABOV and the ABOV logo are trademarks of ABOV.
+                      36     ; *All other product or service names are the property of their respective owners. 
+                      37     ; *Information in this document supersedes and replaces the information previously
+                      38     ; *supplied in any former versions of this document.
+                      39     ; *2020 ABOV Semiconductor  All rights reserved
+                      40     ; *
+                      41     ; */
+                      42     ; 
+                      43     ; /* Includes ------------------------------------------------------------------*/
+                      44     ; #include    "typedef.h"
+                      45     ; #include    "Intrins.h"
+                      46     ; #include    "delay.h"       //
+                      47     ; /* Private Pre-processor Definition & Macro ----------------------------------*/
+                      48     ; /* Private Typedef -----------------------------------------------------------*/
+                      49     ; /* Private Variable ----------------------------------------------------------*/
+                      50     ; /* Private Function Prototype ------------------------------------------------*/
+A51 MACRO ASSEMBLER  DELAY                                                                04/10/2026 17:18:33 PAGE     2
+
+                      51     ; /* Public Variable -----------------------------------------------------------*/
+                      52     ; /* Public Function -----------------------------------------------------------*/
+                      53     ; /**
+                      54     ; * @brief    System NOP 4us Delay rountine. (MCLK = 4MHZ)
+                      55     ; * @note     1 machine cycle comprises 2 system clock cycles. (@ABOV 96 Core Series)
+                      56     ; *           16 system clock delay
+                      57     ; * @param    None
+                      58     ; * @return   None
+                      59     ; */
+                      60     ; volatile void NOP_4us_Delay(void)
+                      61     
+----                  62             RSEG  ?PR?NOP_4us_Delay?DELAY
+0000                  63     NOP_4us_Delay:
+                      64                             ; SOURCE LINE # 49
+                      65     ; {
+                      66                             ; SOURCE LINE # 50
+                      67     ;     // ACALL, LCALL : 2 cycle => 4 system clock cycle
+                      68     ;     NOP; NOP; NOP; NOP;     // NOP : 1 cycle => 2 sys. clock => 8 sys. clk
+                      69                             ; SOURCE LINE # 52
+0000 00               70             NOP     
+0001 00               71             NOP     
+0002 00               72             NOP     
+0003 00               73             NOP     
+                      74     ;     // RET : 2 cycle => 4 system clock cycle
+                      75     ;     // 16 sys. clk @4MHZ = 0.25us x 16 = 4us
+                      76     ; }
+                      77                             ; SOURCE LINE # 55
+0004 22               78             RET     
+                      79     ; END OF NOP_4us_Delay
+                      80     
+                      81     ; /**
+                      82     ; * @brief    System NOP 20us Delay rountine. (MCLK = 4MHz)
+                      83     ; * @note     1 machine cycle comprises 2 system clock cycles. (@ABOV 96 Core Series)
+                      84     ; *           160 system clock delay
+                      85     ; *           1 machine cycle can be added depending on code optimization.
+                      86     ; *
+                      87     ; *           ex1)    MOV R7,#(Low byte of delay)
+                      88     ; *                   MOV R6,#(high byte of delay)
+                      89     ; *                   LCALL   NOP_20us_Delay
+                      90     ; *
+                      91     ; *           ex2)    MOV A,#(Low byte of delay) // Lower byte and higher byte are the same
+                             .
+                      92     ; *                   MOV R7,A
+                      93     ; *                   MOV R6,A
+                      94     ; *                   LCALL   NOP_20us_Delay
+                      95     ; *
+                      96     ; * @param    delay : unsigned int 1~65,355 (delay) * 10us (@System clock = 4MHz)
+                      97     ; * @return   None
+                      98     ; */
+                      99     ; volatile void NOP_20us_Delay(unsigned int delay)
+                     100     
+----                 101             RSEG  ?PR?_NOP_20us_Delay?DELAY
+0000                 102     _NOP_20us_Delay:
+                     103             USING   0
+                     104                             ; SOURCE LINE # 74
+                     105     ; {
+                     106                             ; SOURCE LINE # 75
+                     107     ;     // mov r7 <- low byte of delay      // 1cycle
+                     108     ;     // mov r6 <- high byte of delay     // 1cycle
+                     109     ;     // lcall NOP_20us_Delay             // 2cycle
+                     110     ;     
+                     111     ;     // dummy assignment to avoid warning
+                     112     ;     // 'unreferenced local variable'
+                     113     ;     // Reference Link : http://www.keil.com/support/docs/2622.htm
+                     114     ;     // delay -> [r6:r7]
+                     115     ;     
+A51 MACRO ASSEMBLER  DELAY                                                                04/10/2026 17:18:33 PAGE     3
+
+                     116     ;     delay = delay;  // dummy
+                     117                             ; SOURCE LINE # 85
+                     118     ;                     
+                     119     ;     #pragma asm
+                     120     ;         lcall   NOP_4us_Delay
+0000 120000   F      121               lcall   NOP_4us_Delay
+                     122     ;         lcall   NOP_4us_Delay
+0003 120000   F      123               lcall   NOP_4us_Delay
+                     124     ;         lcall   NOP_4us_Delay
+0006 120000   F      125               lcall   NOP_4us_Delay
+                     126     ;         clr     c                           // 1cycle
+0009 C3              127               clr     c                            
+                     128     ;         mov     a,r7                        // 1cycle
+000A EF              129               mov     a,r7                         
+                     130     ;         subb    a,#2                        // 1cycle
+000B 9402            131               subb    a,#2                         
+                     132     ;         mov     r7,a                        // 1cycle
+000D FF              133               mov     r7,a                         
+                     134     ;         mov     a,r6                        // 1cycle
+000E EE              135               mov     a,r6                         
+                     136     ;         subb    a,#0                        // 1cycle
+000F 9400            137               subb    a,#0                         
+                     138     ;         mov     r6,a                        // 1cycle
+0011 FE              139               mov     r6,a                         
+                     140     ;         jc     _nop_20us_delay_loop_end     // 2cycle
+0012 401B            141               jc     _nop_20us_delay_loop_end      
+                     142     ;         
+                     143               
+                     144     ;     _nop_20us_delay_loop:
+0014                 145               _nop_20us_delay_loop:
+                     146     ;         lcall   NOP_4us_Delay
+0014 120000   F      147               lcall   NOP_4us_Delay
+                     148     ;         lcall   NOP_4us_Delay
+0017 120000   F      149               lcall   NOP_4us_Delay
+                     150     ;         lcall   NOP_4us_Delay
+001A 120000   F      151               lcall   NOP_4us_Delay
+                     152     ;         nop
+001D 00              153               nop
+                     154     ;         nop
+001E 00              155               nop
+                     156     ;         nop
+001F 00              157               nop
+                     158     ;         nop
+0020 00              159               nop
+                     160     ;         nop
+0021 00              161               nop
+                     162     ;         nop
+0022 00              163               nop
+                     164     ;         nop
+0023 00              165               nop
+                     166     ;         
+                     167               
+                     168     ;         clr     c                           // 1cycle
+0024 C3              169               clr     c                            
+                     170     ;         mov     a,r7                        // 1cycle
+0025 EF              171               mov     a,r7                         
+                     172     ;         subb    a,#1                        // 1cycle
+0026 9401            173               subb    a,#1                         
+                     174     ;         mov     r7,a                        // 1cycle
+0028 FF              175               mov     r7,a                         
+                     176     ;         mov     a,r6                        // 1cycle
+0029 EE              177               mov     a,r6                         
+                     178     ;         subb    a,#0                        // 1cycle
+002A 9400            179               subb    a,#0                         
+                     180     ;         mov     r6,a                        // 1cycle
+002C FE              181               mov     r6,a                         
+A51 MACRO ASSEMBLER  DELAY                                                                04/10/2026 17:18:33 PAGE     4
+
+                     182     ;         jnc     _nop_20us_delay_loop        // 2cycle
+002D 50E5            183               jnc     _nop_20us_delay_loop         
+                     184     ; 
+                     185               
+                     186     ;     _nop_20us_delay_loop_end:
+002F                 187               _nop_20us_delay_loop_end:
+                     188     ;         nop                                 // 1cycle
+002F 00              189               nop                                  
+                     190     ;         
+                     191               
+                     192     ;     #pragma endasm
+                     193     ;                                             // ret 2cycle
+                     194     ; }
+                     195                             ; SOURCE LINE # 126
+0030 22              196             RET     
+                     197     ; END OF _NOP_20us_Delay
+                     198     
+                     199             END
+A51 MACRO ASSEMBLER  DELAY                                                                04/10/2026 17:18:33 PAGE     5
+
+SYMBOL TABLE LISTING
+------ ----- -------
+
+
+N A M E                    T Y P E  V A L U E   ATTRIBUTES
+
+?PR?NOP_4US_DELAY?DELAY .  C SEG    0005H       REL=UNIT
+?PR?_NOP_20US_DELAY?DELAY  C SEG    0031H       REL=UNIT
+DELAY . . . . . . . . . .  N NUMB   -----       
+NOP_4US_DELAY . . . . . .  C ADDR   0000H   R   SEG=?PR?NOP_4US_DELAY?DELAY
+_NOP_20US_DELAY . . . . .  C ADDR   0000H   R   SEG=?PR?_NOP_20US_DELAY?DELAY
+_NOP_20US_DELAY_LOOP. . .  C ADDR   0014H   R   SEG=?PR?_NOP_20US_DELAY?DELAY
+_NOP_20US_DELAY_LOOP_END.  C ADDR   002FH   R   SEG=?PR?_NOP_20US_DELAY?DELAY
+
+
+REGISTER BANK(S) USED: 0 
+
+
+ASSEMBLY COMPLETE.  0 WARNING(S), 0 ERROR(S)

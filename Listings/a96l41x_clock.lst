@@ -1,0 +1,183 @@
+C51 COMPILER V9.54   A96L41X_CLOCK                                                         04/10/2026 17:18:31 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE A96L41X_CLOCK
+OBJECT MODULE PLACED IN .\Objects\a96l41x_clock.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE src\a96l41x_clock.c LARGE OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PR
+                    -INT(.\Listings\a96l41x_clock.lst) TABS(2) OBJECT(.\Objects\a96l41x_clock.obj)
+
+line level    source
+
+   1          /**
+   2          *   @file       a96l41x_clock.c
+   3          *   @brief      A96L41x System clock peripheral function 
+   4          *   @author     Application Team, ABOV Semiconductor Co., Ltd.
+   5          *   @version    V1.00
+   6          *   @date       29. MAY. 2020
+   7          *
+   8          * Copyright(C) 2020, ABOV Semiconductor
+   9          * All rights reserved.
+  10          *
+  11          ********************************************************************************
+  12          * ABOV Disclaimer
+  13          *
+  14          *IMPORTANT NOTICE - PLEASE READ CAREFULLY
+  15          *ABOV Semiconductor ("ABOV") reserves the right to make changes, corrections, enhancements, 
+  16          *modifications, and improvements to ABOV products and/or to this document at any time without notice. 
+  17          *ABOV does not give warranties as to the accuracy or completeness of the information included herein.
+  18          *Purchasers should obtain the latest relevant information of ABOV products before placing orders. 
+  19          *Purchasers are entirely responsible for the choice, selection, and use of ABOV products and 
+  20          *ABOV assumes no liability for application assistance or the design of purchasers' products. No license, 
+  21          *express or implied, to any intellectual property rights is granted by ABOV herein. 
+  22          *ABOV disclaims all express and implied warranties and shall not be responsible or
+  23          *liable for any injuries or damages related to use of ABOV products in such unauthorized applications. 
+  24          *ABOV and the ABOV logo are trademarks of ABOV.
+  25          *All other product or service names are the property of their respective owners. 
+  26          *Information in this document supersedes and replaces the information previously
+  27          *supplied in any former versions of this document.
+  28          *2020 ABOV Semiconductor  All rights reserved
+  29          *
+  30          */
+  31          
+  32          /*******************************************************************************
+  33          * Included File
+  34          *******************************************************************************/
+  35          #include "a96l41x_clock.h"
+  36          #include "delay.h"
+  37          
+  38          /*******************************************************************************
+  39          * Private Pre-processor Definition & Macro
+  40          *******************************************************************************/
+  41          
+  42          /*******************************************************************************
+  43          * Private Typedef
+  44          *******************************************************************************/
+  45          
+  46          /*******************************************************************************
+  47          * Private Variable
+  48          *******************************************************************************/
+  49          
+  50          /*******************************************************************************
+  51          * Private Function Prototype
+  52          *******************************************************************************/
+  53          
+  54          /*******************************************************************************
+C51 COMPILER V9.54   A96L41X_CLOCK                                                         04/10/2026 17:18:31 PAGE 2   
+
+  55          * Public Function
+  56          *******************************************************************************/
+  57          
+  58          /**
+  59          * @brief  Initialize System Clock peripheral
+  60          * @param    clock_sel This parameter contains the selection of clock.
+  61          * @return   None
+  62          */
+  63          void Clock_Initial(uint8_t clock_sel)
+  64          {
+  65   1          uint8_t temp_reg;
+  66   1        if(clock_sel <= HFI4_DIV1)
+  67   1        {
+  68   2          /* Internal 4Mhz RC OSC for system clock */
+  69   2          SCCR  = SCCR_IRC_4MHZ;            
+  70   2          /* Internal RC Oscillator Post-divider Select INT-RC/n (32/n MHz) */
+  71   2          temp_reg = OSCCR;
+  72   2          temp_reg  &= ~(0x3 << 3);
+  73   2          temp_reg  |= (clock_sel << 3) | OSCCR_HIRCE_EN;
+  74   2          OSCCR = temp_reg;
+  75   2        }
+  76   1        else if(clock_sel == LFI)
+  77   1        {
+  78   2          /* Internal 32khz RC OSC for system clock */
+  79   2            OSCCR |= OSCCR_LFIRCE_EN;
+  80   2              NOP_20us_Delay(5000);
+  81   2          SCCR  = SCCR_IRC_32KHZ; 
+  82   2          temp_reg = OSCCR;
+  83   2          temp_reg  |= OSCCR_HIRCE_DIS;
+  84   2          OSCCR = temp_reg;
+  85   2        }
+  86   1      }
+  87          
+  88          /**
+  89          * @brief  Controls clock frequency selection and oscillator operation.
+  90          * @param    osc_sel   This parameter contains the selection of Oscillator.
+  91          *
+  92          *         - HFIRC  = 0
+  93          *         - LFIRC  = 1
+  94          * @param    hsirc_div   This parameter contains the Post-divider Selection of Internal RC Oscillator.
+  95          *
+  96          *         - HFIRC4_DIV8 = 0
+  97          *         - HFIRC4_DIV4 = 1 
+  98          *         - HFIRC4_DIV2 = 2
+  99          *         - HFIRC4_DIV1 = 3
+ 100          * @param    osc_enable  This parameter contains the enable of oscillator.
+ 101          *
+ 102          *         - OSC_DIS  = 0
+ 103          *         - OSC_EN   = 1
+ 104          * @return   None
+ 105          */
+ 106          void Clock_ConfigureOSC(uint8_t osc_sel, uint8_t hsirc_div, uint8_t osc_enable)
+ 107          {
+ 108   1        uint8_t temp_reg;
+ 109   1        
+ 110   1        if(osc_sel == LFIRC)
+ 111   1        {
+ 112   2              if(osc_enable == OSC_DIS)
+ 113   2              {
+ 114   3            temp_reg = OSCCR;
+ 115   3                  /* Disable Low Frequency(32kHz) Internal RC OSC for system clock */
+ 116   3                  temp_reg &= ~(osc_enable << 7);
+C51 COMPILER V9.54   A96L41X_CLOCK                                                         04/10/2026 17:18:31 PAGE 3   
+
+ 117   3              }
+ 118   2              else if(osc_enable == OSC_EN)
+ 119   2              {
+ 120   3                  /* Enable Low Frequency(32kHz) Internal RC OSC for system clock */
+ 121   3                  OSCCR |= (0x1 << 7);          
+ 122   3              }
+ 123   2        }
+ 124   1        else if(osc_sel == HFIRC)
+ 125   1        {
+ 126   2              if(osc_enable == OSC_DIS)
+ 127   2              {
+ 128   3                  /* Disable High Frequency(4MHz) Internal RC OSC for system clock */
+ 129   3                  OSCCR |= (0x1 << 2);          
+ 130   3              }
+ 131   2              else if(osc_enable == OSC_EN)
+ 132   2              {
+ 133   3            temp_reg = OSCCR;
+ 134   3                  /* Enable High Frequency(4MHz) Internal RC OSC for system clock */
+ 135   3                  temp_reg &= ~(osc_enable << 2);
+ 136   3                  
+ 137   3                  temp_reg &= ~(0x3<<3);
+ 138   3                  temp_reg |= (hsirc_div<<3);
+ 139   3            
+ 140   3            OSCCR = temp_reg;
+ 141   3              }
+ 142   2        }
+ 143   1      }
+ 144          
+ 145          /**
+ 146          * @brief    Get Systemclock frequency(speed)
+ 147          * @param      None
+ 148          * @return   The value of system clock(frequency)
+ 149          */
+ 150          uint32_t Clock_GetSystemFreq(void)
+ 151          {
+ 152   1        return SYSTEM_CLOCK;
+ 153   1      }
+ 154          
+ 155          /* --------------------------------- End Of File ------------------------------ */
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    120    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

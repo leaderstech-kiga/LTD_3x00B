@@ -1,0 +1,2602 @@
+C51 COMPILER V9.54   MAIN                                                                  04/10/2026 17:18:34 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE src\main.c LARGE OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Lis
+                    -tings\main.lst) TABS(2) OBJECT(.\Objects\main.obj)
+
+line level    source
+
+   1          /***************************************************************************//**
+   2          *   @file       Main.c
+   3          *   @brief      A96L41x Main  function file 
+   4          *   @author     Application Team, ABOV Semiconductor Co., Ltd.
+   5          *   @version    V1.00
+   6          *   @date       29. MAY. 2020
+   7          *
+   8          * Copyright(C) 2019, ABOV Semiconductor
+   9          * All rights reserved.
+  10          *
+  11          *   @mainpage   Project : A96L41x (20TSSOP) 
+  12          *   - Introduction: This is a guide program for using A96L41x .
+  13          *
+  14          *   @section    Compiler Version
+  15          *   - uVision C51 Compiler ( Version 5.13 )
+  16          *
+  17          *   @section    Configure Option
+  18          *   - Code Read Protection :                Disable
+  19          *   - Code Write Protection :               Disable
+  20          *   - Vector Area (00H~FFH) Protection :    Disable
+  21          *   - Select RESETB pin :                   Disable
+  22          *
+  23          *   @section    Clock Setting
+  24          *   - HFIRC OSC/1 (Internal 4Mhz) 
+  25          *
+  26          *   @section    Project Program Version : V1.00
+  27          *   @section    Modify Infomation
+  28          *   - V1.00 :    First Start.    
+  29          *
+  30          *   @section    Caution
+  31          *   - Nothing special.
+  32          *
+  33          *   @section Common
+  34          *   - ABOV Semiconductor Co.,Ltd.
+  35          *   - URL : <http://www.abovsemi.com>
+  36          *
+  37          ********************************************************************************
+  38          * ABOV Disclaimer
+  39          *
+  40          *IMPORTANT NOTICE - PLEASE READ CAREFULLY
+  41          *ABOV Semiconductor ("ABOV") reserves the right to make changes, corrections, enhancements, 
+  42          *modifications, and improvements to ABOV products and/or to this document at any time without notice. 
+  43          *ABOV does not give warranties as to the accuracy or completeness of the information included herein.
+  44          *Purchasers should obtain the latest relevant information of ABOV products before placing orders. 
+  45          *Purchasers are entirely responsible for the choice, selection, and use of ABOV products and 
+  46          *ABOV assumes no liability for application assistance or the design of purchasers' products. No license, 
+  47          *express or implied, to any intellectual property rights is granted by ABOV herein. 
+  48          *ABOV disclaims all express and implied warranties and shall not be responsible or
+  49          *liable for any injuries or damages related to use of ABOV products in such unauthorized applications. 
+  50          *ABOV and the ABOV logo are trademarks of ABOV.
+  51          *All other product or service names are the property of their respective owners. 
+  52          *Information in this document supersedes and replaces the information previously
+  53          *supplied in any former versions of this document.
+  54          *2020 ABOV Semiconductor  All rights reserved
+C51 COMPILER V9.54   MAIN                                                                  04/10/2026 17:18:34 PAGE 2   
+
+  55          *
+  56          */
+  57          
+  58          
+  59          
+  60          /* Includes ------------------------------------------------------------------*/
+  61          #include    "Intrins.h"
+  62          #include    "delay.h"     //
+  63          #include "a96l41x_gpio.h"
+  64          #include "a96l41x_clock.h"
+  65          
+  66          #include "a96l41x_adc.h"
+  67          #include "a96l41x_opamp.h"
+  68          #include "a96l41x_usart.h"
+  69          
+  70          #include "a96l41x_usart_spi.h"
+  71          #include "a96l41x_timer0.h"
+  72          #include "a96l41x_timer1.h"
+  73          #include "a96l41x_timer2.h"
+  74          
+  75          
+  76          #include "main.h"
+  77          #include "audio.h"
+  78          #include "flash.h"
+  79          
+  80          
+  81          /* Private Pre-processor Definition & Macro ----------------------------------*/
+  82          /* Private Typedef -----------------------------------------------------------*/
+  83          /* Private Variable ----------------------------------------------------------*/
+  84          
+  85          //////////////////////////////////////////////////////////////////////////////////////////////////////////
+             -////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+             -////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+             -////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+             -////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+             -//////////////////////////////////////////////////////
+  86          
+  87          //#define Dust_1amp_Val_old 3 // opamp  1∞≥ bat πÃ √º≈©Ω√ adc ∞™ ≥∑¿Ω
+  88          //#define Dust_1amp_Val_old 5 // 240119 , √‡¿˚ ∞®µµ ∫∏¡§ , 5¿œ∂ß 2∞≥ æ⁄«¡ »∞º∫»≠Ω√ 100 ¿Ã«œ∞™ √¯¡§ 
+  89          //#define Dust_1amp_Val_old 4 // 240624, √‡¿˚ ∞®µµ ∫∏¡§ , 240223 πˆ¿¸∫∏¥Ÿ µ–∞®«— ¡¶«∞øÎ 
+  90          #define Dust_1amp_Val_old 3 // 240624, √‡¿˚ ∞®µµ ∫∏¡§ , Stand_along_20240624_1 πˆ¿¸∫∏¥Ÿ µ–∞®«— ¡¶«∞øÎ 
+  91          
+  92          //#define Dust_Val_old            110   // 10%ø° µø¿€«œµµ∑œ º≥¡§ 
+  93          //#define Dust_Val_old            170   // 10%ø° µø¿€«œµµ∑œ º≥¡§   , 230504 ¥‹µ∂«¸ πŒ∞® ¿Â∫Ò ¥Î¿¿¿∏∑Œ ∞®µµ 10% ≥
+             -∑√„
+  94          //#define Dust_Val_old            150   // 10%ø° µø¿€«œµµ∑œ º≥¡§   , 240223  µ–∞®«—¡¶«∞ ºˆ¡§øÎ
+  95          //#define Dust_Val_old            130   // 10%ø° µø¿€«œµµ∑œ º≥¡§   , 240223 πˆ¿¸∫∏¥Ÿ µ–∞®«— ¡¶«∞øÎ 
+  96          //#define Dust_Val_old            110   // 10%ø° µø¿€«œµµ∑œ º≥¡§   , Stand_along_20240624_1 πˆ¿¸∫∏¥Ÿ µ–∞®«— ¡¶«∞
+             -øÎ 
+  97          //#define Dust_Val_old            90   // 10%ø° µø¿€«œµµ∑œ º≥¡§   , Stand_along_20240624_2 πˆ¿¸∫∏¥Ÿ µ–∞®«— ¡¶«∞ø
+             -Î 
+  98          #define Dust_Val_old            70   // 10%ø° µø¿€«œµµ∑œ º≥¡§   , Stand_along_20250122_1 πˆ¿¸∫∏¥Ÿ µ–∞®«— ¡¶«∞øÎ 
+  99          
+ 100          ////230120 Ω√∞¢«¸ ∞®µµ ¬˜¿Ã∑Œ ¿Œ«— ¿Â∫Ò ∫–∫∞∞˙ ∞®µµ∞™ ¿Á ¿˚øÎ
+ 101          //#define Dust_Visual_1amp_Val  10// opamp  1∞≥ bat πÃ √º≈©Ω√ adc ∞™ ≥∑¿Ω
+ 102          //#define Dust_Visual_Val           200   // 10%ø° µø¿€«œµµ∑œ º≥¡§ 
+ 103          /////////////////////////////////////////////////////
+ 104          
+ 105          ////230811 Ω√∞¢«¸ w¿˙«◊ 10ø» ø¿ª¿‘ ¿∏∑Œ  ¿Œ«— ¿Â∫Ò ∫–∫∞∞˙ ∞®µµ∞™ ¿Á ¿˚øÎ
+ 106          #define Dust_Visual_1amp_Val  5// opamp  1∞≥ bat πÃ √º≈©Ω√ adc ∞™ ≥∑¿Ω
+ 107          //#define Dust_Visual_Val           150   // 10%ø° µø¿€«œµµ∑œ º≥¡§ 
+ 108          #define Dust_Visual_Val           130   // 240223  µ–∞®«—¡¶«∞ ºˆ¡§øÎ
+C51 COMPILER V9.54   MAIN                                                                  04/10/2026 17:18:34 PAGE 3   
+
+ 109          /////////////////////////////////////////////////////
+ 110          
+ 111          
+ 112          uint8_t visual_type = 0;
+ 113          
+ 114          uint16_t Dust_Val, Dust_1amp_Val;
+ 115          
+ 116          ////230120 Ω√∞¢øµ ∞®µµ ¬˜¿Ãø¿ ¿Œ«— ¿Â∫Ò ∫–∫∞∞˙ ∞®µµ∞™ ¿Á ¿˚øÎ øœ∑·
+ 117          
+ 118          /*2112ø˘ º≥¡§∞™
+ 119          #define Temp_det_Val    677     //  -> ¿Ã∞™ø° µµ¥ﬁ«œ∏È adc∏¶ 1√ ø° «—π¯ «—¥Ÿ. »≠¿Á ∞Ê∫∏ ±Ÿ√≥∞™¿”¿∏∑Œ 8√ ≥™ ±‚¥
+             -Ÿ∏Æ¡ˆ æ ∞‘ «œ±‚ ¿ß«‘¿Ã¥Ÿ,
+ 120                                                          //  -> √¯¡§ƒ° ∞™∫∏¥Ÿ 3¡§µµ ¿€∞‘ «—¥Ÿ.
+ 121          #define Temp_Val            680     //»∏∑Œ ∫Ø∞Ê»ƒ ∞™( 70√  µø¿€)  , 73 µµ
+ 122           */
+ 123           
+ 124           /*22≥‚ 1ø˘ º≥¡§∞™*/  // µø¿€  Ω√∞£¿ª 25√  ¥Á∞‹¥ﬁ∂Û∞Ì ø‰√ª   22.01.26
+ 125                                          //  21≥‚11ø˘10¿œ Ω√«Ë±‚¡ÿ 25µµ∏¶ ¥Û±‚∑¡∏È     22¡§µµ ∞™¿ª ≥™≈∏≥Ω¥Ÿ.   
+ 126          
+ 127           //#define Temp_det_Val   654     //  -> ¿Ã∞™ø° µµ¥ﬁ«œ∏È adc∏¶ 1√ ø° «—π¯ «—¥Ÿ. »≠¿Á ∞Ê∫∏ ±Ÿ√≥∞™¿”¿∏∑Œ 8√ ≥™ 
+             -±‚¥Ÿ∏Æ¡ˆ æ ∞‘ «œ±‚ ¿ß«‘¿Ã¥Ÿ,
+ 128                                                          //  -> √¯¡§ƒ° ∞™∫∏¥Ÿ 3¡§µµ ¿€∞‘ «—¥Ÿ.
+ 129          //#define Temp_Val            657     //»∏∑Œ ∫Ø∞Ê»ƒ ∞™( 70√  µø¿€)  , 73 µµ
+ 130           
+ 131           
+ 132            /*22≥‚ 1ø˘27  º≥¡§∞™*/  // µø¿€  Ω√∞£¿ª 25√  ¥Á∞‹¥ﬁ∂Û∞Ì ø‰√ª   22.01.26 -> 10√ ¡§µµ ¥ı ø‰√ª
+ 133                                          //  21≥‚11ø˘10¿œ Ω√«Ë±‚¡ÿ 25µµ∏¶ ¥Û±‚∑¡∏È     22¡§µµ ∞™¿ª ≥™≈∏≥Ω¥Ÿ.    -> 22 √ﬂ∞° ≥∑√„
+ 134          
+ 135          // #define Temp_det_Val   632     //  -> ¿Ã∞™ø° µµ¥ﬁ«œ∏È adc∏¶ 1√ ø° «—π¯ «—¥Ÿ. »≠¿Á ∞Ê∫∏ ±Ÿ√≥∞™¿”¿∏∑Œ 8√ ≥™ 
+             -±‚¥Ÿ∏Æ¡ˆ æ ∞‘ «œ±‚ ¿ß«‘¿Ã¥Ÿ,
+ 136                                                          //  -> √¯¡§ƒ° ∞™∫∏¥Ÿ 3¡§µµ ¿€∞‘ «—¥Ÿ.
+ 137          //#define Temp_Val            635     //»∏∑Œ ∫Ø∞Ê»ƒ ∞™( 70√  µø¿€)  , 73 µµ
+ 138          
+ 139          /*22≥‚ 2ø˘7¿œ º≥¡§∞™*/  // µø¿€  Ω√∞£¿ª 25√  ¥Á∞‹¥ﬁ∂Û∞Ì ø‰√ª   22.01.26 -> ¿˚øÎ∞™¿Ã 10√  ¡§µµ ª°∏Æ µø¿€«ÿ 
+             -¡ﬂ∞£∞™ ø‰√ª 
+ 140                                          //  Temp_Val = 657 , 635 ¡ﬂ∞£∞™ 646 ,  Temp_det_Val = Temp_Val - 3
+ 141                                          
+ 142          #define Temp_det_Val    643     //  -> ¿Ã∞™ø° µµ¥ﬁ«œ∏È adc∏¶ 1√ ø° «—π¯ «—¥Ÿ. »≠¿Á ∞Ê∫∏ ±Ÿ√≥∞™¿”¿∏∑Œ 8√ ≥™ ±‚¥
+             -Ÿ∏Æ¡ˆ æ ∞‘ «œ±‚ ¿ß«‘¿Ã¥Ÿ,
+ 143                                                          //  -> √¯¡§ƒ° ∞™∫∏¥Ÿ 3¡§µµ ¿€∞‘ «—¥Ÿ.
+ 144          #define Temp_Val            646     //»∏∑Œ ∫Ø∞Ê»ƒ ∞™( 70√  µø¿€)  , 73 µµ
+ 145          
+ 146          #define Temp_Low_Val    500     //53µµ
+ 147          #define Temp_err_Val      960   //145 ¿ÃªÛ ø°∑Ø
+ 148          #define open_Val_L          150   //
+ 149          #define open_Val_H          1000    //
+ 150          
+ 151          #define  ADC_BUFFER_SIZE 16
+ 152          
+ 153          #define uart_debug_On   1
+ 154          #define uart_debug_Off  0
+ 155          
+ 156          uint8_t  uart_debug = uart_debug_On ;
+ 157          //uint8_t  uart_debug = 0 ;
+ 158          
+ 159          //√ ±‚ µπˆ±◊ ¡¯¿‘ ∏µÂ º±≈√
+ 160          uint8_t  start_uart_debug = 1 ; //uart µπˆ±◊ ∏µÂ ¡¯¿‘ ∞°¥… .
+ 161          //uint8_t  start_uart_debug = 0 ;
+ 162          
+ 163          
+ 164          /* 2022 11 17 ∫£≈Õ∏Æ ∫Ò±≥∞™ ∫Ø∞Ê */
+ 165          
+C51 COMPILER V9.54   MAIN                                                                  04/10/2026 17:18:34 PAGE 4   
+
+ 166          uint16_t  Bat_Low = 265;    //2.65V 
+ 167          uint16_t  Bat_high = 270;   // 2.7V  
+ 168          
+ 169          
+ 170          uint8_t deviceID[3];
+ 171          uint8_t SystemStatus;
+ 172          
+ 173          uint16_t adc_time = 8 * 5;  // adc time , 0.192√  ¡÷±‚
+ 174          uint16_t ck_led_time  = 56 * 5  + 12; // 8 * 7 √  , , 0.192√  ¡÷±‚ > 0.192 * 5* 56  = 53.7  -> 2.3√  ∏¿⁄∏ß
+             - : 0.192 * 12 ¥ı«ÿ¡‹
+ 175          uint16_t Bat_al_time  = 280  * 5  + 58 ;  // 280 √  , , 0.192√  ¡÷±‚  -> 0.192 * 5* 280  = 268.8  -> 11.2√  
+             -∏¿⁄∏ß : 0.192 * 58 ¥ı«ÿ¡‹  
+ 176          
+ 177          /* [BUG-09 NOTE] fire_off_cnt: Intended as alarm-off counter but never read.
+ 178             Reserved for future auto-cancel logic. */
+ 179          
+ 180          uint8_t  fire_off_cnt ;
+ 181          uint8_t  bat_first = 1 ;
+ 182          
+ 183          
+ 184          // Audio Data : 8000bps , 8bit 
+ 185          uint16_t Audio_length;
+ 186          uint16_t Audio_addr;
+ 187          uint8_t Audio_start;
+ 188          uint8_t Audio_start_address;
+ 189          uint16_t Audio_max_length;
+ 190          /* [BUG-06 FIX] Duplicate declaration removed - SystemStatus already declared at line 168 */
+ 191          /* BEFORE: uint8_t SystemStatus; */
+ 192          /* uint8_t SystemStatus; */
+ 193          
+ 194          uint8_t EM_AL_Status = 0;
+ 195          
+ 196          uint16_t  Audio1_Address  = 0x0;
+ 197          uint16_t  Audio1_length  = 10801;
+ 198          uint8_t  Audio1_runtime  = 1;
+ 199          uint16_t  Audio2_Address  = 0x2baa;
+ 200          uint16_t  Audio2_length  = 21478;
+ 201          uint8_t  Audio2_runtime  = 1;
+ 202          uint16_t  Audio3_Address  = 0x8108;
+ 203          uint16_t  Audio3_length  = 24324;
+ 204          uint8_t  Audio3_runtime  = 1;
+ 205          
+ 206          uint16_t  ADC_wait = 8;
+ 207          uint16_t  charge_wait= 10;
+ 208          uint16_t  bat_alarm_wait= 10;
+ 209          uint16_t  alarm_off_wait= 340;
+ 210          
+ 211          uint16_t bat_val;
+ 212          uint32_t Visu_data;
+ 213          uint32_t Dust_o_data;
+ 214          uint32_t Dust_data;
+ 215          uint32_t Dust_Sum_data;
+ 216          uint16_t Tmp_data;
+ 217          uint16_t Dust_Count;
+ 218          uint16_t Temp_Count;
+ 219          uint16_t Al_Stop_key_Count;
+ 220          
+ 221          uint16_t  init_Dust_val ;
+ 222          uint16_t  delta_Dust_val = 0 ;
+ 223          
+ 224          uint16_t system_count = 0;
+ 225          uint16_t Low_Bat_count = 0;
+C51 COMPILER V9.54   MAIN                                                                  04/10/2026 17:18:34 PAGE 5   
+
+ 226          
+ 227          uint16_t  Fire_Alarm_LED = 0;
+ 228          uint16_t  Bat_Alarm_LED = 0;
+ 229          
+ 230          uint8_t  SYS_mode , ADC_mode , Bat_mode;
+ 231          
+ 232          uint16_t temp_data[ADC_MAX_BUFFER_SIZE];
+ 233          
+ 234          /* [BUG-01 FIX] Buffer overflow: array size 8->10 to match charge_wait(10) */
+ 235          /* BEFORE: uint16_t temp_charge_data[8]; */
+ 236          uint16_t temp_charge_data[10];
+ 237          uint16_t charge_data_Avr;
+ 238          uint32_t temp_charge_data_sum;
+ 239          
+ 240          uint16_t adc_read_val;
+ 241          uint8_t ADC_port ;
+ 242          
+ 243          uint8_t uart_pkey_cnt;
+ 244          
+ 245          
+ 246          uint8_t Dust_MODE[10] = "Dust_MODE:";
+ 247          uint8_t Visu_MODE[10] = "Visu_MODE:";
+ 248          uint8_t Temp_MODE[10] = "Temp_MODE:";
+ 249          
+ 250          uint8_t ADC[4] = "ADC:";
+ 251          uint8_t CHR[4] = "CHR:";
+ 252          uint8_t INF[4] = "INF:";
+ 253          
+ 254          uint8_t Dust[5] = "Dust:";
+ 255          uint8_t Dust_ori[7] = "Dust_O:";
+ 256          uint8_t Dust_avr[7] = "Dust_A:";
+ 257          uint8_t Temp[5] = "Temp:";
+ 258          uint8_t Bat[4] = "Bat:";
+ 259          uint8_t Tab[4] = "    ";
+ 260          uint8_t End[4] = "\n\r";
+ 261          uint8_t int_val ;
+ 262          uint16_t tmp ;
+ 263          
+ 264          uint8_t opamp1[5] = "OPA1:";
+ 265          uint8_t opamp2[5] = "OPA2:";
+ 266          
+ 267          uint8_t Avr[9] = "Average: ";
+ 268          
+ 269          uint8_t Dust_Si_Off[7] = "Si_Off:";
+ 270          uint8_t Dust_Si_On[6] = "Si_On:";
+ 271          uint8_t Dust_Si_Deta[6] = "Si_Da:";
+ 272          
+ 273          uint8_t Dust_Du_Off[7] = "Du_Off:";
+ 274          uint8_t Dust_Du_On[6] = "Du_On:";
+ 275          uint8_t Dust_Du_Deta[6] = "Si_Da:";
+ 276          
+ 277          uint8_t Timer2_cnt;
+ 278          
+ 279          int adc_tmp[10];
+ 280          
+ 281          uint32_t Dust_Low_o_data;       // led off ªÛ≈¬ adc ∞™ op0
+ 282          //#define ext_Optic_Low_Val   10 // opamp1 ø‹∫Œ ±§ø¯ ¿÷¿ªΩ√ low value
+ 283          uint32_t Dust_Low_data;       // led off ªÛ≈¬ adc ∞™ op1
+ 284          
+ 285          #define ext_Optic_Low_Val   1// opamp1 ø‹∫Œ ±§ø¯ ¿÷¿ªΩ√ low value  
+ 286                                                          //  20221106  √®πˆ ∫Ø∞Ê πˆ¿¸ ±‚∫ª∞™¿Ã 2 ¡§µµ ≥Ù¿Ω 
+ 287          #define ext_Optic_High_Val    150 // opamp1 ø‹∫Œ ±§ø¯ ¿÷¿ªΩ√ low value
+C51 COMPILER V9.54   MAIN                                                                  04/10/2026 17:18:34 PAGE 6   
+
+ 288          
+ 289          uint8_t Charge_mode,Charge_mode_cnt = 5 ;   // √‡¿˚ »∞º∫»≠Ω√ 100ms ∞£∞›¿∏∑Œ Charge_mode_cnt ∏∏≈≠ ¥ŸΩ√ ¿–æÓ 
+             -∆Ú±’∞™¿∏∑Œ ¿Á»Æ¿Œ 
+ 290          uint16_t Charge_ch_val ;
+ 291          
+ 292          int j;
+ 293          
+ 294          struct Adc_Val_Def
+ 295          {
+ 296            uint16_t LED_Off_Val;
+ 297            uint16_t LED_On_Val;
+ 298            uint16_t Bat_Val;
+ 299          };
+ 300          
+ 301          struct Adc_Val_Def  Single_Amp_Adc, Dual_Amp_Adc;
+ 302          
+ 303          uint8_t Audio_start =0;
+ 304          /* Public Variable -----------------------------------------------------------*/
+ 305          /* Public Function -----------------------------------------------------------*/
+ 306          
+ 307          /**********************************************************************
+ 308           * @brief   Main program
+ 309           * @param     None
+ 310           * @return      None
+ 311           **********************************************************************/
+ 312          void Main(void)
+ 313          {
+ 314   1        
+ 315   1        int i;
+ 316   1        
+ 317   1        hw_initial_Wait(10);
+ 318   1        
+ 319   1        SystemStatus = SPI_Memory_Check();
+ 320   1        
+ 321   1        ADC_mode = Dust_mode;
+ 322   1        
+ 323   1        Check_Uart_Mode(1);
+ 324   1        
+ 325   1        hw_initial_Wait(10);
+ 326   1        system_count = 0;   
+ 327   1        
+ 328   1        //Bat check start Ω√¿€Ω√
+ 329   1        Bat_Ck();
+ 330   1        
+ 331   1        SYS_mode =  In_Fire_al_mode;
+ 332   1        
+ 333   1        while(1)
+ 334   1        {
+ 335   2      
+ 336   2        //¿¸ø¯ ∞®Ω√ led 56√  , ∫£≈Õ∏Æ √º≈© 
+ 337   2        //////////////////////////////////////////////////////////////////////////////////////////
+ 338   2          
+ 339   2          if(system_count%ck_led_time == 0){
+ 340   3          
+ 341   3            hw_initial_Wait(10);
+ 342   3            LED_G_ON;
+ 343   3            Delay_ms(5);
+ 344   3            LED_G_OFF;
+ 345   3            Bat_Ck();
+ 346   3            hw_initial_Wait(10);
+ 347   3            
+ 348   3          }
+C51 COMPILER V9.54   MAIN                                                                  04/10/2026 17:18:34 PAGE 7   
+
+ 349   2        //////////////////////////////////////////////////////////////////////////////////////////
+ 350   2              
+ 351   2        //ADC check start 8√  
+ 352   2        //////////////////////////////////////////////////////////////////////////////////////////    
+ 353   2          if(system_count%adc_time == 0){
+ 354   3      
+ 355   3            // system √ ±‚»≠ 
+ 356   3            hw_initial_Wait(10);
+ 357   3            
+ 358   3            LED_G_ON;
+ 359   3            Delay_ms(5);
+ 360   3            LED_G_OFF;
+ 361   3            
+ 362   3            if(ADC_mode == Dust_mode){
+ 363   4      
+ 364   4                Dust_ADC_Single(5);
+ 365   4                
+ 366   4            }
+ 367   3            else if(ADC_mode == Temp_mode){
+ 368   4              
+ 369   4          }
+ 370   3            
+ 371   3          hw_initial_Wait(10);
+ 372   3        }
+ 373   2        //ADC check start 8√   end
+ 374   2        //////////////////////////////////////////////////////////////////////////////////////////    
+ 375   2      
+ 376   2        //≥ª∫Œ »≠¿Á »Æ¿Œ
+ 377   2        //////////////////////////////////////////////////////////////////////////////////////////    
+ 378   2        if((SYS_mode ==  In_Fire_al_mode)){
+ 379   3          
+ 380   3          char In_charge_wait = 4;
+ 381   3          
+ 382   3          // system √ ±‚»≠ 
+ 383   3          hw_initial_Wait(10);
+ 384   3          
+ 385   3          // ø¨µø √‚∑¬ 
+ 386   3          Port_SetOutputpin(PORT1, PIN0, 0);
+ 387   3          Delay_ms(100);
+ 388   3          P10 = 1;
+ 389   3            
+ 390   3          while(1){
+ 391   4      
+ 392   4            Fire_Alarm();
+ 393   4            
+ 394   4            if(SYS_mode  == Al_Stop_mode){
+ 395   5              break;
+ 396   5            }
+ 397   4      
+ 398   4            Delay_ms(100);
+ 399   4            
+ 400   4            if(ADC_mode == Dust_mode){
+ 401   5              Dust_data = 0;
+ 402   5              
+ 403   5              //√‡¿˚ 4»∏ Ω«Ω√ 
+ 404   5              for(i=0;i<In_charge_wait;i++){
+ 405   6                Dust_o_data = Dust_ADC_1AMP(5);
+ 406   6                Dust_data = Dust_ADC_2AMP(5);
+ 407   6              
+ 408   6                temp_charge_data[i] = Dust_data - Dust_Low_data;
+ 409   6                
+ 410   6                Delay_ms(5);
+C51 COMPILER V9.54   MAIN                                                                  04/10/2026 17:18:34 PAGE 8   
+
+ 411   6                    
+ 412   6                //Uart Test//
+ 413   6                  if(uart_debug == 1){
+ 414   7                    Uart_Out(3);
+ 415   7                  }
+ 416   6                  else{
+ 417   7                    Uart_Set();
+ 418   7                  }
+ 419   6                  //Uart Test end//
+ 420   6              }
+ 421   5                  
+ 422   5              // √‡¿˚ ∆Ú±’ ∞™ ∞ËªÍ
+ 423   5              temp_charge_data_sum = 0;
+ 424   5              for(i=0;i<In_charge_wait;i++){
+ 425   6                temp_charge_data_sum = temp_charge_data_sum + temp_charge_data[i];
+ 426   6              }
+ 427   5                  
+ 428   5              charge_data_Avr = temp_charge_data_sum / In_charge_wait;
+ 429   5                        
+ 430   5              //Uart Test//
+ 431   5              if(uart_debug == 1){
+ 432   6                Uart_Out_avr(charge_data_Avr);
+ 433   6              }
+ 434   5              else{
+ 435   6                Uart_Set();
+ 436   6              }
+ 437   5              //Uart Test end//
+ 438   5                  
+ 439   5              if(charge_data_Avr > Dust_Val){
+ 440   6                Dust_Count = 0;
+ 441   6                fire_off_cnt = 0;
+ 442   6                SYS_mode =  In_Fire_al_mode;
+ 443   6              }
+ 444   5              else{
+ 445   6                Dust_Count = 0;
+ 446   6                SYS_mode =  Normal_mode;
+ 447   6                Fire_Alarm_LED = 0;
+ 448   6                Bat_Alarm_LED = 0;
+ 449   6                Timer2_Stop();
+ 450   6                Port_SetInputpin(PORT1, PIN0, 0);  // EM IO 
+ 451   6                P10 = 0;
+ 452   6                break;
+ 453   6              } 
+ 454   5            }
+ 455   4        }
+ 456   3          
+ 457   3        // system √ ±‚»≠ 
+ 458   3        hw_initial_Wait(10);
+ 459   3        
+ 460   3      }
+ 461   2        
+ 462   2        //≥ª∫Œ »≠¿Á »Æ¿Œ end
+ 463   2        //////////////////////////////////////////////////////////////////////////////////////////    
+ 464   2        
+ 465   2        // ∞Ê∫∏ ≈◊Ω∫∆Æ 
+ 466   2        //////////////////////////////////////////////////////////////////////////////////////////    
+ 467   2        if((SYS_mode ==  Normal_mode)&(Port_GetInputpinValue(PORT1, PIN2)  == 0)){
+ 468   3          
+ 469   3          // system √ ±‚»≠ 
+ 470   3          hw_initial_Wait(10); 
+ 471   3          
+ 472   3      
+C51 COMPILER V9.54   MAIN                                                                  04/10/2026 17:18:34 PAGE 9   
+
+ 473   3          Port_SetOutputpin(PORT1, PIN0, 0);
+ 474   3          Delay_ms(100);
+ 475   3          P10 = 1;
+ 476   3          
+ 477   3          T2_init();
+ 478   3          Fire_Alarm_LED = 1;
+ 479   3          Bat_Alarm_LED = 0;
+ 480   3          Timer2_Start();
+ 481   3          
+ 482   3          // Ω√«Ë πÊº€ 1»∏ ∏∏ ¡¯«‡ 
+ 483   3          
+ 484   3          //Fire_Alarm();
+ 485   3          
+ 486   3          Audio_Run(Audio3_Address , Audio3_length  , Audio3_runtime);
+ 487   3          
+ 488   3          GLOBAL_INTERRUPT_DIS();     
+ 489   3          hw_audio_initial(); 
+ 490   3          Delay_ms(10);
+ 491   3          GLOBAL_INTERRUPT_EN();  
+ 492   3          
+ 493   3          
+ 494   3          Timer2_Stop();
+ 495   3      
+ 496   3          Fire_Alarm_LED = 0;
+ 497   3          Bat_Alarm_LED = 0;
+ 498   3          Timer2_Stop();
+ 499   3          LED_R_OFF;
+ 500   3          LED_G_OFF;
+ 501   3          
+ 502   3          Port_SetInputpin(PORT1, PIN0, 0);  // EM IO 
+ 503   3          P10 = 0;
+ 504   3          
+ 505   3          // system √ ±‚»≠ 
+ 506   3            hw_initial_Wait(10); 
+ 507   3          
+ 508   3        }
+ 509   2        
+ 510   2        // ∞Ê∫∏ ≈◊Ω∫∆Æ end
+ 511   2        //////////////////////////////////////////////////////////////////////////////////////////    
+ 512   2      
+ 513   2        //Bat_Low_mode check start
+ 514   2        //////////////////////////////////////////////////////////////////////////////////////////
+ 515   2        if(Bat_mode == Bat_Low_mode){
+ 516   3          
+ 517   3          if(Low_Bat_count == 0){
+ 518   4            // system √ ±‚»≠ 
+ 519   4            hw_initial_Wait(10); 
+ 520   4            
+ 521   4            T2_init();
+ 522   4            Fire_Alarm_LED = 0;
+ 523   4            Bat_Alarm_LED = 1;
+ 524   4            Timer2_Start();
+ 525   4            
+ 526   4            LowBat_Alarm();
+ 527   4            
+ 528   4            Fire_Alarm_LED = 0;
+ 529   4            Bat_Alarm_LED = 0;
+ 530   4            Timer2_Stop();
+ 531   4            
+ 532   4            // system √ ±‚»≠ 
+ 533   4            hw_initial_Wait(10); 
+ 534   4          }
+C51 COMPILER V9.54   MAIN                                                                  04/10/2026 17:18:34 PAGE 10  
+
+ 535   3          Low_Bat_count++;
+ 536   3          if(Low_Bat_count == Bat_al_time){
+ 537   4            Low_Bat_count = 0;
+ 538   4          }
+ 539   3        }   
+ 540   2        //Bat_Low_mode check end
+ 541   2        //////////////////////////////////////////////////////////////////////////////////////////
+ 542   2      
+ 543   2        //Stop_mode Start
+ 544   2        //////////////////////////////////////////////////////////////////////////////////////////
+ 545   2        
+ 546   2        if(SYS_mode  == Al_Stop_mode){
+ 547   3        
+ 548   3        int i,j;
+ 549   3        int break_mode = 0;
+ 550   3        
+ 551   3        // system √ ±‚»≠ 
+ 552   3        hw_initial_Wait(10);
+ 553   3        
+ 554   3        Audio_Run(Audio1_Address , Audio1_length  , Audio1_runtime);  
+ 555   3        
+ 556   3        Timer2_Stop();
+ 557   3        
+ 558   3        Port_SetInputpin(PORT1, PIN0, 0);  // EM IO 
+ 559   3        P10 = 0;
+ 560   3        
+ 561   3        SYS_mode  = Normal_mode;
+ 562   3        
+ 563   3        LED_G_ON;
+ 564   3        NOP_20us_Delay(25000); // 500ms
+ 565   3        LED_G_OFF;
+ 566   3        NOP_20us_Delay(25000); // 500ms
+ 567   3        
+ 568   3        while(1){
+ 569   4          if(Port_GetInputpinValue(PORT1, PIN2)  == 1){
+ 570   5              break;
+ 571   5            }
+ 572   4        }
+ 573   3      
+ 574   3        
+ 575   3        for(i=0;i<8;i++){
+ 576   4          
+ 577   4          // 100ms
+ 578   4          LED_G_ON;
+ 579   4          NOP_20us_Delay(500); // 10ms
+ 580   4          LED_G_OFF;
+ 581   4          NOP_20us_Delay(4500); // 90ms
+ 582   4                
+ 583   4          //100ms + 400ms = 500ms
+ 584   4          for(j=0;j<4;j++){
+ 585   5          NOP_20us_Delay(5000); // 100ms
+ 586   5            if(Port_GetInputpinValue(PORT1, PIN2)  == 0){
+ 587   6              break_mode = 1;
+ 588   6              break;
+ 589   6            }
+ 590   5          }
+ 591   4                  
+ 592   4          // 500ms + 100ms = 600ms
+ 593   4          LED_G_ON;
+ 594   4          Delay_ms(10);
+ 595   4          LED_G_OFF;
+ 596   4          Delay_ms(90);
+C51 COMPILER V9.54   MAIN                                                                  04/10/2026 17:18:34 PAGE 11  
+
+ 597   4                
+ 598   4          //600ms + (100ms * 394) = 600ms + 39400ms = 40000ms = 40s
+ 599   4          for(j=0;j<394;j++){
+ 600   5            Delay_ms(100);
+ 601   5            if(Port_GetInputpinValue(PORT1, PIN2)  == 0){
+ 602   6              break_mode = 1;
+ 603   6              break;      
+ 604   6            }
+ 605   5          }
+ 606   4        
+ 607   4          if(break_mode == 1){
+ 608   5            break;
+ 609   5          }
+ 610   4        }
+ 611   3      
+ 612   3        LED_G_ON;
+ 613   3        Delay_ms(500);
+ 614   3        LED_G_OFF;
+ 615   3      
+ 616   3        while(1){
+ 617   4          if(Port_GetInputpinValue(PORT1, PIN2)  == 1){
+ 618   5              break;
+ 619   5            }
+ 620   4        }
+ 621   3        
+ 622   3          // system √ ±‚»≠ 
+ 623   3        hw_initial_Wait(10);
+ 624   3      }
+ 625   2        
+ 626   2        //Stop_mode End
+ 627   2        //////////////////////////////////////////////////////////////////////////////////////////
+ 628   2      
+ 629   2      
+ 630   2      
+ 631   2        // EMO ∞Ê∫∏ »Æ¿Œ 
+ 632   2        //////////////////////////////////////////////////////////////////////////////////////////
+ 633   2        if((SYS_mode ==  Normal_mode)&(Port_GetInputpinValue(PORT1, PIN0)  == 1)){
+ 634   3          
+ 635   3          // system √ ±‚»≠ 
+ 636   3          hw_initial_Wait(10);
+ 637   3          
+ 638   3          Audio_Run(Audio3_Address , Audio3_length  , Audio3_runtime);
+ 639   3          
+ 640   3          GLOBAL_INTERRUPT_DIS();     
+ 641   3          hw_audio_initial(); 
+ 642   3          NOP_20us_Delay(1000);
+ 643   3          GLOBAL_INTERRUPT_EN();  
+ 644   3          
+ 645   3      
+ 646   3          // system √ ±‚»≠ 
+ 647   3          hw_initial_Wait(10);
+ 648   3          
+ 649   3        }
+ 650   2        // EMO ∞Ê∫∏ »Æ¿Œ end
+ 651   2        //////////////////////////////////////////////////////////////////////////////////////////
+ 652   2        
+ 653   2        system_count++;
+ 654   2      
+ 655   2          // øÕƒ°µ∂ ≈∏¿Ã∏” 
+ 656   2        BeforeStop();
+ 657   2        GLOBAL_INTERRUPT_EN();  
+ 658   2        Stop();
+C51 COMPILER V9.54   MAIN                                                                  04/10/2026 17:18:34 PAGE 12  
+
+ 659   2        AfterStop();
+ 660   2            
+ 661   2        }
+ 662   1      }
+ 663          
+ 664          
+ 665          
+ 666          /**********************************************************************
+ 667           * @brief   Variable_Initial
+ 668           * @param     None
+ 669           * @return  None
+ 670           **********************************************************************/
+ 671          void Variable_Initial(uint16_t Audio_st_address)
+ 672          {
+ 673   1      
+ 674   1        Audio_addr= Audio_st_address + ADDR_START;
+ 675   1        Audio_start=0;
+ 676   1        Audio_length=0;
+ 677   1      
+ 678   1      }
+ 679          
+ 680          /**********************************************************************
+ 681           * @brief   Delay_s
+ 682           * @param     None
+ 683           * @return  None
+ 684           **********************************************************************/
+ 685          void Delay_s(uint16_t sec)
+ 686          {
+ 687   1      
+ 688   1        int i;
+ 689   1        
+ 690   1        for(i=0;i<sec;i++){
+ 691   2          NOP_20us_Delay(50000);
+ 692   2        }
+ 693   1      
+ 694   1      }
+ 695          
+ 696          void hw_initial(void) {
+ 697   1        
+ 698   1        // hw_initial() »£√‚ ¿¸ ø¿µø¿ øœ¿¸ ¡§¡ˆ
+ 699   1        if(Audio_start == 1) {
+ 700   2            SLAVEDESELECT;      // CS ¥›±‚
+ 701   2            AUDIO_OFF;          // æ⁄«¡ ≤Ù±‚
+ 702   2            Timer0_Stop();      // PWM ¡§¡ˆ
+ 703   2            Audio_start = 0;
+ 704   2            Audio_length = 0;
+ 705   2        }
+ 706   1      
+ 707   1        BITCR = 0x60;                                              // BIT cnt cleared, Select 0Bit overflow perio
+             -d
+ 708   1        
+ 709   1      #ifdef SysClock_1MHZ  
+                OSCCR = 0x08;                                            // System clock: 1MHz
+              #else 
+ 712   1        OSCCR = 0x18;                                            // System clock: 4MHz
+ 713   1                                                                // If 0x00/0x08/0x10/0x18, 0.5MHz/1MHz/2MHz/4MHz
+ 714   1      #endif
+ 715   1      
+ 716   1        RSTFR = 0x00;                                            // Clear all reset flags
+ 717   1      
+ 718   1        
+ 719   1        // Port 0
+C51 COMPILER V9.54   MAIN                                                                  04/10/2026 17:18:34 PAGE 13  
+
+ 720   1        P0 = 0xC0;                      // 0 : Low, 1 : High
+ 721   1        P0OD = 0x00;                // 0 : Disable, 1 : Enable (Open-drain)
+ 722   1        P0PU = 0X00;                 // 0 : Disable,  1 : Enable (Pull-up)
+ 723   1        P0IO = 0xc1;                  // 0 : Input, 1 : Output
+ 724   1        //P0FSRH = 0x05;                                                          // P[7]: normal I/O, P[5:0]: Am
+             -p
+ 725   1        //P0FSRL = 0x55;
+ 726   1        P0FSRH  = 0
+ 727   1          | ( 0 << 6)       //P07     // 0 : I/O (EINT3), 1 : ICS1                  // LED_R        
+ 728   1          | ( 0 << 4)       //P06     // 0 : I/O (EINT2), 1 : ICS0                  // LED_G
+ 729   1          | ( 1 << 2)       //P05     // 0 : I/O, 1 : OP0P,                       // SENISNG OP0P
+ 730   1          | ( 1 << 0);      //P04     // 0 : I/O, 1 : OP0N                          // SENSING OP0N
+ 731   1          
+ 732   1        P0FSRL  = 0
+ 733   1          | ( 1 << 6)       //P03     // 0 : I/O, 1 : OP0OUT,   2 : AN3,      3 : Not used          // SENSING IN ADC 
+ 734   1          | ( 1 << 4)       //P02     // 0 : I/O, 1 : OP1P,   2 : AN2,      3 : Not used          // 
+ 735   1          | ( 1 << 2)       //P01     // 0 : I/O (EINT1), 1 : OP1N,  2 : AN1, 3 : Not used        // Not use
+ 736   1          | ( 0 << 0);      //P00     // 0 : I/O (EINT0), 1 : OP1OUT,   2 : AN0,  3 : Not used      // C_VDD
+ 737   1          
+ 738   1        P0DB  = 0
+ 739   1          | ( 0 << 6)     //DBCLK[1:0]  // 00 : fx (SCLK),  01 : fx/4,  10 : fx/16, 11 : fx/64
+ 740   1          | ( 0 << 3)     //P07DB   // 0 : Disable, 1 : Enable
+ 741   1          | ( 0 << 2)     //P06DB   // 0 : Disable, 1 : Enable
+ 742   1          | ( 0 << 1)     //P10DB   // 0 : Disable, 1 : Enable
+ 743   1          | ( 0 << 0);    //P00DB   // 0 : Disable, 1 : Enable
+ 744   1                                                 // Low level
+ 745   1      
+ 746   1        // Port 1
+ 747   1        
+ 748   1        P1 = 0x00;                      // 0 : Low, 1 : High                // audio off
+ 749   1        P1OD = 0x00;                  // 0 : Disable, 1 : Enable (Open-drain)
+ 750   1        P1PU = 0x04;                  // 0 : Disable, 1 : Enable (Pull-up) // ≈◊Ω∫∆Æ Ω∫¿ßƒ° «Ææ˜ « ø‰
+ 751   1        //P1PU = 0x0;                   // 0 : Disable, 1 : Enable (Pull-up)
+ 752   1        P1IO = 0x32;                  // 0 : Input, 1 : Output
+ 753   1        
+ 754   1      
+ 755   1        //P12DB = 0x00;                     //P1/P2 Debounce disable
+ 756   1        //P1FSRH = 0x08;                                                          // P1[5]: AN6, others: normal I
+             -/O
+ 757   1        //P1FSRL = 0x00;                                                          // P1[3:0]: Normal I/O
+ 758   1        P1FSRH  = 0
+ 759   1          | ( 1 << 2)       //P15  // 0 : I/O,  1 : LDO23,   2 : AN6, 3 : (SDA)           // LDO23
+ 760   1          | ( 0 << 0);      //P14  // 0 : I/O (EINT11), 1 : T1O/PWM1O,   2 : SCL, 3 : Not used    // /AUD ON
+ 761   1          
+ 762   1          P1FSRL  = 0
+ 763   1          | ( 0 << 6)       //P13  // 0 : I/O (EC1),  1 : (RXD/MISO)              // DSDA
+ 764   1          | ( 0 << 4)       //P12  // 0 : I/O (EC0),  1 : (TXD/MOSI)                // DSCL
+ 765   1          | ( 1 << 2)       //P11  // 0 : I/O (EINT10), 1 : T0O/PWM0O             // AUDIO SIG
+ 766   1          | ( 0 << 0);      //P10  // 0 : I/O,  1 : (SCK)                   // SENSE PW
+ 767   1      
+ 768   1          P12DB = 0
+ 769   1          | ( 0 << 5)     //P21DB   // 0 : Disable, 1 : Enable
+ 770   1          | ( 0 << 4)     //P20DB   // 0 : Disable, 1 : Enable
+ 771   1          | ( 0 << 2)     //P14DB   // 0 : Disable, 1 : Enable
+ 772   1          | ( 0 << 1)     //P11DB   // 0 : Disable, 1 : Enable
+ 773   1          | ( 0 << 0);      //P10DB   // 0 : Disable, 1 : Enable
+ 774   1          
+ 775   1        
+ 776   1          
+ 777   1        // Port 2
+ 778   1        P2 = 0x00;                        // 0 : Low, 1 : High
+ 779   1        P2OD = 0x00;                    // 0 : Disable, 1 : Enable (Open-drain)
+C51 COMPILER V9.54   MAIN                                                                  04/10/2026 17:18:34 PAGE 14  
+
+ 780   1        P2PU = 0x00;                    // 0 : Disable, 1 : Enable (Pull-up)
+ 781   1        P2IO = 0x0f;                      // 0 : Input, 1 : Output
+ 782   1        //P2FSR = 0x00;                      // P2[3:0]: I/O
+ 783   1        P2FSR   = 0
+ 784   1          | ( 1 << 6)     // 0 : P23,  1 : TXD/MOSI,  2 : AN5,     3 : Not used         //mosi
+ 785   1          | ( 1 << 4)     // 0 : P22,  1 : RXD/MISO,  2 : AN4,     3 : Not used         // miso
+ 786   1          | ( 1 << 2)         // 0 : P21 (EC2),  1 : SCK,   2 : (SCL),     3 : Not used           // sck
+ 787   1          | ( 0 << 0);        // 0 : P20 (EINT12),  1 : T2O/PWM2O,   2 : SDA,     3 : Not used      // cs 
+ 788   1      
+ 789   1      
+ 790   1      
+ 791   1        
+ 792   1          // Timer 0 
+ 793   1        T0CRL = 0x80;                                                           // Timer 0: fx/4
+ 794   1        T0CRH = 0x01;                                                           // Timer 0: disable, clear counte
+             -r
+ 795   1        T0ADRH = (unsigned char)(T_USEC>>8);
+ 796   1        T0ADRL = (unsigned char)(T_USEC&0xff);
+ 797   1        // Timer 1
+ 798   1        T1CRL = 0x00
+ 799   1            |(1<<5);                                                          // Timer 1: if 0/1/2.../7, fx divide
+             -d by 2048/512/64/8/4/2/1/EC1
+ 800   1        T1CRH = 0x81;                                                           // Timer 1: if 0/8, Dis/Enable, c
+             -lear counter
+ 801   1        //T1CRH = 0x01;                                                           // Timer 1: if 0/8, Dis/Enable,
+             - clear counter
+ 802   1        T1ADRH = (unsigned char)(TIME_2S>>8);
+ 803   1        T1ADRL = (unsigned char)(TIME_2S&0xff);
+ 804   1      
+ 805   1        
+ 806   1        // Timer 2
+ 807   1        T2CRL = 0x00;                                            // Timer 2: fx/1
+ 808   1        T2CRH = 0x00;                                            // Timer 2: Disable, Clear counter
+ 809   1      
+ 810   1        // WDT
+ 811   1        WDTCR = 0x00
+ 812   1            |(0<<7)                                            // If 0/1, Diable/Enable WDT operation
+ 813   1            |(0<<6)                                            // If 0/1, "Free running 8-bit timer"/"Reset by WDT"
+ 814   1            |(1<<5)                                            // If 0/1, "No effect"/"Clear WDT Counter"
+ 815   1            |(0<<1)                                            // If 0/1/2, Select WDT Clock as "BIT Overflow"/ LFI
+             -RC /WDTRC
+ 816   1            |(0<<0);                                           // Clear WDTIFR
+ 817   1        
+ 818   1        // LVR
+ 819   1        LVRIDR = 0x59;                                           // Id value to write data to the LVRCR register
+ 820   1        LVRCR = 0x01;                                            // LVR Disable
+ 821   1       
+ 822   1        // Amp
+ 823   1        AMPCR0 = 0x00
+ 824   1            |(0<<6)                                                         // If 0/1, Disable/Enable filter OP1OUT
+             - for ADC
+ 825   1            |(0<<4)                                                         // If 0/1/2/3, Select No/AMP0/AMP1/"AMP
+             -0/1" discharge channel
+ 826   1            |(0<<2)                                                         // If 0/1/2/3, Select discharge time du
+             -ring Disable/100us/200us/300us
+ 827   1            |(AMP_AUTO_DIS<<1)                                              // If 0/1, AMP1 Always/"Auto disable af
+             -ter ADC"
+ 828   1            |(AMP_AUTO_DIS<<0);                                             // If 0/1, AMP0 Always/"Auto disable af
+             -ter ADC"
+ 829   1        #ifdef DELAY_TIME
+ 830   1        AMPCR1 = 0x00
+ 831   1            |(0<<7)                                                       // If 0/1, Disable/Enable Amp1
+C51 COMPILER V9.54   MAIN                                                                  04/10/2026 17:18:34 PAGE 15  
+
+ 832   1            |(0<<4)                                                       // If 0/1/2/3/4/5/6/7, "Disable gain"/x1/
+             -x2/x10/x15/x20/x30/x60
+ 833   1            |(0<<3)                                                       // If 0/1, Disable/Enable Amp0
+ 834   1            |(0<<0);                                                      // If 0/1/2/3, "Disable gain"/x5/x10/x20
+ 835   1        #else
+                AMPCR1 = 0x00
+                    |(1<<7)                                                       // If 0/1, Disable/Enable Amp1
+                    |(0<<4)                                                       // If 0/1/2/3/4/5/6/7, "Disable gain"/x1/
+             -x2/x10/x15/x20/x30/x60
+                    |(1<<3)                                                       // If 0/1, Disable/Enable Amp0
+                    |(0<<0);                                                      // If 0/1/2/3, "Disable gain"/x5/x10/x20
+                #endif
+ 842   1        CHPCR = (0<<0);                                                         // If 0/1/2/3, 125/167/250/500 [k
+             -Hz] chopper clock
+ 843   1        // ADC
+ 844   1        ADCCRH = 0x00
+ 845   1            |(0<<7)                                                         // Clear ADCIFR
+ 846   1            |(0<<3)                                                         // If 0/1, ADC Trigger Signal: ADST/"Ti
+             -mer 0"
+ 847   1            |(0<<2)                                                         // If 0/1, ADC Data Align: MSB/LSB . 0 
+             -= MSB
+ 848   1            |(0<<0);                                                        // If 0/1/2/3, 1/0.5/0.25/0.125 [MHz]
+ 849   1        ADCCRL = 0x00
+ 850   1            |(0<<7)                                                         // If 0/1, Disable/Enable ADC Module
+ 851   1            |(0<<6)                                                         // If 0/1, No/Start
+ 852   1            |(0<<5)                                                         // If 0/1, Reference VDD/AVREF
+ 853   1            |(0x6<<0);                                                      // sel. AN6
+ 854   1            //|(0xA<<0);                                                      // If 0/1////, AN0/AN1/////AMP1
+ 855   1        // USART
+ 856   1        USTBD = (unsigned char)(4000000/9600/16 - 1);            // 4MHz/(Baud Rate)/16 - 1
+ 857   1        USTCR1 = 0x00
+ 858   1            |(0<<6)                                           // If 0/1/2/3, UART/Synchronous/Reserved/SPI Mode
+ 859   1            |(0<<4)                                           // If 0/1/2/3, No/Reserved/Even/Odd Parity
+ 860   1            |(3<<1)                                           // If 0/1/2/3/7, 5/6/7/8/9-bit Data
+ 861   1            |(0<<0);                                          // If 0/1, TxD change @Rising/@Falling only SPI mode
+ 862   1        USTCR2 = 0x00
+ 863   1            |(0<<7)                                           // If 0/1, Disable/Enable DRE Interrupt
+ 864   1            |(0<<6)                                           // If 0/1, Disable/Enable TXC Interrupt
+ 865   1            |(0<<5)                                           // If 0/1, Disable/Enable RXC Interrupt
+ 866   1            |(0<<4)                                           // If 0/1, Disable/Enable WAKE Interrupt
+ 867   1            |(0<<3)                                           // If 0/1, Disable/Enable Transmitter
+ 868   1            |(0<<2)                                           // If 0/1, Disable/Enable Receiver
+ 869   1            |(0<<1)                                           // If 0/1, Disable/Enable USART Block
+ 870   1            |(0<<0);                                          // If 0/1, Normal/Double Speed Operation
+ 871   1        USTCR3 = 0x00
+ 872   1            |(0<<7)                                           // If 0/1, Slave/Master in SPI or Synchronous mode
+ 873   1            |(0<<6)                                           // If 0/1, Normal/"Loop back" Operation
+ 874   1            |(0<<5)                                           // When synchronous mode only
+ 875   1            |(0<<4)                                           // If 0/1, Disable/Enable SS Pin
+ 876   1            |(0<<3)                                           // If 0/1, No/Exchange MOSI and MISO
+ 877   1            |(0<<2);                                          // If 0/1, 1/2 Stop bit
+ 878   1      
+ 879   1        // ICSx
+ 880   1        #ifdef CC_USE
+              
+                ICSCR = 0x00;                                            // If 0x00/0x05/0x0a, Disable/"Enable ICS0"/"Ena
+             -ble ICS1"
+                ICSDR0 = 0x06;                                           // If 0/1/.../15, abot 50 + 15 x data [mA]
+                ICSDR1 = 0x06;                                           // If 0/1/.../15, abot 50 + 15 x data [mA]
+                P0FSRH |= 0xF0;                     // P07 function set to ICS1, P06 function set to ICS0
+                #else
+ 887   1        ICSCR = 0x00;                                            // If 0x00/0x05/0x0a, Disable/"Enable ICS0"/"Ena
+C51 COMPILER V9.54   MAIN                                                                  04/10/2026 17:18:34 PAGE 16  
+
+             -ble ICS1"
+ 888   1        ICSDR0 = 0x00;                                           // If 0/1/.../15, abot 50 + 15 x data [mA]
+ 889   1        ICSDR1 = 0x00;                                           // If 0/1/.../15, abot 50 + 15 x data [mA]
+ 890   1        
+ 891   1        #endif
+ 892   1        // External Interrupt
+ 893   1        EIPOL0 = 0x00                                            // If 0x00/0x01/0x02/0x03, Disable/Rising/Fallin
+             -g/Both
+ 894   1            |(0x00<<6)                                        // EINT3
+ 895   1            |(0x00<<4)                                        // EINT2
+ 896   1            |(0x00<<2)                                        // EINT1
+ 897   1            |(0x00<<0);                                       // EINT0
+ 898   1        EIPOL1 = 0x00                                            // If 0x00/0x01/0x02/0x03, Disable/Rising/Fallin
+             -g/Both
+ 899   1            |(0x00<<4)                      // EINT12
+ 900   1            |(0x00<<2)                                        // EINT11
+ 901   1            |(0x00<<0);                                       // EINT10
+ 902   1        EIFLAG = 0x00;                                           // Clear all external interrupt flags
+ 903   1      
+ 904   1        // Initialize Interrupt Registers
+ 905   1        IP = 0x00;                                         // Priority level 0
+ 906   1        IP1 = 0x00;                                        // Priority level 0
+ 907   1        IE = 0x00
+ 908   1          |(0<<5)                                              // EINT11
+ 909   1          |(0<<4)                                              // EINT10
+ 910   1          |(0<<3)                                              // EINT3
+ 911   1          |(0<<2)                                              // EINT2
+ 912   1          |(0<<1)                                              // EINT1
+ 913   1          |(0<<0);                                             // EINT0
+ 914   1        IE1 = 0x00
+ 915   1          |(0<<5)                                              // EINT12 Interrupt
+ 916   1          |(0<<1)                                              // I2C Interrupt
+ 917   1          |(0<<0);                                             // ADC Interrupt
+ 918   1        IE2 = 0x00
+ 919   1          |(0<<5)                                              // USART Tx Interrupt
+ 920   1          |(0<<4)                                              // USART Rx Interrupt
+ 921   1          |(0<<2)                                              // Timer 2 Interrupt
+ 922   1          |(0<<1)                                              // Timer 1 Interrupt
+ 923   1          |(0<<0);                                             // Timer 0 Interrupt
+ 924   1        IE3 = 0x00
+ 925   1          |(0<<4)                                              // BIT Interrupt
+ 926   1          |(0<<3);                                             // WDT Interrupt
+ 927   1      
+ 928   1      }
+ 929          
+ 930          
+ 931          
+ 932          void hw_audio_initial(void) {
+ 933   1        BITCR = 0x60;                                              // BIT cnt cleared, Select 0Bit overflow perio
+             -d
+ 934   1        
+ 935   1      #ifdef SysClock_1MHZ  
+                OSCCR = 0x08;                                            // System clock: 1MHz
+              #else 
+ 938   1        OSCCR = 0x18;                                            // System clock: 4MHz
+ 939   1                                                                // If 0x00/0x08/0x10/0x18, 0.5MHz/1MHz/2MHz/4MHz
+ 940   1      #endif
+ 941   1      
+ 942   1        RSTFR = 0x00;                                            // Clear all reset flags
+ 943   1        
+ 944   1          // Timer 0 
+ 945   1        T0CRL = 0x80;                                                           // Timer 0: fx/4
+C51 COMPILER V9.54   MAIN                                                                  04/10/2026 17:18:34 PAGE 17  
+
+ 946   1        T0CRH = 0x01;                                                           // Timer 0: disable, clear counte
+             -r
+ 947   1        T0ADRH = (unsigned char)(T_USEC>>8);
+ 948   1        T0ADRL = (unsigned char)(T_USEC&0xff);
+ 949   1        // Timer 1
+ 950   1        T1CRL = 0x00
+ 951   1            |(1<<5);                                                          // Timer 1: if 0/1/2.../7, fx divide
+             -d by 2048/512/64/8/4/2/1/EC1
+ 952   1        T1CRH = 0x81;                                                           // Timer 1: if 0/8, Dis/Enable, c
+             -lear counter
+ 953   1        //T1CRH = 0x01;                                                           // Timer 1: if 0/8, Dis/Enable,
+             - clear counter
+ 954   1        T1ADRH = (unsigned char)(TIME_2S>>8);
+ 955   1        T1ADRL = (unsigned char)(TIME_2S&0xff);
+ 956   1      
+ 957   1        
+ 958   1        // Timer 2
+ 959   1        T2CRL = 0x00;                                            // Timer 2: fx/1
+ 960   1        T2CRH = 0x00;                                            // Timer 2: Disable, Clear counter
+ 961   1      
+ 962   1        // WDT
+ 963   1        WDTCR = 0x00
+ 964   1            |(0<<7)                                            // If 0/1, Diable/Enable WDT operation
+ 965   1            |(0<<6)                                            // If 0/1, "Free running 8-bit timer"/"Reset by WDT"
+ 966   1            |(1<<5)                                            // If 0/1, "No effect"/"Clear WDT Counter"
+ 967   1            |(0<<1)                                            // If 0/1/2, Select WDT Clock as "BIT Overflow"/ LFI
+             -RC /WDTRC
+ 968   1            |(0<<0);                                           // Clear WDTIFR
+ 969   1        
+ 970   1        // LVR
+ 971   1        LVRIDR = 0x59;                                           // Id value to write data to the LVRCR register
+ 972   1        LVRCR = 0x01;                                            // LVR Disable
+ 973   1       
+ 974   1        // Amp
+ 975   1        AMPCR0 = 0x00
+ 976   1            |(0<<6)                                                         // If 0/1, Disable/Enable filter OP1OUT
+             - for ADC
+ 977   1            |(0<<4)                                                         // If 0/1/2/3, Select No/AMP0/AMP1/"AMP
+             -0/1" discharge channel
+ 978   1            |(0<<2)                                                         // If 0/1/2/3, Select discharge time du
+             -ring Disable/100us/200us/300us
+ 979   1            |(AMP_AUTO_DIS<<1)                                              // If 0/1, AMP1 Always/"Auto disable af
+             -ter ADC"
+ 980   1            |(AMP_AUTO_DIS<<0);                                             // If 0/1, AMP0 Always/"Auto disable af
+             -ter ADC"
+ 981   1        #ifdef DELAY_TIME
+ 982   1        AMPCR1 = 0x00
+ 983   1            |(0<<7)                                                       // If 0/1, Disable/Enable Amp1
+ 984   1            |(0<<4)                                                       // If 0/1/2/3/4/5/6/7, "Disable gain"/x1/
+             -x2/x10/x15/x20/x30/x60
+ 985   1            |(0<<3)                                                       // If 0/1, Disable/Enable Amp0
+ 986   1            |(0<<0);                                                      // If 0/1/2/3, "Disable gain"/x5/x10/x20
+ 987   1        #else
+                AMPCR1 = 0x00
+                    |(1<<7)                                                       // If 0/1, Disable/Enable Amp1
+                    |(0<<4)                                                       // If 0/1/2/3/4/5/6/7, "Disable gain"/x1/
+             -x2/x10/x15/x20/x30/x60
+                    |(1<<3)                                                       // If 0/1, Disable/Enable Amp0
+                    |(0<<0);                                                      // If 0/1/2/3, "Disable gain"/x5/x10/x20
+                #endif
+ 994   1        CHPCR = (0<<0);                                                         // If 0/1/2/3, 125/167/250/500 [k
+             -Hz] chopper clock
+C51 COMPILER V9.54   MAIN                                                                  04/10/2026 17:18:34 PAGE 18  
+
+ 995   1        // ADC
+ 996   1        ADCCRH = 0x00
+ 997   1            |(0<<7)                                                         // Clear ADCIFR
+ 998   1            |(0<<3)                                                         // If 0/1, ADC Trigger Signal: ADST/"Ti
+             -mer 0"
+ 999   1            |(0<<2)                                                         // If 0/1, ADC Data Align: MSB/LSB . 0 
+             -= MSB
+1000   1            |(0<<0);                                                        // If 0/1/2/3, 1/0.5/0.25/0.125 [MHz]
+1001   1        ADCCRL = 0x00
+1002   1            |(0<<7)                                                         // If 0/1, Disable/Enable ADC Module
+1003   1            |(0<<6)                                                         // If 0/1, No/Start
+1004   1            |(0<<5)                                                         // If 0/1, Reference VDD/AVREF
+1005   1            |(0x6<<0);                                                      // sel. AN6
+1006   1            //|(0xA<<0);                                                      // If 0/1////, AN0/AN1/////AMP1
+1007   1        // USART
+1008   1        USTBD = (unsigned char)(4000000/9600/16 - 1);            // 4MHz/(Baud Rate)/16 - 1
+1009   1        USTCR1 = 0x00
+1010   1            |(0<<6)                                           // If 0/1/2/3, UART/Synchronous/Reserved/SPI Mode
+1011   1            |(0<<4)                                           // If 0/1/2/3, No/Reserved/Even/Odd Parity
+1012   1            |(3<<1)                                           // If 0/1/2/3/7, 5/6/7/8/9-bit Data
+1013   1            |(0<<0);                                          // If 0/1, TxD change @Rising/@Falling only SPI mode
+1014   1        USTCR2 = 0x00
+1015   1            |(0<<7)                                           // If 0/1, Disable/Enable DRE Interrupt
+1016   1            |(0<<6)                                           // If 0/1, Disable/Enable TXC Interrupt
+1017   1            |(0<<5)                                           // If 0/1, Disable/Enable RXC Interrupt
+1018   1            |(0<<4)                                           // If 0/1, Disable/Enable WAKE Interrupt
+1019   1            |(0<<3)                                           // If 0/1, Disable/Enable Transmitter
+1020   1            |(0<<2)                                           // If 0/1, Disable/Enable Receiver
+1021   1            |(0<<1)                                           // If 0/1, Disable/Enable USART Block
+1022   1            |(0<<0);                                          // If 0/1, Normal/Double Speed Operation
+1023   1        USTCR3 = 0x00
+1024   1            |(0<<7)                                           // If 0/1, Slave/Master in SPI or Synchronous mode
+1025   1            |(0<<6)                                           // If 0/1, Normal/"Loop back" Operation
+1026   1            |(0<<5)                                           // When synchronous mode only
+1027   1            |(0<<4)                                           // If 0/1, Disable/Enable SS Pin
+1028   1            |(0<<3)                                           // If 0/1, No/Exchange MOSI and MISO
+1029   1            |(0<<2);                                          // If 0/1, 1/2 Stop bit
+1030   1      
+1031   1        // ICSx
+1032   1        #ifdef CC_USE
+              
+                ICSCR = 0x00;                                            // If 0x00/0x05/0x0a, Disable/"Enable ICS0"/"Ena
+             -ble ICS1"
+                ICSDR0 = 0x06;                                           // If 0/1/.../15, abot 50 + 15 x data [mA]
+                ICSDR1 = 0x06;                                           // If 0/1/.../15, abot 50 + 15 x data [mA]
+                P0FSRH |= 0xF0;                     // P07 function set to ICS1, P06 function set to ICS0
+                #else
+1039   1        ICSCR = 0x00;                                            // If 0x00/0x05/0x0a, Disable/"Enable ICS0"/"Ena
+             -ble ICS1"
+1040   1        ICSDR0 = 0x00;                                           // If 0/1/.../15, abot 50 + 15 x data [mA]
+1041   1        ICSDR1 = 0x00;                                           // If 0/1/.../15, abot 50 + 15 x data [mA]
+1042   1        
+1043   1        #endif
+1044   1        // External Interrupt
+1045   1        EIPOL0 = 0x00                                            // If 0x00/0x01/0x02/0x03, Disable/Rising/Fallin
+             -g/Both
+1046   1            |(0x00<<6)                                        // EINT3
+1047   1            |(0x00<<4)                                        // EINT2
+1048   1            |(0x00<<2)                                        // EINT1
+1049   1            |(0x00<<0);                                       // EINT0
+1050   1        EIPOL1 = 0x00                                            // If 0x00/0x01/0x02/0x03, Disable/Rising/Fallin
+             -g/Both
+C51 COMPILER V9.54   MAIN                                                                  04/10/2026 17:18:34 PAGE 19  
+
+1051   1            |(0x00<<4)                      // EINT12
+1052   1            |(0x00<<2)                                        // EINT11
+1053   1            |(0x00<<0);                                       // EINT10
+1054   1        EIFLAG = 0x00;                                           // Clear all external interrupt flags
+1055   1      
+1056   1        // Initialize Interrupt Registers
+1057   1        IP = 0x00;                                         // Priority level 0
+1058   1        IP1 = 0x00;                                        // Priority level 0
+1059   1        IE = 0x00
+1060   1          |(0<<5)                                              // EINT11
+1061   1          |(0<<4)                                              // EINT10
+1062   1          |(0<<3)                                              // EINT3
+1063   1          |(0<<2)                                              // EINT2
+1064   1          |(0<<1)                                              // EINT1
+1065   1          |(0<<0);                                             // EINT0
+1066   1        IE1 = 0x00
+1067   1          |(0<<5)                                              // EINT12 Interrupt
+1068   1          |(0<<1)                                              // I2C Interrupt
+1069   1          |(0<<0);                                             // ADC Interrupt
+1070   1        IE2 = 0x00
+1071   1          |(0<<5)                                              // USART Tx Interrupt
+1072   1          |(0<<4)                                              // USART Rx Interrupt
+1073   1          |(0<<2)                                              // Timer 2 Interrupt
+1074   1          |(0<<1)                                              // Timer 1 Interrupt
+1075   1          |(0<<0);                                             // Timer 0 Interrupt
+1076   1        IE3 = 0x00
+1077   1          |(0<<4)                                              // BIT Interrupt
+1078   1          |(0<<3);                                             // WDT Interrupt
+1079   1      
+1080   1      }
+1081          
+1082          
+1083          //----------------------------------------------------------------------------
+1084          void BeforeStop(void)
+1085          {
+1086   1        
+1087   1        OSCCR = 0x80;
+1088   1        WDTCR = 0xA2;
+1089   1        
+1090   1        WDTDR = 2;              // entrance to every 0.192sec
+1091   1        //WDTDR = 5;              // entrance to every 0.384sec
+1092   1        //WDTDR = 7;              // entrance to every 0.512sec
+1093   1        //WDTDR = 124;              // entrance to every 8sec
+1094   1        
+1095   1        //WDTCR = 0xA3;     // set WDT enable , clock source LFIRC, WDT interrupt
+1096   1        //WDTCR = 0xA4;       // set WDT enable , clock source WDTRC
+1097   1        
+1098   1        
+1099   1          
+1100   1        IE3 |= 0x08;              // WDT interrupt enable 
+1101   1        
+1102   1      }
+1103          //----------------------------------------------------------------------------
+1104          void AfterStop(void)
+1105          {
+1106   1      
+1107   1        IE3 &= ~(0x08);                     // WDT interrupt disable
+1108   1        //WDTCR = 0x00;
+1109   1        
+1110   1        /*
+1111   1      #ifdef SysClock_1MHZ  
+1112   1        OSCCR = 0x08;                                            // System clock: 1MHz
+C51 COMPILER V9.54   MAIN                                                                  04/10/2026 17:18:34 PAGE 20  
+
+1113   1      #else 
+1114   1        OSCCR = 0x18;                                            // System clock: 4MHz
+1115   1                                                                // If 0x00/0x08/0x10/0x18, 0.5MHz/1MHz/2MHz/4MHz
+1116   1      #endif
+1117   1        */
+1118   1        OSCCR = 0x18;                                            // System clock: 4MHz
+1119   1                                                                // If 0x00/0x08/0x10/0x18, 0.5MHz/1MHz/2MHz/4MHz
+1120   1      }
+1121          
+1122          void WD_Reset(void)
+1123          {
+1124   1        //WDTDR = 30;                       // entrance to every 2sec
+1125   1        WDTDR = 2;                        // entrance to every 0.192sec
+1126   1        //WDTCR = 0xA3;                     // set WDT enable , clock source LFIRC, WDT interrupt
+1127   1        WDTCR = 0xE5;                     // set WDT enable , clock source WDTRC, WDT interrupt
+1128   1        IE3 |= 0x08;                      // WDT interrupt enable 
+1129   1        
+1130   1      }
+1131          
+1132          
+1133          
+1134          
+1135          
+1136          
+1137          /**********************************************************************
+1138           * @brief   Fire_Alarm
+1139           * @param     None
+1140           * @return  None
+1141           **********************************************************************/
+1142          void Fire_Alarm(void){
+1143   1      
+1144   1        //Audio_Run(Audio3_Address , Audio3_length  , Audio3_runtime);
+1145   1      
+1146   1        GLOBAL_INTERRUPT_DIS();     
+1147   1        //hw_audio_initial(); 
+1148   1        hw_initial();
+1149   1        Port_SetOutputpin(PORT1, PIN0, 0);
+1150   1        P10 = 1;
+1151   1        NOP_20us_Delay(1000);
+1152   1        NOP_20us_Delay(1000);
+1153   1        GLOBAL_INTERRUPT_EN();  
+1154   1          
+1155   1          
+1156   1        Timer2_Stop();
+1157   1        T2_init();
+1158   1        Fire_Alarm_LED = 1;
+1159   1        Bat_Alarm_LED = 0;
+1160   1        Timer2_Start();
+1161   1        
+1162   1        
+1163   1        
+1164   1          /* Audio Initial */
+1165   1        if(SYS_mode  == Al_Stop_mode){
+1166   2          
+1167   2          Timer2_Stop();
+1168   2          Fire_Alarm_LED = 0;
+1169   2          Bat_Alarm_LED = 0;
+1170   2      
+1171   2        }
+1172   1        else{
+1173   2          
+1174   2          Audio_Run(Audio3_Address , Audio3_length  , Audio3_runtime);
+C51 COMPILER V9.54   MAIN                                                                  04/10/2026 17:18:34 PAGE 21  
+
+1175   2          
+1176   2          NOP_20us_Delay(25000); // 500ms
+1177   2      }
+1178   1        
+1179   1      
+1180   1        if(SYS_mode  == Al_Stop_mode){
+1181   2          
+1182   2          Timer2_Stop();
+1183   2          Fire_Alarm_LED = 0;
+1184   2          Bat_Alarm_LED = 0;
+1185   2      
+1186   2        }
+1187   1        else{
+1188   2          
+1189   2          GLOBAL_INTERRUPT_DIS();     
+1190   2          //hw_audio_initial(); 
+1191   2          hw_initial();
+1192   2          Port_SetOutputpin(PORT1, PIN0, 0);
+1193   2          P10 = 1;
+1194   2          NOP_20us_Delay(1000);
+1195   2          NOP_20us_Delay(1000);
+1196   2          GLOBAL_INTERRUPT_EN();  
+1197   2      
+1198   2          
+1199   2          T2_init();
+1200   2          Fire_Alarm_LED = 1;
+1201   2          Bat_Alarm_LED = 0;
+1202   2          Timer2_Start();
+1203   2          
+1204   2          Audio_Run(Audio3_Address , Audio3_length  , Audio3_runtime);
+1205   2          
+1206   2          
+1207   2          NOP_20us_Delay(25000); // 500ms
+1208   2      }
+1209   1      
+1210   1        if(SYS_mode  == Al_Stop_mode){
+1211   2          
+1212   2          Timer2_Stop();
+1213   2          Fire_Alarm_LED = 0;
+1214   2          Bat_Alarm_LED = 0;
+1215   2      
+1216   2        }
+1217   1        else{
+1218   2          
+1219   2          GLOBAL_INTERRUPT_DIS();     
+1220   2          //hw_audio_initial(); 
+1221   2          hw_initial();
+1222   2          Port_SetOutputpin(PORT1, PIN0, 0);
+1223   2          P10 = 1;
+1224   2          NOP_20us_Delay(1000);
+1225   2          NOP_20us_Delay(1000);
+1226   2          GLOBAL_INTERRUPT_EN();  
+1227   2          
+1228   2          T2_init();
+1229   2          Fire_Alarm_LED = 1;
+1230   2          Bat_Alarm_LED = 0;
+1231   2          Timer2_Start();
+1232   2          
+1233   2          Audio_Run(Audio3_Address , Audio3_length  , Audio3_runtime);
+1234   2          
+1235   2          
+1236   2          NOP_20us_Delay(25000); // 500ms
+C51 COMPILER V9.54   MAIN                                                                  04/10/2026 17:18:34 PAGE 22  
+
+1237   2        }
+1238   1        
+1239   1      }
+1240          
+1241          
+1242          
+1243          
+1244          /**********************************************************************
+1245           * @brief   LowBat_Alarm
+1246           * @param     None
+1247           * @return  None
+1248           **********************************************************************/
+1249          void LowBat_Alarm(void){
+1250   1        
+1251   1        T2_init();
+1252   1        Fire_Alarm_LED = 0;
+1253   1        Bat_Alarm_LED = 1;
+1254   1        Timer2_Start();
+1255   1        Audio_Run(Audio2_Address , Audio2_length  , Audio2_runtime);
+1256   1        Fire_Alarm_LED = 0;
+1257   1        Bat_Alarm_LED = 0;
+1258   1        LED_R_OFF;
+1259   1        LED_G_OFF;
+1260   1        Timer2_Stop();
+1261   1        
+1262   1      }
+1263          
+1264          /**********************************************************************
+1265           * @brief   Audio_Run
+1266           * @param     None
+1267           * @return  None
+1268           **********************************************************************/
+1269          void Audio_Run(uint16_t Address , uint16_t Length,  uint8_t Run_time){
+1270   1           
+1271   1        FLASH_ON;
+1272   1        AUDIO_ON; 
+1273   1        
+1274   1        Audio_start = 1;
+1275   1      
+1276   1        P2 = 0x01;
+1277   1        /* SPI Initial */
+1278   1        USART_SPI_Initial(SPI_MASTER_MODE, 500000, SPI_MSB, SPI_CPOL_LOW, SPI_CPHA_1EDGE, SPI_TX_RX_MODE, SPI_SS_
+             -HW_DISABLE);   // 500000
+1279   1        
+1280   1        NOP_20us_Delay(5000);         // 0.1sec
+1281   1        NOP_20us_Delay(5000);         // 0.1sec
+1282   1        NOP_20us_Delay(5000);         // 0.1sec
+1283   1        
+1284   1        Audio_max_length = Length;
+1285   1        Variable_Initial(Address);
+1286   1        
+1287   1          /* Audio Initial */
+1288   1        Audio_Initial();  
+1289   1        
+1290   1        NOP_20us_Delay(1000);         // 0.02sec
+1291   1        NOP_20us_Delay(1000);         // 0.02sec
+1292   1        NOP_20us_Delay(1000);         // 0.02sec
+1293   1        
+1294   1        
+1295   1        Timer1_Start(); 
+1296   1      
+1297   1        while(Audio_length < Audio_max_length){
+C51 COMPILER V9.54   MAIN                                                                  04/10/2026 17:18:34 PAGE 23  
+
+1298   2        }
+1299   1        
+1300   1        FLASH_OFF;
+1301   1        AUDIO_OFF;
+1302   1        P2 = 0x00;
+1303   1        
+1304   1        //Port_SetOutputpin(PORT1, PIN0, 0);
+1305   1        //P10 = 1;
+1306   1        
+1307   1        Audio_start = 0; 
+1308   1      }
+*** WARNING C280 IN LINE 1269 OF src\main.c: 'Run_time': unreferenced local variable
+1309          
+1310          /**********************************************************************
+1311           * @brief   T2_init
+1312           * @param     None
+1313           * @return  None
+1314           **********************************************************************/
+1315          void T2_init(void){
+1316   1        /* Timer2 initialize @ 62500Hz */
+1317   1        Timer2_Initial(T2_PPG_REPEAT_MODE, TIMER2_DIV64);
+1318   1        
+1319   1         /* Timer2 PPG Polarity Start Low */
+1320   1        Timer2_SetPPGPolarity(T2_START_LOW);
+1321   1        
+1322   1         /* Timer2 PPG Period Counter (31250) 62500/31250 = 2Hz  */
+1323   1        Timer2_SetPPGPeriodCounter(62500 / 10);
+1324   1        
+1325   1          /* Enable timer2 match INT */   
+1326   1        Timer2_ConfigureInterrupt(TRUE);
+1327   1        
+1328   1        Timer2_cnt = 0;
+1329   1      }
+1330          /**********************************************************************
+1331           * @brief   TIMER2_Int(void) interrupt T2_MATCH_VECT
+1332           * @param     None
+1333           * @return  None
+1334           **********************************************************************/
+1335          char Gled_mode, GLED_CNT;
+1336          void TIMER2_Int(void) interrupt T2_MATCH_VECT
+1337          {
+1338   1        
+1339   1        if(Timer2_cnt == 0){
+1340   2          
+1341   2          if(Fire_Alarm_LED == 1){
+1342   3            //Port_SetOutputTogglepin(PORT0, PIN7);
+1343   3            LED_R_ON;
+1344   3          }
+1345   2          
+1346   2          if(Bat_Alarm_LED == 1){
+1347   3            //Port_SetOutputTogglepin(PORT0, PIN6);
+1348   3            if (Gled_mode == 0){
+1349   4              LED_G_ON; 
+1350   4              GLED_CNT++;
+1351   4              if(GLED_CNT > 1){
+1352   5                Gled_mode = 1;
+1353   5                GLED_CNT = 0;
+1354   5              }
+1355   4            }
+1356   3            else{
+1357   4              LED_G_OFF;  
+1358   4              Gled_mode = 0;
+C51 COMPILER V9.54   MAIN                                                                  04/10/2026 17:18:34 PAGE 24  
+
+1359   4            }
+1360   3          }
+1361   2          else{
+1362   3            GLED_CNT = 0;
+1363   3            LED_G_OFF;  
+1364   3            Gled_mode = 0;
+1365   3          }
+1366   2        
+1367   2        }
+1368   1        else{
+1369   2          LED_R_OFF;
+1370   2          //LED_G_OFF;
+1371   2          
+1372   2          if(Bat_Alarm_LED == 1){
+1373   3            //Port_SetOutputTogglepin(PORT0, PIN6);
+1374   3            if (Gled_mode == 0){
+1375   4              LED_G_ON; 
+1376   4              //Gled_mode = 1;
+1377   4            }
+1378   3            else{
+1379   4              LED_G_OFF;  
+1380   4            }
+1381   3          }
+1382   2          
+1383   2        
+1384   2        }
+1385   1      
+1386   1        Timer2_cnt++;
+1387   1        
+1388   1        if(Timer2_cnt == 10){
+1389   2          Timer2_cnt = 0;
+1390   2        }
+1391   1        
+1392   1        if(SYS_mode == In_Fire_al_mode){
+1393   2          
+1394   2          if(Port_GetInputpinValue(PORT1, PIN2)  == 0){
+1395   3            Al_Stop_key_Count++;
+1396   3          }
+1397   2          else{
+1398   3            Al_Stop_key_Count = 0;
+1399   3          }
+1400   2          
+1401   2          if(Al_Stop_key_Count > 5){
+1402   3            SYS_mode  = Al_Stop_mode;
+1403   3            LED_G_ON;
+1404   3          }
+1405   2            
+1406   2        }
+1407   1        
+1408   1      }
+1409          
+1410          void ADC_Uart_Out(uint16_t Adc_data){
+1411   1        
+1412   1        //UART mode º≥¡§
+1413   1      
+1414   1        //Set Alernative Function for USART P12(TX) / P13(RX)
+1415   1        Port_SetAlterFunctionpin(PORT1, PIN2, 0x1);
+1416   1        //Port_SetAlterFunctionpin(PORT1, PIN3, 0x1);
+1417   1              
+1418   1        USART_Initial(9600, USART_DATA_8BIT, USART_STOP_1BIT, USART_PARITY_NO, USART_TX_RX_MODE);
+1419   1      
+1420   1          
+C51 COMPILER V9.54   MAIN                                                                  04/10/2026 17:18:34 PAGE 25  
+
+1421   1        int_val = Adc_data / 1000 + 48;
+1422   1        USART_SendDataWithPolling(&int_val, 1);
+1423   1        tmp= Adc_data % 1000 ;
+1424   1        int_val = (tmp/ 100 )+ 48;
+1425   1        USART_SendDataWithPolling(&int_val, 1);
+1426   1        tmp= Adc_data % 100 ;
+1427   1        int_val = (tmp/ 10 )+ 48;
+1428   1        USART_SendDataWithPolling(&int_val, 1);
+1429   1        tmp= Adc_data % 10 ;
+1430   1        int_val = (tmp/ 1) + 48;
+1431   1        USART_SendDataWithPolling(&int_val, 1);
+1432   1      
+1433   1        USART_SendDataWithPolling(&End, 4);
+1434   1      
+1435   1        /* [BUG-10 FIX] Restore P1.2 to GPIO (button input) after UART use - same as Uart_Out_avr/Uart_Set */
+1436   1        /* BEFORE: (Port_SetAlterFunctionpin restore was missing - P1.2 stuck as UART TX) */
+1437   1        Port_SetAlterFunctionpin(PORT1, PIN2, 0);
+1438   1      
+1439   1      }
+1440          
+1441          
+1442          void Uart_Out_avr(int avr_val){
+1443   1        
+1444   1        //Set Alernative Function for USART P12(TX) / P13(RX)
+1445   1        Port_SetAlterFunctionpin(PORT1, PIN2, 0x1);
+1446   1        //Port_SetAlterFunctionpin(PORT1, PIN3, 0x1);
+1447   1                  
+1448   1        USART_Initial(9600, USART_DATA_8BIT, USART_STOP_1BIT, USART_PARITY_NO, USART_TX_RX_MODE);
+1449   1        
+1450   1        
+1451   1        USART_SendDataWithPolling(&Avr, 9);
+1452   1        USART_SendDataWithPolling(&Tab, 4);
+1453   1        
+1454   1        int_val = avr_val/ 1000 + 48;
+1455   1        USART_SendDataWithPolling(&int_val, 1);
+1456   1        tmp= avr_val% 1000 ;
+1457   1        int_val = (tmp/ 100 )+ 48;
+1458   1        USART_SendDataWithPolling(&int_val, 1);
+1459   1        tmp= avr_val% 100 ;
+1460   1        int_val = (tmp/ 10 )+ 48;
+1461   1        USART_SendDataWithPolling(&int_val, 1);
+1462   1        tmp= avr_val% 10 ;
+1463   1        int_val = (tmp/ 1) + 48;
+1464   1        USART_SendDataWithPolling(&int_val, 1);
+1465   1        
+1466   1        USART_SendDataWithPolling(&End, 4);
+1467   1        
+1468   1        Port_SetAlterFunctionpin(PORT1, PIN2, 0);
+1469   1        
+1470   1      }
+1471          
+1472          
+1473          void Uart_Set(void){
+1474   1        
+1475   1        //Set Alernative Function for USART P12(TX) / P13(RX)
+1476   1        Port_SetAlterFunctionpin(PORT1, PIN2, 0x1);
+1477   1        //Port_SetAlterFunctionpin(PORT1, PIN3, 0x1);
+1478   1                  
+1479   1        USART_Initial(9600, USART_DATA_8BIT, USART_STOP_1BIT, USART_PARITY_NO, USART_TX_RX_MODE);
+1480   1        
+1481   1        Port_SetAlterFunctionpin(PORT1, PIN2, 0);
+1482   1        
+C51 COMPILER V9.54   MAIN                                                                  04/10/2026 17:18:34 PAGE 26  
+
+1483   1      }
+1484          void Uart_Out(char mode){
+1485   1        
+1486   1        //Set Alernative Function for USART P12(TX) / P13(RX)
+1487   1        Port_SetAlterFunctionpin(PORT1, PIN2, 0x1);
+1488   1        //Port_SetAlterFunctionpin(PORT1, PIN3, 0x1);
+1489   1                  
+1490   1        USART_Initial(9600, USART_DATA_8BIT, USART_STOP_1BIT, USART_PARITY_NO, USART_TX_RX_MODE);
+1491   1        
+1492   1        if(ADC_mode == Dust_mode){
+1493   2          
+1494   2          if(visual_type == 1){
+1495   3            USART_SendDataWithPolling(&Visu_MODE, 10);
+1496   3            USART_SendDataWithPolling(&Tab, 4);
+1497   3          }
+1498   2          else{
+1499   3            USART_SendDataWithPolling(&Dust_MODE, 10);
+1500   3            USART_SendDataWithPolling(&Tab, 4);
+1501   3          }
+1502   2        }
+1503   1        else if(ADC_mode == Temp_mode){
+1504   2          
+1505   2          USART_SendDataWithPolling(&Temp_MODE, 10);
+1506   2          USART_SendDataWithPolling(&Tab, 4);
+1507   2        }
+1508   1        
+1509   1        int_val = Visu_data/ 1000 + 48;
+1510   1        USART_SendDataWithPolling(&int_val, 1);
+1511   1        tmp= Visu_data% 1000 ;
+1512   1        int_val = (tmp/ 100 )+ 48;
+1513   1        USART_SendDataWithPolling(&int_val, 1);
+1514   1        tmp= Visu_data% 100 ;
+1515   1        int_val = (tmp/ 10 )+ 48;
+1516   1        USART_SendDataWithPolling(&int_val, 1);
+1517   1        tmp= Visu_data% 10 ;
+1518   1        int_val = (tmp/ 1) + 48;
+1519   1        USART_SendDataWithPolling(&int_val, 1);
+1520   1                    
+1521   1        USART_SendDataWithPolling(&Tab, 4);
+1522   1        
+1523   1        if (mode == 1){
+1524   2          USART_SendDataWithPolling(&ADC, 4);
+1525   2          USART_SendDataWithPolling(&Tab, 4);
+1526   2          
+1527   2          Dust_Low_data = 0;
+1528   2          Dust_data = 0;
+1529   2        }
+1530   1        else if(mode == 2){
+1531   2          USART_SendDataWithPolling(&CHR, 4);
+1532   2          USART_SendDataWithPolling(&Tab, 4);
+1533   2        }
+1534   1        else if(mode == 3){
+1535   2          USART_SendDataWithPolling(&INF, 4);
+1536   2          USART_SendDataWithPolling(&Tab, 4);
+1537   2        }
+1538   1        
+1539   1        USART_SendDataWithPolling(&Bat, 4);
+1540   1                
+1541   1        int_val = bat_val/ 1000 + 48;
+1542   1        USART_SendDataWithPolling(&int_val, 1);
+1543   1        tmp= bat_val% 1000 ;
+1544   1        int_val = (tmp/ 100 )+ 48;
+C51 COMPILER V9.54   MAIN                                                                  04/10/2026 17:18:34 PAGE 27  
+
+1545   1        USART_SendDataWithPolling(&int_val, 1);
+1546   1        tmp= bat_val% 100 ;
+1547   1        int_val = (tmp/ 10 )+ 48;
+1548   1        USART_SendDataWithPolling(&int_val, 1);
+1549   1        tmp= bat_val% 10 ;
+1550   1        int_val = (tmp/ 1) + 48;
+1551   1        USART_SendDataWithPolling(&int_val, 1);
+1552   1                
+1553   1                
+1554   1        USART_SendDataWithPolling(&Tab, 4);
+1555   1                
+1556   1        USART_SendDataWithPolling(&Dust_ori, 7);  
+1557   1        int_val = Dust_Low_o_data / 1000 + 48;
+1558   1        USART_SendDataWithPolling(&int_val, 1);
+1559   1        tmp= Dust_Low_o_data % 1000 ;
+1560   1        int_val = (tmp/ 100 )+ 48;
+1561   1        USART_SendDataWithPolling(&int_val, 1);
+1562   1        tmp= Dust_Low_o_data % 100 ;
+1563   1        int_val = (tmp/ 10 )+ 48;
+1564   1        USART_SendDataWithPolling(&int_val, 1);
+1565   1        tmp= Dust_Low_o_data % 10 ;
+1566   1        int_val = (tmp/ 1) + 48;
+1567   1        USART_SendDataWithPolling(&int_val, 1);
+1568   1        
+1569   1        USART_SendDataWithPolling(&Tab, 4);
+1570   1        int_val = Dust_o_data / 1000 + 48;
+1571   1        USART_SendDataWithPolling(&int_val, 1);
+1572   1        tmp= Dust_o_data % 1000 ;
+1573   1        int_val = (tmp/ 100 )+ 48;
+1574   1        USART_SendDataWithPolling(&int_val, 1);
+1575   1        tmp= Dust_o_data % 100 ;
+1576   1        int_val = (tmp/ 10 )+ 48;
+1577   1        USART_SendDataWithPolling(&int_val, 1);
+1578   1        tmp= Dust_o_data % 10 ;
+1579   1        int_val = (tmp/ 1) + 48;
+1580   1        USART_SendDataWithPolling(&int_val, 1);
+1581   1        
+1582   1        USART_SendDataWithPolling(&Tab, 4);
+1583   1        int_val = (Dust_o_data - Dust_Low_o_data) / 1000 + 48;
+1584   1        USART_SendDataWithPolling(&int_val, 1);
+1585   1        tmp= (Dust_o_data - Dust_Low_o_data)  % 1000 ;
+1586   1        int_val = (tmp/ 100 )+ 48;
+1587   1        USART_SendDataWithPolling(&int_val, 1);
+1588   1        tmp= (Dust_o_data - Dust_Low_o_data)  % 100 ;
+1589   1        int_val = (tmp/ 10 )+ 48;
+1590   1        USART_SendDataWithPolling(&int_val, 1);
+1591   1        tmp= (Dust_o_data - Dust_Low_o_data)  % 10 ;
+1592   1        int_val = (tmp/ 1) + 48;
+1593   1        USART_SendDataWithPolling(&int_val, 1);
+1594   1        
+1595   1        
+1596   1        USART_SendDataWithPolling(&Tab, 4);
+1597   1                
+1598   1        USART_SendDataWithPolling(&Dust, 5);  
+1599   1        int_val = Dust_Low_data / 1000 + 48;
+1600   1        USART_SendDataWithPolling(&int_val, 1);
+1601   1        tmp= Dust_Low_data % 1000 ;
+1602   1        int_val = (tmp/ 100 )+ 48;
+1603   1        USART_SendDataWithPolling(&int_val, 1);
+1604   1        tmp= Dust_Low_data % 100 ;
+1605   1        int_val = (tmp/ 10 )+ 48;
+1606   1        USART_SendDataWithPolling(&int_val, 1);
+C51 COMPILER V9.54   MAIN                                                                  04/10/2026 17:18:34 PAGE 28  
+
+1607   1        tmp= Dust_Low_data % 10 ;
+1608   1        int_val = (tmp/ 1) + 48;
+1609   1        USART_SendDataWithPolling(&int_val, 1);
+1610   1        
+1611   1        USART_SendDataWithPolling(&Tab, 4);
+1612   1                
+1613   1        int_val = Dust_data / 1000 + 48;
+1614   1        USART_SendDataWithPolling(&int_val, 1);
+1615   1        tmp= Dust_data % 1000 ;
+1616   1        int_val = (tmp/ 100 )+ 48;
+1617   1        USART_SendDataWithPolling(&int_val, 1);
+1618   1        tmp= Dust_data % 100 ;
+1619   1        int_val = (tmp/ 10 )+ 48;
+1620   1        USART_SendDataWithPolling(&int_val, 1);
+1621   1        tmp= Dust_data % 10 ;
+1622   1        int_val = (tmp/ 1) + 48;
+1623   1        USART_SendDataWithPolling(&int_val, 1);
+1624   1        
+1625   1        USART_SendDataWithPolling(&Tab, 4);
+1626   1                
+1627   1        int_val = (Dust_data - Dust_Low_data)  / 1000 + 48;
+1628   1        USART_SendDataWithPolling(&int_val, 1);
+1629   1        tmp= (Dust_data - Dust_Low_data) % 1000 ;
+1630   1        int_val = (tmp/ 100 )+ 48;
+1631   1        USART_SendDataWithPolling(&int_val, 1);
+1632   1        tmp= (Dust_data - Dust_Low_data) % 100 ;
+1633   1        int_val = (tmp/ 10 )+ 48;
+1634   1        USART_SendDataWithPolling(&int_val, 1);
+1635   1        tmp= (Dust_data - Dust_Low_data) % 10 ;
+1636   1        int_val = (tmp/ 1) + 48;
+1637   1        USART_SendDataWithPolling(&int_val, 1);
+1638   1        
+1639   1        
+1640   1        USART_SendDataWithPolling(&Tab, 4);
+1641   1        
+1642   1        USART_SendDataWithPolling(&Temp, 5);
+1643   1        int_val = Tmp_data / 1000 + 48;
+1644   1        USART_SendDataWithPolling(&int_val, 1);
+1645   1        tmp= Tmp_data % 1000 ;
+1646   1        int_val = (tmp/ 100 )+ 48;
+1647   1        USART_SendDataWithPolling(&int_val, 1);
+1648   1        tmp= Tmp_data % 100 ;
+1649   1        int_val = (tmp/ 10 )+ 48;
+1650   1        USART_SendDataWithPolling(&int_val, 1);
+1651   1        tmp= Tmp_data % 10 ;
+1652   1        int_val = (tmp/ 1) + 48;
+1653   1        USART_SendDataWithPolling(&int_val, 1);
+1654   1      
+1655   1      
+1656   1        USART_SendDataWithPolling(&End, 4);
+1657   1        
+1658   1        Port_SetAlterFunctionpin(PORT1, PIN2, 0);
+1659   1        
+1660   1      }
+1661          
+1662          void WDT_Int(void) interrupt WDT_VECT
+1663          {
+1664   1        WDTCR &= ~0x01;
+1665   1      }
+1666          
+1667          void Data_Sorting(uint16_t *adc_data, uint8_t count)
+1668          {
+C51 COMPILER V9.54   MAIN                                                                  04/10/2026 17:18:34 PAGE 29  
+
+1669   1        uint8_t i,j;
+1670   1        uint16_t temp;
+1671   1      
+1672   1        for(i = 0; i < (count-1); i++)
+1673   1        {
+1674   2          for(j = i+1; j < count; j++)
+1675   2          {
+1676   3            
+1677   3            if(adc_data[i] > adc_data[j])
+1678   3            {
+1679   4              temp = adc_data[i];
+1680   4              adc_data[i]=adc_data[j];
+1681   4              adc_data[j]=temp;
+1682   4            }
+1683   3          }
+1684   2        }
+1685   1      }
+1686          
+1687          /**********************************************************************
+1688           * @brief   Data_Avr
+1689           * @param     None
+1690           * @return  None
+1691           **********************************************************************/
+1692          
+1693          uint16_t Data_Avr(uint16_t *adc_data, uint8_t count){
+1694   1        
+1695   1        uint32_t temp = 0;
+1696   1        uint8_t i;
+1697   1        
+1698   1        for(i=0; i<count ; i++){
+1699   2          temp = temp + adc_data[i];
+1700   2        }
+1701   1        
+1702   1        temp = (uint16_t)(temp / count);
+1703   1        
+1704   1        return temp;
+1705   1        
+1706   1      }
+1707          
+1708          /**********************************************************************
+1709           * @brief   Dust_ADC
+1710           * @param     None
+1711           * @return  None
+1712           **********************************************************************/
+1713          
+1714          uint16_t Dust_ADC_1AMP(uint8_t buf_cnt)
+1715          {
+1716   1        int Dust_adc_data= 0;
+1717   1        uint32_t op;
+1718   1        
+1719   1        uint16_t ADC_temp_data[ADC_BUFFER_SIZE];
+1720   1        
+1721   1        /*
+1722   1        P1IO = 0x3A;                  // 0 : Input, 1 : Output // P13¿ª 0¿∏∑Œ π≠¥¬¥Ÿ.
+1723   1        P13 = 0;
+1724   1        */
+1725   1        
+1726   1        P0FSRL  = 0
+1727   1          | ( 1 << 6)       //P03     // 0 : I/O, 1 : OP0OUT,   2 : AN3,      3 : Not used          // SENSING IN ADC 
+1728   1          | ( 1 << 4)       //P02     // 0 : I/O, 1 : OP1P,   2 : AN2,      3 : Not used          // 
+1729   1          | ( 2<< 2)       //P10     // 0 : I/O (EINT1),  1 : OP1N,  2 : AN1, 3 : Not used        // BAT_ADC
+1730   1          | ( 1 << 0);      //P00     // 0 : I/O (EINT0), 1 : OP1OUT,   2 : AN0,  3 : Not used      // C_VDD
+C51 COMPILER V9.54   MAIN                                                                  04/10/2026 17:18:34 PAGE 30  
+
+1731   1        
+1732   1        OPAMP_Initial(GAIN1_DIS, GAIN0_DIS, chp_125KHz);
+1733   1        OP0_Enable(TRUE);
+1734   1        OP1_Enable(FALSE);
+1735   1      
+1736   1        ADC_Initial(ADC_CLK_4M, ADC_SW_TRIG, ADC_INTERNAL_REF, ADC_LSB);  
+1737   1        
+1738   1        ADC_SelectChannel(ADC_VBGR);
+1739   1        ADC_GetDataWithPolling(ADC_temp_data, buf_cnt);
+1740   1        
+1741   1        Data_Sorting(ADC_temp_data,buf_cnt);
+1742   1        
+1743   1        /* [BUG-04 FIX #1] Prevent division by zero if ADC returns 0 (Dust_ADC_1AMP) */
+1744   1        /* BEFORE: op=92; op*=1024; op/=ADC_temp_data[buf_cnt/2]; */
+1745   1        if(ADC_temp_data[buf_cnt/2] == 0) ADC_temp_data[buf_cnt/2] = 1;
+1746   1        op=92;
+1747   1        op*=1024;
+1748   1        op/=ADC_temp_data[buf_cnt/2];
+1749   1        bat_val=op;
+1750   1      
+1751   1        //ADC_Initial(ADC_CLK_4M, ADC_SW_TRIG, ADC_LDO_REF, ADC_LSB); 
+1752   1        LDO_ON;
+1753   1      
+1754   1        NOP_20us_Delay(5); // 100us
+1755   1        
+1756   1        ADC_SelectChannel(ADC_OP0OUT);
+1757   1        ADC_GetDataWithPolling(ADC_temp_data, buf_cnt);
+1758   1        
+1759   1        LDO_OFF;
+1760   1      
+1761   1        Data_Sorting(ADC_temp_data,buf_cnt);
+1762   1        
+1763   1        op=bat_val;
+1764   1        op *=ADC_temp_data[buf_cnt/2];
+1765   1        op/=1024;
+1766   1        Dust_adc_data=op;
+1767   1        
+1768   1        //led off Ω√ ºæº≠∞™ ¿–±‚;
+1769   1        ADC_Initial(ADC_CLK_4M, ADC_SW_TRIG, ADC_INTERNAL_REF, ADC_LSB);  
+1770   1        ADC_SelectChannel(ADC_OP0OUT);
+1771   1        ADC_GetDataWithPolling(ADC_temp_data, buf_cnt);
+1772   1        
+1773   1        Data_Sorting(ADC_temp_data,buf_cnt);
+1774   1        
+1775   1        op=bat_val;
+1776   1        op *=ADC_temp_data[buf_cnt/2];
+1777   1        op/=1024;
+1778   1        Dust_Low_o_data=op;
+1779   1        
+1780   1        return Dust_adc_data;
+1781   1        
+1782   1      }
+1783          
+1784          
+1785          /**********************************************************************
+1786           * @brief   Dust_ADC_2amp
+1787           * @param     None
+1788           * @return  None
+1789           **********************************************************************/
+1790          
+1791          uint16_t Dust_ADC_2AMP(uint8_t buf_cnt)
+1792          {
+C51 COMPILER V9.54   MAIN                                                                  04/10/2026 17:18:34 PAGE 31  
+
+1793   1        uint16_t Dust_adc_data= 0 , i;
+1794   1        
+1795   1        uint32_t op;
+1796   1        uint16_t ADC_temp_data[ADC_BUFFER_SIZE];
+1797   1        
+1798   1        /* [BUG-07 FIX] Replaced direct P1IO register write with Port API; GPIO state restored on exit */
+1799   1        /* BEFORE: P1IO = 0x3A; P13 = 0; */
+1800   1        Port_SetOutputpin(PORT1, PIN3, 0); /* Set P13 as output */
+1801   1        P13 = 0;
+1802   1        
+1803   1        if(visual_type == 1){
+1804   2          OPAMP_Initial(GAIN1_X30, GAIN0_DIS, chp_125KHz);
+1805   2        }
+1806   1        else{
+1807   2          OPAMP_Initial(GAIN1_X15, GAIN0_DIS, chp_125KHz);
+1808   2        }
+1809   1        
+1810   1        OP0_Enable(TRUE);
+1811   1        OP1_Enable(TRUE);
+1812   1      
+1813   1        ADC_Initial(ADC_CLK_4M, ADC_SW_TRIG, ADC_INTERNAL_REF, ADC_LSB);  
+1814   1        
+1815   1        ADC_SelectChannel(ADC_VBGR);
+1816   1        ADC_GetDataWithPolling(ADC_temp_data, buf_cnt);
+1817   1        
+1818   1        Data_Sorting(ADC_temp_data,buf_cnt);
+1819   1        
+1820   1        /* [BUG-04 FIX #2] Prevent division by zero if ADC returns 0 (Dust_ADC_2AMP) */
+1821   1        /* BEFORE: op=92; op*=1024; op/=ADC_temp_data[buf_cnt/2]; */
+1822   1        if(ADC_temp_data[buf_cnt/2] == 0) ADC_temp_data[buf_cnt/2] = 1;
+1823   1        op=92;
+1824   1        op*=1024;
+1825   1        op/=ADC_temp_data[buf_cnt/2];
+1826   1        bat_val=op;
+1827   1      
+1828   1        LDO_ON;
+1829   1        NOP_20us_Delay(10); // 200us
+1830   1        
+1831   1        
+1832   1        ADC_SelectChannel(ADC_OP1OUT);
+1833   1        ADC_GetDataWithPolling(ADC_temp_data, buf_cnt);
+1834   1        
+1835   1        LDO_OFF;
+1836   1      
+1837   1        Data_Sorting(ADC_temp_data,buf_cnt);
+1838   1        
+1839   1        op=bat_val;
+1840   1        //op *=ADC_temp_data[buf_cnt/2];
+1841   1        ////////////////////
+1842   1        Dust_Sum_data = 0;
+1843   1        for(i=0;i< buf_cnt;i++){
+1844   2          Dust_Sum_data += ADC_temp_data[i];
+1845   2        }
+1846   1        Dust_Sum_data = Dust_Sum_data / buf_cnt;
+1847   1        op *= Dust_Sum_data;
+1848   1        ///////////////////
+1849   1        op/=1024;
+1850   1        Dust_adc_data=op;
+1851   1        
+1852   1        //led off Ω√ ºæº≠∞™ ¿–±‚;
+1853   1      
+1854   1        ADC_GetDataWithPolling(ADC_temp_data, buf_cnt);
+C51 COMPILER V9.54   MAIN                                                                  04/10/2026 17:18:34 PAGE 32  
+
+1855   1        
+1856   1        Data_Sorting(ADC_temp_data,buf_cnt);
+1857   1        
+1858   1        op=bat_val;
+1859   1        op *=ADC_temp_data[buf_cnt/2];
+1860   1        op/=1024;
+1861   1        Dust_Low_data=op;
+1862   1        
+1863   1        /* [BUG-07 FIX] Restore P13 to input mode (match hw_initial state) */
+1864   1        /* BEFORE: (missing - P13 was left as output after function returned) */
+1865   1        Port_SetInputpin(PORT1, PIN3, 0);
+1866   1      
+1867   1        return Dust_adc_data;
+1868   1        
+1869   1      }
+1870          
+1871          
+1872          
+1873          /**********************************************************************
+1874           * @brief   TEMP_ADC
+1875           * @param     None
+1876           * @return  None
+1877           **********************************************************************/
+1878          
+1879          uint16_t TEMP_ADC(void)
+1880          {
+1881   1        int Temp_adc_data= 0;
+1882   1        
+1883   1        P0FSRL  = 0
+1884   1          | ( 2 << 6)       //P03     // 0 : I/O, 1 : OP0OUT,   2 : AN3,      3 : Not used          // SENSING IN ADC 
+1885   1          | ( 2 << 4)       //P02     // 0 : I/O, 1 : OP1P,   2 : AN2,      3 : Not used          // 
+1886   1          | ( 2<< 2)       //P10     // 0 : I/O (EINT1),  1 : OP1N,  2 : AN1, 3 : Not used        // BAT_ADC
+1887   1          | ( 0 << 0);      //P00     // 0 : I/O (EINT0), 1 : OP1OUT,   2 : AN0,  3 : Not used      // C_VDD
+1888   1        
+1889   1        OP0_Enable(FALSE);
+1890   1        OP1_Enable(FALSE);
+1891   1        LDO_ON;
+1892   1        NOP_20us_Delay(10); // 200us
+1893   1        
+1894   1        ADC_Initial(ADC_CLK_4M, ADC_SW_TRIG, ADC_LDO_REF, ADC_LSB);
+1895   1        ADC_SelectChannel(ADC_CH3);
+1896   1        
+1897   1        ADC_GetDataWithPolling(temp_data, ADC_MAX_BUFFER_SIZE);
+1898   1        
+1899   1        LDO_OFF;
+1900   1      
+1901   1        Data_Sorting(temp_data,ADC_MAX_BUFFER_SIZE);
+1902   1        Temp_adc_data = temp_data[ADC_MAX_BUFFER_SIZE/2];
+1903   1        
+1904   1        return Temp_adc_data;
+1905   1        
+1906   1      }
+1907          /*
+1908          **********************************************************************
+1909           * @brief   BAT_ADC
+1910           * @param     None
+1911           * @return  None
+1912           **********************************************************************/
+1913          
+1914          uint16_t BAT_ADC(void){
+1915   1        
+1916   1        uint16_t Bat_ADC;
+C51 COMPILER V9.54   MAIN                                                                  04/10/2026 17:18:34 PAGE 33  
+
+1917   1        
+1918   1        uint32_t op;
+1919   1        
+1920   1        P0FSRL  = 0
+1921   1          | ( 1 << 6)       //P03     // 0 : I/O, 1 : OP0OUT,   2 : AN3,      3 : Not used          // SENSING IN ADC 
+1922   1          | ( 1 << 4)       //P02     // 0 : I/O, 1 : OP1P,   2 : AN2,      3 : Not used          // 
+1923   1          | ( 1<< 2)       //P10     // 0 : I/O (EINT1),  1 : OP1N,  2 : AN1, 3 : Not used        // BAT_ADC
+1924   1          | ( 0 << 0);      //P00     // 0 : I/O (EINT0), 1 : OP1OUT,   2 : AN0,  3 : Not used      // C_VDD
+1925   1        
+1926   1      
+1927   1        NOP_20us_Delay(10); // 200us
+1928   1      
+1929   1        ADC_Initial(ADC_CLK_4M, ADC_SW_TRIG, ADC_INTERNAL_REF, ADC_LSB);  
+1930   1        //ADC_Initial(ADC_CLK_1M, ADC_SW_TRIG, ADC_INTERNAL_REF, ADC_LSB);    
+1931   1        
+1932   1        ADC_SelectChannel(ADC_VBGR);
+1933   1      
+1934   1        ADC_GetDataWithPolling(temp_data, ADC_MAX_BUFFER_SIZE);
+1935   1        
+1936   1      
+1937   1        Data_Sorting(temp_data,ADC_MAX_BUFFER_SIZE);
+1938   1        
+1939   1        /* [BUG-04 FIX #3] Prevent division by zero if ADC returns 0 (BAT_ADC) */
+1940   1        /* BEFORE: op=92; op*=1024; op/=temp_data[ADC_MAX_BUFFER_SIZE/2]; */
+1941   1        if(temp_data[ADC_MAX_BUFFER_SIZE/2] == 0) temp_data[ADC_MAX_BUFFER_SIZE/2] = 1;
+1942   1        op=92;
+1943   1        op*=1024;
+1944   1        op/=temp_data[ADC_MAX_BUFFER_SIZE/2];
+1945   1        Bat_ADC=op;
+1946   1        //Bat_ADC=temp_data[ADC_MAX_BUFFER_SIZE/2];
+1947   1        
+1948   1        return Bat_ADC;
+1949   1      }
+1950          /* --------------------------------- End Of File ------------------------------ */
+1951          
+1952          
+1953          
+1954          
+1955          /**********************************************************************
+1956           * @brief   Delay_ms
+1957           * @param     None
+1958           * @return  None
+1959           **********************************************************************/
+1960          void Delay_ms(uint16_t msec)
+1961          {
+1962   1      
+1963   1        int i;
+1964   1        
+1965   1        for(i=0;i<msec;i++){
+1966   2          NOP_20us_Delay(50);
+1967   2        }
+1968   1      
+1969   1      }
+1970          
+1971          /**********************************************************************
+1972           * @brief   Enable_WD
+1973           * @param     None
+1974           * @return  None
+1975           **********************************************************************/
+1976          // øÕƒ°µ∂¿ª »∞º∫»≠ «—¥Ÿ.
+1977          
+1978          void Enable_WD(void){
+C51 COMPILER V9.54   MAIN                                                                  04/10/2026 17:18:34 PAGE 34  
+
+1979   1        
+1980   1          // øÕƒ°µ∂ ≈∏¿Ã∏” 
+1981   1          BeforeStop();
+1982   1          GLOBAL_INTERRUPT_EN();  
+1983   1          Stop();
+1984   1          AfterStop();
+1985   1        
+1986   1      }
+1987          
+1988          /**********************************************************************
+1989           * @brief   hw_initial_Wait
+1990           * @param     None
+1991           * @return  None
+1992           **********************************************************************/
+1993          // «œµÂø˛æÓ∏¶ √ ∞°»≠ «— »ƒ ms ¥Î±‚«—¥Ÿ. 
+1994          void hw_initial_Wait(int msec){
+1995   1        
+1996   1        GLOBAL_INTERRUPT_DIS();     
+1997   1        hw_initial();
+1998   1        
+1999   1        CVDD_OFF;
+2000   1        Port_SetOutputpin(PORT1, PIN3, 0); // CS «…
+2001   1      
+2002   1        Delay_ms(msec);
+2003   1        
+2004   1          /* Enable INT */
+2005   1        GLOBAL_INTERRUPT_EN();  
+2006   1        
+2007   1      }
+2008          
+2009          uint8_t SPI_Memory_Check(void){
+2010   1        
+2011   1        uint8_t SystemStatus_Read;
+2012   1        uint8_t deviceID[3];
+2013   1        
+2014   1          // SPI Memory Chack 
+2015   1        FLASH_ON; 
+2016   1        P2 = 0x0F;
+2017   1        // SPI Initial 
+2018   1        USART_SPI_Initial(SPI_MASTER_MODE, 500000, SPI_MSB, SPI_CPOL_LOW, SPI_CPHA_1EDGE, SPI_TX_RX_MODE, SPI_SS_
+             -HW_DISABLE);   // 500000
+2019   1        
+2020   1        Get_Identification(deviceID);
+2021   1        if( (deviceID[0]==0xC2)&&(deviceID[1]==0x20)&&(deviceID[2]==0x11) )
+2022   1        {
+2023   2          SystemStatus_Read=1;
+2024   2        }
+2025   1        else{
+2026   2          SystemStatus_Read=0;  
+2027   2        }
+2028   1      
+2029   1        FLASH_OFF;
+2030   1        
+2031   1          if(SystemStatus_Read == 1){
+2032   2          
+2033   2          LED_G_ON;
+2034   2          Delay_ms(50);
+2035   2          LED_G_OFF;
+2036   2          
+2037   2        }
+2038   1        else{
+2039   2          
+C51 COMPILER V9.54   MAIN                                                                  04/10/2026 17:18:34 PAGE 35  
+
+2040   2          LED_R_ON;
+2041   2          Delay_ms(50);
+2042   2          LED_R_OFF;
+2043   2        }
+2044   1        
+2045   1        
+2046   1        Delay_ms(100);
+2047   1        LED_G_ON;
+2048   1        LED_R_ON;
+2049   1        Delay_ms(50);
+2050   1        LED_G_OFF;
+2051   1        LED_R_OFF;
+2052   1        
+2053   1        return SystemStatus_Read;
+2054   1      }
+2055          
+2056          /**********************************************************************
+2057           * @brief   hw_initial_Wait
+2058           * @param     None
+2059           * @return  None
+2060           **********************************************************************/
+2061          void Check_Uart_Mode(uint8_t start_uart_debug){
+2062   1        
+2063   1        Port_SetInputpin(PORT1, PIN2, 1);  //key input & mode0  -> button input , √ ±‚ ¥≠∑¡ ¿÷¿∏∏È UART mode
+2064   1        
+2065   1          if(start_uart_debug == 1){
+2066   2            if(Port_GetInputpinValue(PORT1, PIN2)  == 0){
+2067   3              SYS_mode = UART_mode;
+2068   3            }
+2069   2            else{
+2070   3              SYS_mode = Normal_mode;
+2071   3            }
+2072   2            
+2073   2            LED_G_ON;
+2074   2            Delay_ms(100);
+2075   2            LED_G_OFF;
+2076   2            
+2077   2            // key «Æ∏±∂ß±Ó¡ˆ ¥Î±‚ 
+2078   2            if(SYS_mode == UART_mode){
+2079   3                while(1){
+2080   4                  LED_G_ON;
+2081   4                  if(Port_GetInputpinValue(PORT1, PIN2)  == 1){
+2082   5                    break;
+2083   5                  }
+2084   4                }
+2085   3                
+2086   3                LED_G_OFF;
+2087   3                //UART mode º≥¡§
+2088   3                
+2089   3                while(1){
+2090   4          
+2091   4                  LED_R_ON;
+2092   4                  
+2093   4                  Dust_ADC_Single(10);
+2094   4                  Dust_ADC_Dual(10);
+2095   4                  bat_val = BAT_ADC_Avr(10) ;
+2096   4                  Uart_Test_Out();
+2097   4                  Delay_ms(300);
+2098   4                  LED_R_OFF;
+2099   4                  Delay_ms(300);
+2100   4                }
+2101   3            }
+C51 COMPILER V9.54   MAIN                                                                  04/10/2026 17:18:34 PAGE 36  
+
+2102   2          }
+2103   1      }
+2104          
+2105          /**********************************************************************
+2106           * @brief   BAT_ADC_Avr
+2107           * @param     None
+2108           * @return  None
+2109           **********************************************************************/
+2110          
+2111          uint16_t BAT_ADC_Avr(uint8_t buf_cnt){
+2112   1        
+2113   1        uint16_t Bat_ADC;
+2114   1        
+2115   1        uint32_t op;
+2116   1        
+2117   1        P0FSRL  = 0
+2118   1          | ( 1 << 6)       //P03     // 0 : I/O, 1 : OP0OUT,   2 : AN3,      3 : Not used          // SENSING IN ADC 
+2119   1          | ( 1 << 4)       //P02     // 0 : I/O, 1 : OP1P,   2 : AN2,      3 : Not used          // 
+2120   1          | ( 1<< 2)       //P10     // 0 : I/O (EINT1),  1 : OP1N,  2 : AN1, 3 : Not used        // BAT_ADC
+2121   1          | ( 0 << 0);      //P00     // 0 : I/O (EINT0), 1 : OP1OUT,   2 : AN0,  3 : Not used      // C_VDD
+2122   1        
+2123   1      
+2124   1        NOP_20us_Delay(10); // 200us
+2125   1      
+2126   1        ADC_Initial(ADC_CLK_2M, ADC_SW_TRIG, ADC_INTERNAL_REF, ADC_LSB);  
+2127   1        
+2128   1        ADC_SelectChannel(ADC_VBGR);
+2129   1      
+2130   1        ADC_GetDataWithPolling(temp_data, buf_cnt);
+2131   1        
+2132   1        Data_Sorting(temp_data,buf_cnt);
+2133   1        
+2134   1        /* [BUG-04 FIX #3] Prevent division by zero if ADC returns 0 (BAT_ADC) */
+2135   1        /* BEFORE: op=92; op*=1024; op/=temp_data[ADC_MAX_BUFFER_SIZE/2]; */
+2136   1        if(temp_data[buf_cnt/2] == 0) {
+2137   2          temp_data[buf_cnt/2] = 1;
+2138   2        }
+2139   1        op=92;
+2140   1        op*=1024;
+2141   1        op/=temp_data[ADC_MAX_BUFFER_SIZE/2];
+2142   1        Bat_ADC=op;
+2143   1      
+2144   1        return Bat_ADC;
+2145   1      }
+2146          
+2147          /**********************************************************************
+2148           * @brief   Dust_ADC_Single
+2149           * @param     None
+2150           * @return  None
+2151           **********************************************************************/
+2152          
+2153          void Dust_ADC_Single(uint8_t buf_cnt)
+2154          {
+2155   1        int Dust_adc_data= 0;
+2156   1        uint32_t op;
+2157   1        
+2158   1        uint16_t ADC_temp_data[ADC_BUFFER_SIZE];
+2159   1        
+2160   1        /*
+2161   1        P1IO = 0x3A;                  // 0 : Input, 1 : Output // P13¿ª 0¿∏∑Œ π≠¥¬¥Ÿ.
+2162   1        P13 = 0;
+2163   1        */
+C51 COMPILER V9.54   MAIN                                                                  04/10/2026 17:18:34 PAGE 37  
+
+2164   1        
+2165   1        P0FSRL  = 0
+2166   1          | ( 1 << 6)       //P03     // 0 : I/O, 1 : OP0OUT,   2 : AN3,      3 : Not used          // SENSING IN ADC 
+2167   1          | ( 1 << 4)       //P02     // 0 : I/O, 1 : OP1P,   2 : AN2,      3 : Not used          // 
+2168   1          | ( 2<< 2)       //P10     // 0 : I/O (EINT1),  1 : OP1N,  2 : AN1, 3 : Not used        // BAT_ADC
+2169   1          | ( 1 << 0);      //P00     // 0 : I/O (EINT0), 1 : OP1OUT,   2 : AN0,  3 : Not used      // C_VDD
+2170   1        
+2171   1        OPAMP_Initial(GAIN1_DIS, GAIN0_DIS, chp_125KHz);
+2172   1        OP0_Enable(TRUE);
+2173   1        OP1_Enable(FALSE);
+2174   1      
+2175   1        ADC_Initial(ADC_CLK_2M, ADC_SW_TRIG, ADC_INTERNAL_REF, ADC_LSB);  
+2176   1        ADC_SelectChannel(ADC_VBGR);
+2177   1        Delay_ms(1);
+2178   1        
+2179   1        ADC_GetDataWithPolling(ADC_temp_data, buf_cnt);
+2180   1        
+2181   1        op=92;
+2182   1        op*=1024;
+2183   1        op/=Data_Avr(ADC_temp_data,buf_cnt);
+2184   1        Single_Amp_Adc.Bat_Val = op;
+2185   1        
+2186   1        ADC_SelectChannel(ADC_OP0OUT);
+2187   1        LDO_ON;
+2188   1        Delay_ms(1);
+2189   1        
+2190   1        ADC_GetDataWithPolling(ADC_temp_data, buf_cnt);
+2191   1        
+2192   1        Single_Amp_Adc.LED_On_Val =Data_Avr(ADC_temp_data,buf_cnt);
+2193   1        
+2194   1        LDO_OFF;
+2195   1        Delay_ms(1);
+2196   1        //led off Ω√ ºæº≠∞™ ¿–±‚;
+2197   1        ADC_GetDataWithPolling(ADC_temp_data, buf_cnt);
+2198   1      
+2199   1        Single_Amp_Adc.LED_Off_Val=Data_Avr(ADC_temp_data,buf_cnt);
+2200   1        
+2201   1      }
+2202          
+2203          
+2204          /**********************************************************************
+2205           * @brief   Dust_ADC_Dual
+2206           * @param     None
+2207           * @return  None
+2208           **********************************************************************/
+2209          
+2210          void Dust_ADC_Dual(uint8_t buf_cnt)
+2211          {
+2212   1        uint16_t Dust_adc_data= 0 ;
+2213   1        
+2214   1        uint32_t op;
+2215   1        uint16_t ADC_temp_data[16];
+2216   1        
+2217   1        P1IO = 0x3A;                  // 0 : Input, 1 : Output // P13¿ª 0¿∏∑Œ π≠¥¬¥Ÿ.
+2218   1        P13 = 0;
+2219   1        
+2220   1        
+2221   1        P0FSRL  = 0
+2222   1          | ( 1 << 6)       //P03     // 0 : I/O, 1 : OP0OUT,   2 : AN3,      3 : Not used          // SENSING IN ADC 
+2223   1          | ( 1 << 4)       //P02     // 0 : I/O, 1 : OP1P,   2 : AN2,      3 : Not used          // 
+2224   1          | ( 1 << 2)       //P10     // 0 : I/O (EINT1), 1 : OP1N,  2 : AN1, 3 : Not used        // BAT_ADC
+2225   1          | ( 1 << 0);      //P00     // 0 : I/O (EINT0), 1 : OP1OUT,   2 : AN0,  3 : Not used      // C_VDD
+C51 COMPILER V9.54   MAIN                                                                  04/10/2026 17:18:34 PAGE 38  
+
+2226   1        
+2227   1        OPAMP_Initial(GAIN1_X30, GAIN0_DIS, chp_125KHz);
+2228   1        
+2229   1        OP0_Enable(TRUE);
+2230   1        OP1_Enable(TRUE);
+2231   1      
+2232   1        ADC_Initial(ADC_CLK_2M, ADC_SW_TRIG, ADC_INTERNAL_REF, ADC_LSB);  
+2233   1        
+2234   1        ADC_SelectChannel(ADC_OP1OUT);
+2235   1        LDO_ON;
+2236   1        Delay_ms(1);
+2237   1        
+2238   1        ADC_GetDataWithPolling(ADC_temp_data, buf_cnt);
+2239   1        Dual_Amp_Adc.LED_On_Val = Data_Avr(ADC_temp_data,buf_cnt);
+2240   1        
+2241   1        LDO_OFF;
+2242   1        Delay_ms(1);
+2243   1        
+2244   1        //led off Ω√ ºæº≠∞™ ¿–±‚
+2245   1        ADC_GetDataWithPolling(ADC_temp_data, buf_cnt);
+2246   1        Dual_Amp_Adc.LED_Off_Val=Data_Avr(ADC_temp_data,buf_cnt);
+2247   1      
+2248   1      
+2249   1      }
+*** WARNING C280 IN LINE 2214 OF src\main.c: 'op': unreferenced local variable
+2250          
+2251          /**********************************************************************
+2252           * @brief   Uart_Test_Out
+2253           * @param     None
+2254           * @return  None
+2255           **********************************************************************/
+2256          
+2257          void Uart_Test_Out(void){
+2258   1        
+2259   1        uint16_t tmp , Read_temp;
+2260   1        
+2261   1        Port_SetAlterFunctionpin(PORT1, PIN2, 0x1);
+2262   1                  
+2263   1        USART_Initial(9600, USART_DATA_8BIT, USART_STOP_1BIT, USART_PARITY_NO, USART_TX_RX_MODE);
+2264   1        
+2265   1        if(ADC_mode == Dust_mode){
+2266   2          USART_SendDataWithPolling(&Dust_MODE, 10);
+2267   2        }
+2268   1        else if(ADC_mode == Temp_mode){
+2269   2          USART_SendDataWithPolling(&Temp_MODE, 10);
+2270   2        }
+2271   1        
+2272   1        //∫£≈Õ∏Æ «¡∏∞∆Æ 
+2273   1        USART_SendDataWithPolling(&Bat, 4);
+2274   1                
+2275   1        Read_temp = bat_val;
+2276   1        int_val = Read_temp/ 1000 + 48;
+2277   1        USART_SendDataWithPolling(&int_val, 1);
+2278   1        tmp= Read_temp% 1000 ;
+2279   1        int_val = (tmp/ 100 )+ 48;
+2280   1        USART_SendDataWithPolling(&int_val, 1);
+2281   1        tmp= Read_temp% 100 ;
+2282   1        int_val = (tmp/ 10 )+ 48;
+2283   1        USART_SendDataWithPolling(&int_val, 1);
+2284   1        tmp= Read_temp% 10 ;
+2285   1        int_val = (tmp/ 1) + 48;
+2286   1        USART_SendDataWithPolling(&int_val, 1);
+C51 COMPILER V9.54   MAIN                                                                  04/10/2026 17:18:34 PAGE 39  
+
+2287   1                
+2288   1        USART_SendDataWithPolling(&Tab, sizeof(Tab));
+2289   1        
+2290   1        //¥‹¿œ æ⁄«¡ LED OFF
+2291   1        USART_SendDataWithPolling(&Dust_Si_Off, sizeof(Dust_Si_Off)); 
+2292   1        
+2293   1        Read_temp = Single_Amp_Adc.LED_Off_Val;
+2294   1        int_val = Read_temp/ 1000 + 48;
+2295   1        USART_SendDataWithPolling(&int_val, 1);
+2296   1        tmp= Read_temp% 1000 ;
+2297   1        int_val = (tmp/ 100 )+ 48;
+2298   1        USART_SendDataWithPolling(&int_val, 1);
+2299   1        tmp= Read_temp% 100 ;
+2300   1        int_val = (tmp/ 10 )+ 48;
+2301   1        USART_SendDataWithPolling(&int_val, 1);
+2302   1        tmp= Read_temp% 10 ;
+2303   1        int_val = (tmp/ 1) + 48;
+2304   1        USART_SendDataWithPolling(&int_val, 1);
+2305   1        
+2306   1        USART_SendDataWithPolling(&Tab, sizeof(Tab));
+2307   1        
+2308   1        
+2309   1        //¥‹¿œ æ⁄«¡ LED ON
+2310   1        USART_SendDataWithPolling(&Dust_Si_On, sizeof(Dust_Si_On)); 
+2311   1        
+2312   1        Read_temp = Single_Amp_Adc.LED_On_Val;
+2313   1        int_val = Read_temp/ 1000 + 48;
+2314   1        USART_SendDataWithPolling(&int_val, 1);
+2315   1        tmp= Read_temp% 1000 ;
+2316   1        int_val = (tmp/ 100 )+ 48;
+2317   1        USART_SendDataWithPolling(&int_val, 1);
+2318   1        tmp= Read_temp% 100 ;
+2319   1        int_val = (tmp/ 10 )+ 48;
+2320   1        USART_SendDataWithPolling(&int_val, 1);
+2321   1        tmp= Read_temp% 10 ;
+2322   1        int_val = (tmp/ 1) + 48;
+2323   1        USART_SendDataWithPolling(&int_val, 1);
+2324   1        
+2325   1        USART_SendDataWithPolling(&Tab, sizeof(Tab));
+2326   1        
+2327   1          //¥‹¿œ æ⁄«¡ LED Del
+2328   1        USART_SendDataWithPolling(&Dust_Si_Deta, sizeof(Dust_Si_Deta)); 
+2329   1        
+2330   1        Read_temp = Single_Amp_Adc.LED_On_Val - Single_Amp_Adc.LED_Off_Val;
+2331   1        int_val = Read_temp/ 1000 + 48;
+2332   1        USART_SendDataWithPolling(&int_val, 1);
+2333   1        tmp= Read_temp% 1000 ;
+2334   1        int_val = (tmp/ 100 )+ 48;
+2335   1        USART_SendDataWithPolling(&int_val, 1);
+2336   1        tmp= Read_temp% 100 ;
+2337   1        int_val = (tmp/ 10 )+ 48;
+2338   1        USART_SendDataWithPolling(&int_val, 1);
+2339   1        tmp= Read_temp% 10 ;
+2340   1        int_val = (tmp/ 1) + 48;
+2341   1        USART_SendDataWithPolling(&int_val, 1);
+2342   1        
+2343   1        USART_SendDataWithPolling(&Tab, sizeof(Tab));
+2344   1        
+2345   1        //µ‡æÛ  æ⁄«¡ LED OFF
+2346   1        USART_SendDataWithPolling(&Dust_Du_Off, sizeof(Dust_Du_Off)); 
+2347   1        
+2348   1        Read_temp = Dual_Amp_Adc.LED_Off_Val;
+C51 COMPILER V9.54   MAIN                                                                  04/10/2026 17:18:34 PAGE 40  
+
+2349   1        int_val = Read_temp/ 1000 + 48;
+2350   1        USART_SendDataWithPolling(&int_val, 1);
+2351   1        tmp= Read_temp% 1000 ;
+2352   1        int_val = (tmp/ 100 )+ 48;
+2353   1        USART_SendDataWithPolling(&int_val, 1);
+2354   1        tmp= Read_temp% 100 ;
+2355   1        int_val = (tmp/ 10 )+ 48;
+2356   1        USART_SendDataWithPolling(&int_val, 1);
+2357   1        tmp= Read_temp% 10 ;
+2358   1        int_val = (tmp/ 1) + 48;
+2359   1        USART_SendDataWithPolling(&int_val, 1);
+2360   1        
+2361   1        USART_SendDataWithPolling(&Tab, sizeof(Tab));
+2362   1        
+2363   1        //µ‡æÛ  æ⁄«¡ LED ON
+2364   1        USART_SendDataWithPolling(&Dust_Du_On, sizeof(Dust_Du_On)); 
+2365   1        
+2366   1        Read_temp = Dual_Amp_Adc.LED_On_Val;
+2367   1        int_val = Read_temp/ 1000 + 48;
+2368   1        USART_SendDataWithPolling(&int_val, 1);
+2369   1        tmp= Read_temp% 1000 ;
+2370   1        int_val = (tmp/ 100 )+ 48;
+2371   1        USART_SendDataWithPolling(&int_val, 1);
+2372   1        tmp= Read_temp% 100 ;
+2373   1        int_val = (tmp/ 10 )+ 48;
+2374   1        USART_SendDataWithPolling(&int_val, 1);
+2375   1        tmp= Read_temp% 10 ;
+2376   1        int_val = (tmp/ 1) + 48;
+2377   1        USART_SendDataWithPolling(&int_val, 1);
+2378   1        
+2379   1        USART_SendDataWithPolling(&Tab, sizeof(Tab));
+2380   1        
+2381   1          //µ‡æÛ  æ⁄«¡ LED Del
+2382   1        USART_SendDataWithPolling(&Dust_Du_Deta, sizeof(Dust_Du_Deta)); 
+2383   1        
+2384   1        Read_temp = Dual_Amp_Adc.LED_On_Val - Single_Amp_Adc.LED_Off_Val;
+2385   1        int_val = Read_temp/ 1000 + 48;
+2386   1        USART_SendDataWithPolling(&int_val, 1);
+2387   1        tmp= Read_temp% 1000 ;
+2388   1        int_val = (tmp/ 100 )+ 48;
+2389   1        USART_SendDataWithPolling(&int_val, 1);
+2390   1        tmp= Read_temp% 100 ;
+2391   1        int_val = (tmp/ 10 )+ 48;
+2392   1        USART_SendDataWithPolling(&int_val, 1);
+2393   1        tmp= Read_temp% 10 ;
+2394   1        int_val = (tmp/ 1) + 48;
+2395   1        USART_SendDataWithPolling(&int_val, 1);
+2396   1        
+2397   1        USART_SendDataWithPolling(&Tab, sizeof(Tab));
+2398   1        
+2399   1        USART_SendDataWithPolling(&End, 4);
+2400   1        
+2401   1        Port_SetAlterFunctionpin(PORT1, PIN2, 0);
+2402   1        
+2403   1      }
+2404          
+2405          void Bat_Ck(void){
+2406   1      
+2407   1            ////∫£≈Õ∏Æ  √º≈©///
+2408   1            
+2409   1            bat_val = BAT_ADC_Avr(5) ;
+2410   1            
+C51 COMPILER V9.54   MAIN                                                                  04/10/2026 17:18:34 PAGE 41  
+
+2411   1            if(bat_val < Bat_Low){
+2412   2              Bat_mode = Bat_Low_mode;
+2413   2            }
+2414   1            else if(bat_val >= Bat_high ){
+2415   2              Bat_mode = Bat_High_mode;
+2416   2            }
+2417   1            
+2418   1                  //Uart Test//
+2419   1            if(uart_debug == uart_debug_On){
+2420   2              Uart_Out(1);
+2421   2            }
+2422   1            else{
+2423   2              Uart_Set();
+2424   2            }
+2425   1            
+2426   1            //Uart Test end//
+2427   1            
+2428   1            LED_G_ON;
+2429   1            NOP_20us_Delay(250);  // 5ms  
+2430   1            
+2431   1            LED_G_OFF;
+2432   1            
+2433   1            system_count = 1;
+2434   1            
+2435   1            hw_initial_Wait(10);
+2436   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   9768    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =    319     219
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  2 WARNING(S),  0 ERROR(S)

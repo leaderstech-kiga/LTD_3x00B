@@ -1,0 +1,166 @@
+C51 COMPILER V9.54   A96L41X_OPAMP                                                         04/10/2026 17:18:31 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE A96L41X_OPAMP
+OBJECT MODULE PLACED IN .\Objects\a96l41x_opamp.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE src\a96l41x_opamp.c LARGE OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PR
+                    -INT(.\Listings\a96l41x_opamp.lst) TABS(2) OBJECT(.\Objects\a96l41x_opamp.obj)
+
+line level    source
+
+   1          /**
+   2          * @file       a96l41x_opamp.c
+   3          * @brief      A96L41x OPAMP peripheral function 
+   4          * @author     Application Team, ABOV Semiconductor Co., Ltd.
+   5          * @version    V1.00
+   6          * @date       29. MAY. 2020
+   7          *
+   8          * Copyright(C) 2020, ABOV Semiconductor
+   9          * All rights reserved.
+  10          *
+  11          ********************************************************************************
+  12          * ABOV Disclaimer
+  13          *
+  14          *IMPORTANT NOTICE - PLEASE READ CAREFULLY
+  15          *ABOV Semiconductor ("ABOV") reserves the right to make changes, corrections, enhancements, 
+  16          *modifications, and improvements to ABOV products and/or to this document at any time without notice. 
+  17          *ABOV does not give warranties as to the accuracy or completeness of the information included herein.
+  18          *Purchasers should obtain the latest relevant information of ABOV products before placing orders. 
+  19          *Purchasers are entirely responsible for the choice, selection, and use of ABOV products and 
+  20          *ABOV assumes no liability for application assistance or the design of purchasers' products. No license, 
+  21          *express or implied, to any intellectual property rights is granted by ABOV herein. 
+  22          *ABOV disclaims all express and implied warranties and shall not be responsible or
+  23          *liable for any injuries or damages related to use of ABOV products in such unauthorized applications. 
+  24          *ABOV and the ABOV logo are trademarks of ABOV.
+  25          *All other product or service names are the property of their respective owners. 
+  26          *Information in this document supersedes and replaces the information previously
+  27          *supplied in any former versions of this document.
+  28          *2020 ABOV Semiconductor  All rights reserved
+  29          *
+  30          */
+  31          
+  32          /*******************************************************************************
+  33          * Included File
+  34          *******************************************************************************/
+  35          #include "a96l41x_opamp.h"
+  36          
+  37          /*******************************************************************************
+  38          * Private Pre-processor Definition & Macro
+  39          *******************************************************************************/
+  40          
+  41          /*******************************************************************************
+  42          * Private Typedef
+  43          *******************************************************************************/
+  44          
+  45          /*******************************************************************************
+  46          * Private Variable
+  47          *******************************************************************************/
+  48          
+  49          /*******************************************************************************
+  50          * Private Function Prototype
+  51          *******************************************************************************/
+  52          
+  53          /*******************************************************************************
+  54          * Public Function
+C51 COMPILER V9.54   A96L41X_OPAMP                                                         04/10/2026 17:18:31 PAGE 2   
+
+  55          *******************************************************************************/
+  56          
+  57          /**
+  58          * @brief    Initialize OPAMP peripheral
+  59          * @param   gain_1sel      This parameter contains the selection of OP1 gain select .
+  60          *
+  61          *     - GAIN1_DIS   = 0
+  62          *     - X1      = 1
+  63          *     - X2      = 2
+  64          *     - X10       = 3
+  65          *     - X15       = 4
+  66          *     - X20       = 5
+  67          *     - X30       = 6
+  68          *     - X60       = 7
+  69          * @param   gain_0sel    This parameter contains the selection of OP0 gain select.
+  70          *
+  71          *     - GAIN0_DIS   = 0
+  72          *     - X5      = 1
+  73          *     - X10       = 2
+  74          *     - X20       = 3
+  75          * @param   chp_clk    This parameter contains the selection of OPAMP chopper clock select.
+  76          *
+  77          *     - 125KHz    = 0
+  78          *     - 167KHz    = 1
+  79          * @return   None
+  80          */
+  81          void OPAMP_Initial(uint8_t gain_1sel, uint8_t gain_0sel, uint8_t chp_clk)
+  82          {
+  83   1        uint8_t temp_reg, temp_reg2;
+  84   1        
+  85   1        temp_reg = AMPCR1;
+  86   1        temp_reg &= ~(0xFF);
+  87   1        temp_reg |= ((gain_1sel << 4) | (gain_0sel << 0));
+  88   1        
+  89   1        AMPCR1 = temp_reg;
+  90   1        
+  91   1        temp_reg2 = CHPCR;
+  92   1        temp_reg2 &= ~(0xFF);
+  93   1        temp_reg2 |= (chp_clk << 0);
+  94   1        
+  95   1        CHPCR = temp_reg2;
+  96   1        
+  97   1      }
+  98          
+  99          /**
+ 100          * @brief    Enables or disables the OP1 peripheral.
+ 101          * @param   enable   This parameter contains the enable of this function. 
+ 102          *
+ 103          *     - FALSE   = 0
+ 104          *     - TRUE    = 1
+ 105          * @return   None
+ 106          */
+ 107          void OP1_Enable(uint8_t enable)
+ 108          {
+ 109   1        if(enable == TRUE)
+ 110   1        {
+ 111   2          AMPCR1 |= (1 << 7);
+ 112   2        }
+ 113   1        else
+ 114   1        {
+ 115   2          AMPCR1 &= ~(1 << 7);
+ 116   2        }
+C51 COMPILER V9.54   A96L41X_OPAMP                                                         04/10/2026 17:18:31 PAGE 3   
+
+ 117   1      }
+ 118          /**
+ 119          * @brief    Enables or disables the OP0 peripheral.
+ 120          * @param   enable   This parameter contains the enable of this function. 
+ 121          *
+ 122          *     - FALSE   = 0
+ 123          *     - TRUE    = 1
+ 124          * @return   None
+ 125          */
+ 126          void OP0_Enable(uint8_t enable)
+ 127          {
+ 128   1        if(enable == TRUE)
+ 129   1        {
+ 130   2          AMPCR1 |= (1 << 3);
+ 131   2        }
+ 132   1        else
+ 133   1        {
+ 134   2          AMPCR1 &= ~(1 << 3);
+ 135   2        }
+ 136   1      }
+ 137          
+ 138          /* --------------------------------- End Of File ------------------------------ */
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =     39    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
