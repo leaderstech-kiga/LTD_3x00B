@@ -4,17 +4,6 @@
 /* Private Typedef -----------------------------------------------------------*/
 /* Private Variable ----------------------------------------------------------*/
 
-/*
-#define LED_G_ON			P06 = 1
-#define LED_G_OFF		P06 = 0
-
-#define LED_R_ON			P07 = 1
-#define LED_R_OFF		P07 = 0
-
-#define AUDIO_ON	P14 = 0
-#define AUDIO_OFF 	P14 = 1
-*/
-
 
 #define LED_G_ON			P06 = 0
 #define LED_G_OFF		P06 = 1
@@ -25,11 +14,8 @@
 #define AUDIO_ON		P14 = 1
 #define AUDIO_OFF 	P14 = 0
 
-#define  BAT_PW_ON			P13 = 1
-#define  BAT_PW_OFF		P13 = 0
-
 #define LDO_ON				LDOCR = 0x01
-#define LDO_OFF				LDOCR = 0x00
+#define LDO_OFF			LDOCR = 0x00
 
 #define CVDD_ON		P20 = 1
 #define CVDD_OFF 	P20 = 0
@@ -39,10 +25,9 @@
 #define Stop()          {PCON = 0x03; _nop_( ); _nop_( ); _nop_( );}
 #define Idle()          {PCON = 0x01; _nop_( ); _nop_( ); _nop_( );}
 
-
 //------------------- AMP/ADC Control Constants Definition -------------------
 //#define CC_USE					// if constant current use disable comment line
-#define DELAY_TIME			
+	
 #define AMP_AUTO_DIS         0
 
 #ifdef SysClock_1MHZ		
@@ -73,22 +58,8 @@
 #define ADC_OFF()            ADCCRL = ADCCRL&(~(1<<7))
 #define CHK_ADC()            (ADCCRL&(1<<4))	
 
-#define ADC_AMP0	1
-#define ADC_Temp	2
-#define ADC_BAT			3	
-	
-#define Dust_mode		1
-#define Temp_mode	2
 
-#define Normal_mode	1
-#define UART_mode		2
-#define In_Fire_al_mode		3
-#define Ex_Fire_al_mode		4
-#define Al_Stop_mode		6
-
-
-#define Bat_High_mode		1
-#define Bat_Low_mode		2
+////////////////Start  오디오 변수//////////// 
 	
 // Audio Data : 8000bps , 8bit 
 
@@ -97,45 +68,15 @@ extern uint16_t Audio_addr;
 extern uint8_t Audio_start;
 extern uint8_t Audio_start_address;
 extern uint16_t Audio_max_length;
+
+////////////////End  오디오 변수//////////// 
+
+
+////////////////Start  시스템 상태 함수//////////// 
+
 extern uint8_t SystemStatus;
 
-extern uint8_t Timer2_cnt;
+
+////////////////End  시스템 상태 함수//////////// 
 
 /* Private Function Prototype ------------------------------------------------*/
-
-void Variable_Initial(uint16_t Audio_st_address);
-void Delay_s(uint16_t sec);
-void hw_initial(void) ;
-void hw_audio_initial(void);
-void BeforeStop(void);
-void AfterStop(void);
-void WD_Reset(void);
-void Audio_Init(void);
-uint16_t Adc_Read(uint8_t Port);
-uint16_t Dust_ADC_1AMP(uint8_t buf_cnt);
-uint16_t Dust_ADC_2AMP(uint8_t buf_cnt);
-uint16_t TEMP_ADC(void);
-void Fire_Alarm(void);
-uint16_t BAT_ADC(void);
-uint16_t Visu_MODE_CK(void);
-void Audio_Run(uint16_t Address , uint16_t Length,  uint8_t Run_time);
-void T2_init(void);
-void LowBat_Alarm(void);
-void ADC_Uart_Out(uint16_t Dust_data);
-void det_adc(void);
-void Uart_Out_avr(int avr_val);
-void Uart_Out(char mode);
-void Data_Sorting(uint16_t *adc_data, uint8_t count);
-void Uart_Set(void);
-
-void Delay_ms(uint16_t msec);
-void Enable_WD(void);
-void hw_initial_Wait(int msec);
-uint8_t SPI_Memory_Check(void);
-void Check_Uart_Mode(uint8_t start_uart_debug);
-void Uart_Test_Out(void);
-uint16_t BAT_ADC_Avr(uint8_t buf_cnt);
-void Dust_ADC_Single(uint8_t buf_cnt);
-void Dust_ADC_Dual(uint8_t buf_cnt);
-void Bat_Ck(void);
-uint16_t Data_Avr(uint16_t *adc_data, uint8_t count);

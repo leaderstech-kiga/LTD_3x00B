@@ -1,4 +1,4 @@
-C51 COMPILER V9.54   AUDIO                                                                 04/10/2026 17:39:34 PAGE 1   
+C51 COMPILER V9.54   AUDIO                                                                 04/16/2026 10:27:07 PAGE 1   
 
 
 C51 COMPILER V9.54, COMPILATION OF MODULE AUDIO
@@ -62,7 +62,7 @@ line level    source
   52          *Information in this document supersedes and replaces the information previously
   53          *supplied in any former versions of this document.
   54          *2020 ABOV Semiconductor  All rights reserved
-C51 COMPILER V9.54   AUDIO                                                                 04/10/2026 17:39:34 PAGE 2   
+C51 COMPILER V9.54   AUDIO                                                                 04/16/2026 10:27:07 PAGE 2   
 
   55          *
   56          */
@@ -126,7 +126,7 @@ line level    source
  114   1          /* Enable timer1 match INT */   
  115   1        Timer1_ConfigureInterrupt(TRUE);
  116   1        /* Timer1 start */
-C51 COMPILER V9.54   AUDIO                                                                 04/10/2026 17:39:34 PAGE 3   
+C51 COMPILER V9.54   AUDIO                                                                 04/16/2026 10:27:07 PAGE 3   
 
  117   1        //Timer1_Start(); 
  118   1      
@@ -145,64 +145,67 @@ line level    source
  131   1        if(Audio_start==0)
  132   1        { 
  133   2          AUDIO_ON;
- 134   2          Read(Audio_addr);   
+ 134   2          Read(Audio_addr);   // SPI 읽기 명령만 시작
  135   2        
  136   2          Timer0_SetPPGDutyCounter(0);
  137   2          Timer0_Start();
  138   2          Audio_start=1;
- 139   2        }
- 140   1        else
- 141   1        {
- 142   2      
- 143   2          if(Audio_length < Audio_max_length)
- 144   2          {
- 145   3            Read_c(read_data);
- 146   3            duty = read_data[0];
- 147   3            duty =duty>>1;
- 148   3            if(duty >= 124)
- 149   3              duty= 124;
- 150   3             Timer0_SetPPGDutyCounter(duty);
- 151   3             Audio_length++;
- 152   3             Audio_addr++;
- 153   3          }
- 154   2          else
- 155   2          {
- 156   3            SLAVEDESELECT;
- 157   3            AUDIO_OFF;
- 158   3            Timer0_Stop();
- 159   3          }
- 160   2          
- 161   2        }
- 162   1          
- 163   1        
- 164   1      }
- 165          
- 166          
- 167          
- 168          void Read_Audio_Length(uint16_t Audio_st_address)
- 169          {
- 170   1        unsigned long temp;
- 171   1      
- 172   1        Audio_addr=Audio_st_address + 40;
- 173   1        Read_v(Audio_addr, read_data);
- 174   1        Audio_max_length = read_data[0];
- 175   1      
- 176   1        Audio_addr=Audio_st_address + 41;
- 177   1        Read_v(Audio_addr, read_data);  
- 178   1        temp= read_data[0];
-C51 COMPILER V9.54   AUDIO                                                                 04/10/2026 17:39:34 PAGE 4   
+ 139   2          // ← 이 시점엔 아직 데이터가 PWM에 반영 안 됨
+ 140   2        }
+ 141   1        else
+ 142   1        {
+ 143   2      
+ 144   2          if(Audio_length < Audio_max_length)
+ 145   2          {
+ 146   3            Read_c(read_data);  // 다음 인터럽트에서 데이터 수신
+ 147   3            duty = read_data[0];  // 8bit → 0~127 변환
+ 148   3            duty =duty>>1;
+ 149   3            if(duty >= 124)
+ 150   3              duty= 124;
+ 151   3             Timer0_SetPPGDutyCounter(duty);
+ 152   3             Audio_length++;
+ 153   3             Audio_addr++;
+ 154   3          }
+ 155   2          else  // Audio_length >= Audio_max_length 도달 시
+ 156   2          {
+ 157   3            SLAVEDESELECT;
+ 158   3            AUDIO_OFF;
+ 159   3            Timer0_Stop();
+ 160   3            Audio_start = 0;
+ 161   3            Audio_length = 0;
+ 162   3          }
+ 163   2          
+ 164   2        }
+ 165   1          
+ 166   1        
+ 167   1      }
+ 168          
+ 169          
+ 170          
+ 171          void Read_Audio_Length(uint16_t Audio_st_address)
+ 172          {
+ 173   1        unsigned long temp;
+ 174   1      
+ 175   1        Audio_addr=Audio_st_address + 40;
+ 176   1        Read_v(Audio_addr, read_data);
+ 177   1        Audio_max_length = read_data[0];          // Low byte
+ 178   1      
+C51 COMPILER V9.54   AUDIO                                                                 04/16/2026 10:27:07 PAGE 4   
 
- 179   1        temp = (temp << 8)&0xff00;
- 180   1        Audio_max_length |=temp;
- 181   1      
- 182   1      }
- 183          
- 184          
- 185          /* --------------------------------- End Of File ------------------------------ */
+ 179   1        Audio_addr=Audio_st_address + 41;
+ 180   1        Read_v(Audio_addr, read_data);  
+ 181   1        temp= read_data[0];
+ 182   1        temp = (temp << 8)&0xff00;     // High byte
+ 183   1        Audio_max_length |=temp;
+ 184   1      
+ 185   1      }
+ 186          
+ 187          
+ 188          /* --------------------------------- End Of File ------------------------------ */
 
 
 MODULE INFORMATION:   STATIC OVERLAYABLE
-   CODE SIZE        =    365    ----
+   CODE SIZE        =    376    ----
    CONSTANT SIZE    =   ----    ----
    XDATA SIZE       =     20       2
    PDATA SIZE       =   ----    ----

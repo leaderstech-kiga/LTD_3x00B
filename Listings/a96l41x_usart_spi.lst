@@ -1,4 +1,4 @@
-C51 COMPILER V9.54   A96L41X_USART_SPI                                                     04/10/2026 17:39:34 PAGE 1   
+C51 COMPILER V9.54   A96L41X_USART_SPI                                                     04/16/2026 10:27:07 PAGE 1   
 
 
 C51 COMPILER V9.54, COMPILATION OF MODULE A96L41X_USART_SPI
@@ -62,7 +62,7 @@ line level    source
   52          uint8_t *spi_readBuff0;
   53          uint8_t spi_readNum0 = 0;
   54          
-C51 COMPILER V9.54   A96L41X_USART_SPI                                                     04/10/2026 17:39:34 PAGE 2   
+C51 COMPILER V9.54   A96L41X_USART_SPI                                                     04/16/2026 10:27:07 PAGE 2   
 
   55          /*******************************************************************************
   56          * Private Function Prototype
@@ -126,7 +126,7 @@ line level    source
  113   1          
  114   1        temp_reg |= USTEN;
  115   1          
-C51 COMPILER V9.54   A96L41X_USART_SPI                                                     04/10/2026 17:39:34 PAGE 3   
+C51 COMPILER V9.54   A96L41X_USART_SPI                                                     04/16/2026 10:27:07 PAGE 3   
 
  116   1        USTST |= SOFTRST;     // USART block reset
  117   1        USTCR1 |= ((0x3 << 6) | (first_bit << 2) | (cpha << 1) | (cpol << 0));  //SPI mode
@@ -190,7 +190,7 @@ line level    source
  175   1        USART_SPI_ConfigureInterrupt(SPI_TX_COMPLETE_INT, FALSE);
  176   1          
  177   1        spi_writeNum0 = count;
-C51 COMPILER V9.54   A96L41X_USART_SPI                                                     04/10/2026 17:39:34 PAGE 4   
+C51 COMPILER V9.54   A96L41X_USART_SPI                                                     04/16/2026 10:27:07 PAGE 4   
 
  178   1        for(i = 0; i < count ; i++)
  179   1        {
@@ -254,7 +254,7 @@ line level    source
  237          * @return   None
  238          */
  239          void USART_SPI_ConfigureInterrupt(uint8_t flag, uint8_t enable)
-C51 COMPILER V9.54   A96L41X_USART_SPI                                                     04/10/2026 17:39:34 PAGE 5   
+C51 COMPILER V9.54   A96L41X_USART_SPI                                                     04/16/2026 10:27:07 PAGE 5   
 
  240          {
  241   1        uint8_t temp_reg, temp_reg2;
@@ -318,7 +318,7 @@ line level    source
  299   1          {
  300   2              if(USTST & DOR)
  301   2              {
-C51 COMPILER V9.54   A96L41X_USART_SPI                                                     04/10/2026 17:39:34 PAGE 6   
+C51 COMPILER V9.54   A96L41X_USART_SPI                                                     04/16/2026 10:27:07 PAGE 6   
 
  302   3                  // 데이터 오버런 처리
  303   3                  NOP;
@@ -382,7 +382,7 @@ line level    source
  361   2          }
  362   1      }
  363          
-C51 COMPILER V9.54   A96L41X_USART_SPI                                                     04/10/2026 17:39:34 PAGE 7   
+C51 COMPILER V9.54   A96L41X_USART_SPI                                                     04/16/2026 10:27:07 PAGE 7   
 
  364          
  365          /* --------------------------------- End Of File ------------------------------ */

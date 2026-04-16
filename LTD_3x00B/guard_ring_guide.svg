@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="900" height="680" xmlns="http://www.w3.org/2000/svg" font-family="Arial, sans-serif">
+
+  <!-- Background -->
+  <rect width="900" height="680" fill="#1a1a2e"/>
+
+  <!-- Title -->
+  <text x="450" y="38" text-anchor="middle" fill="#e0e0e0" font-size="20" font-weight="bold">가드링 처리 방법 — PADS (고임피던스 노드 보호)</text>
+
+  <!-- ===================== TOP VIEW ===================== -->
+  <text x="220" y="70" text-anchor="middle" fill="#aaaaaa" font-size="14">[Top Layer — PCB 평면도]</text>
+
+  <!-- PCB board background -->
+  <rect x="30" y="80" width="390" height="310" rx="8" fill="#2d4a1e" stroke="#4a7a30" stroke-width="2"/>
+
+  <!-- GND copper pour cutout area (darker region inside) -->
+  <rect x="70" y="110" width="310" height="250" rx="6" fill="#1e3a14" stroke="#3a6020" stroke-width="1" stroke-dasharray="6,3"/>
+  <text x="225" y="128" text-anchor="middle" fill="#5a8a40" font-size="11">GND Pour Cutout (내층 GND 플레인 제거 구간)</text>
+
+  <!-- Guard Ring (copper trace surrounding high-Z node) -->
+  <!-- Outer rectangle of guard ring -->
+  <rect x="100" y="145" width="250" height="185" rx="4" fill="none" stroke="#f4a460" stroke-width="8"/>
+  <!-- Label -->
+  <text x="225" y="142" text-anchor="middle" fill="#f4a460" font-size="12" font-weight="bold">가드링 (Guard Ring)</text>
+  <text x="225" y="156" text-anchor="middle" fill="#f4a460" font-size="10">→ OP0_OUT 전위에 연결</text>
+
+  <!-- Solder mask removed area inside guard ring -->
+  <rect x="108" y="163" width="234" height="152" rx="3" fill="#2a3a20" stroke="#8fbc8f" stroke-width="1" stroke-dasharray="4,2"/>
+  <text x="225" y="228" text-anchor="middle" fill="#8fbc8f" font-size="10">솔더 레지스트 제거 구간</text>
+  <text x="225" y="242" text-anchor="middle" fill="#8fbc8f" font-size="10">(Open/Exposed copper)</text>
+
+  <!-- OP-AMP symbol -->
+  <polygon points="155,255 155,215 195,235" fill="#4169e1" stroke="#6495ed" stroke-width="2"/>
+  <text x="168" y="239" text-anchor="middle" fill="white" font-size="9">OPA</text>
+  <!-- OP-AMP pins -->
+  <!-- IN+ -->
+  <line x1="130" y1="222" x2="155" y2="222" stroke="#00ff88" stroke-width="2.5"/>
+  <text x="125" y="219" text-anchor="end" fill="#00ff88" font-size="9">OP0P</text>
+  <!-- IN- -->
+  <line x1="130" y1="248" x2="155" y2="248" stroke="#00ff88" stroke-width="2.5"/>
+  <text x="125" y="252" text-anchor="end" fill="#00ff88" font-size="9">OP0N</text>
+  <!-- OUT -->
+  <line x1="195" y1="235" x2="230" y2="235" stroke="#ffdd00" stroke-width="2.5"/>
+
+  <!-- Feedback: R12 (10M) from OUT to IN+ -->
+  <!-- Route: OUT → up → left → down to IN+ -->
+  <polyline points="220,235 220,185 145,185 145,222 130,222" fill="none" stroke="#ff6060" stroke-width="2.5"/>
+  <!-- R12 component -->
+  <rect x="168" y="178" width="40" height="14" rx="3" fill="#333" stroke="#ff6060" stroke-width="1.5"/>
+  <text x="188" y="189" text-anchor="middle" fill="#ff6060" font-size="10" font-weight="bold">R12 10MΩ</text>
+
+  <!-- C10 (10pF) -->
+  <line x1="230" y1="235" x2="260" y2="235" stroke="#ffdd00" stroke-width="2.5"/>
+  <line x1="260" y1="222" x2="260" y2="248" stroke="#00ccff" stroke-width="2.5"/>
+  <line x1="268" y1="222" x2="268" y2="248" stroke="#00ccff" stroke-width="2.5"/>
+  <line x1="268" y1="235" x2="290" y2="235" stroke="#ffdd00" stroke-width="2.5"/>
+  <text x="264" y="215" text-anchor="middle" fill="#00ccff" font-size="9">C10</text>
+  <text x="264" y="207" text-anchor="middle" fill="#00ccff" font-size="9">10pF</text>
+
+  <!-- OP0_OUT label -->
+  <text x="300" y="232" fill="#ffdd00" font-size="10" font-weight="bold">OP0_OUT</text>
+  <!-- Arrow from OUT to guard ring connection -->
+  <line x1="295" y1="235" x2="340" y2="235" stroke="#ffdd00" stroke-width="2"/>
+  <line x1="340" y1="235" x2="340" y2="152" stroke="#f4a460" stroke-width="3"/>
+  <text x="348" y="200" fill="#f4a460" font-size="9">가드링</text>
+  <text x="348" y="212" fill="#f4a460" font-size="9">연결</text>
+
+  <!-- ===================== CROSS SECTION VIEW ===================== -->
+  <text x="670" y="70" text-anchor="middle" fill="#aaaaaa" font-size="14">[단면도 — Layer 구조]</text>
+
+  <!-- PCB cross-section -->
+  <rect x="490" y="80" width="380" height="310" rx="8" fill="#1e1e3a" stroke="#4040aa" stroke-width="2"/>
+
+  <!-- Layer labels on left -->
+  <text x="500" y="135" fill="#aaaaaa" font-size="11">Top Cu</text>
+  <text x="500" y="185" fill="#aaaaaa" font-size="11">Core</text>
+  <text x="500" y="220" fill="#aaaaaa" font-size="11">GND</text>
+  <text x="500" y="260" fill="#aaaaaa" font-size="11">Core</text>
+  <text x="500" y="300" fill="#aaaaaa" font-size="11">Bot Cu</text>
+
+  <!-- TOP Copper Layer -->
+  <!-- Left copper (outside guard ring) -->
+  <rect x="560" y="118" width="60" height="12" fill="#f4a460"/>
+  <!-- Guard Ring trace on top -->
+  <rect x="625" y="118" width="14" height="12" fill="#f4a460" stroke="#ffaa00" stroke-width="1"/>
+  <text x="632" y="113" text-anchor="middle" fill="#f4a460" font-size="9">가드링</text>
+  <!-- High-Z signal (open/no solder mask) -->
+  <rect x="640" y="118" width="60" height="12" fill="#cc4444"/>
+  <text x="670" y="113" text-anchor="middle" fill="#ff8888" font-size="9">고임피던스 노드</text>
+  <!-- Right guard ring -->
+  <rect x="701" y="118" width="14" height="12" fill="#f4a460" stroke="#ffaa00" stroke-width="1"/>
+  <!-- Right copper -->
+  <rect x="716" y="118" width="60" height="12" fill="#f4a460"/>
+
+  <!-- Solder mask removed indication -->
+  <rect x="625" y="130" width="90" height="4" fill="none" stroke="#8fbc8f" stroke-width="1" stroke-dasharray="3,2"/>
+  <text x="670" y="143" text-anchor="middle" fill="#8fbc8f" font-size="9">← 솔더레지스트 제거 →</text>
+
+  <!-- Core (FR4) Layer 1 -->
+  <rect x="560" y="150" width="216" height="30" fill="#3a3a5a" stroke="#5050aa" stroke-width="0.5"/>
+  <text x="668" y="170" text-anchor="middle" fill="#8888cc" font-size="11">FR4 기판</text>
+
+  <!-- Inner GND Layer with CUTOUT -->
+  <!-- Left GND pour -->
+  <rect x="560" y="180" width="65" height="12" fill="#4a8a4a"/>
+  <!-- CUTOUT area - no copper -->
+  <rect x="626" y="180" width="88" height="12" fill="#2a2a4a" stroke="#aa4444" stroke-width="1" stroke-dasharray="4,2"/>
+  <text x="670" y="191" text-anchor="middle" fill="#ff6666" font-size="9">GND 플레인 Cutout</text>
+  <!-- Right GND pour -->
+  <rect x="715" y="180" width="61" height="12" fill="#4a8a4a"/>
+
+  <!-- Core (FR4) Layer 2 -->
+  <rect x="560" y="192" width="216" height="60" fill="#3a3a5a" stroke="#5050aa" stroke-width="0.5"/>
+  <text x="668" y="227" text-anchor="middle" fill="#8888cc" font-size="11">FR4 기판</text>
+
+  <!-- Bottom Copper Layer -->
+  <!-- Left copper -->
+  <rect x="560" y="252" width="60" height="12" fill="#f4a460"/>
+  <!-- Bottom guard ring -->
+  <rect x="621" y="252" width="14" height="12" fill="#f4a460" stroke="#ffaa00" stroke-width="1"/>
+  <!-- Bottom high-Z area (exposed) -->
+  <rect x="636" y="252" width="68" height="12" fill="#cc4444"/>
+  <!-- Bottom right guard ring -->
+  <rect x="705" y="252" width="14" height="12" fill="#f4a460" stroke="#ffaa00" stroke-width="1"/>
+  <!-- Right copper -->
+  <rect x="720" y="252" width="56" height="12" fill="#f4a460"/>
+  <text x="670" y="278" text-anchor="middle" fill="#f4a460" font-size="9">Bottom에도 동일하게 가드링 처리</text>
+
+  <!-- Via connecting top and bottom guard rings -->
+  <circle cx="632" cy="187" r="5" fill="#ffaa00" stroke="#ff8800" stroke-width="1.5"/>
+  <circle cx="710" cy="187" r="5" fill="#ffaa00" stroke="#ff8800" stroke-width="1.5"/>
+  <text x="670" y="302" text-anchor="middle" fill="#ffaa00" font-size="9">Via로 Top↔Bottom 가드링 연결</text>
+
+  <!-- Vertical lines for via -->
+  <line x1="632" y1="130" x2="632" y2="252" stroke="#ffaa00" stroke-width="1.5" stroke-dasharray="3,2"/>
+  <line x1="710" y1="130" x2="710" y2="252" stroke="#ffaa00" stroke-width="1.5" stroke-dasharray="3,2"/>
+
+  <!-- ===================== PADS 작업 순서 ===================== -->
+  <rect x="30" y="405" width="840" height="245" rx="8" fill="#0d1b2a" stroke="#2a5080" stroke-width="2"/>
+  <text x="450" y="430" text-anchor="middle" fill="#e0e0e0" font-size="15" font-weight="bold">PADS Layout — 가드링 작업 순서</text>
+
+  <!-- Step 1 -->
+  <rect x="50" y="445" width="180" height="180" rx="6" fill="#0a2a1a" stroke="#2a7a4a" stroke-width="1.5"/>
+  <text x="140" y="465" text-anchor="middle" fill="#4aaa6a" font-size="12" font-weight="bold">① 가드링 트레이스</text>
+  <text x="140" y="482" text-anchor="middle" fill="#88cc88" font-size="10">Route → Interactive Route</text>
+  <text x="140" y="497" text-anchor="middle" fill="#88cc88" font-size="10">고임피던스 노드 주변을</text>
+  <text x="140" y="511" text-anchor="middle" fill="#88cc88" font-size="10">폐루프로 배선</text>
+  <text x="140" y="526" text-anchor="middle" fill="#88cc88" font-size="10">(Net: OP0_OUT 할당)</text>
+  <text x="140" y="545" text-anchor="middle" fill="#ffaa44" font-size="10">선폭: 0.3~0.5mm</text>
+  <text x="140" y="560" text-anchor="middle" fill="#ffaa44" font-size="10">고임피던스 라인과</text>
+  <text x="140" y="574" text-anchor="middle" fill="#ffaa44" font-size="10">0.2mm 이상 간격 유지</text>
+  <text x="140" y="590" text-anchor="middle" fill="#ffaa44" font-size="10">Via로 Bot Layer 연결</text>
+  <text x="140" y="605" text-anchor="middle" fill="#ffaa44" font-size="10">필수!</text>
+
+  <!-- Step 2 -->
+  <rect x="248" y="445" width="180" height="180" rx="6" fill="#0a1a2a" stroke="#2a4a7a" stroke-width="1.5"/>
+  <text x="338" y="465" text-anchor="middle" fill="#4a7aaa" font-size="12" font-weight="bold">② GND 플레인 Cutout</text>
+  <text x="338" y="482" text-anchor="middle" fill="#8899cc" font-size="10">Setup → Pad Properties</text>
+  <text x="338" y="497" text-anchor="middle" fill="#8899cc" font-size="10">또는 Pour Manager에서</text>
+  <text x="338" y="511" text-anchor="middle" fill="#8899cc" font-size="10">Keepout 영역 설정</text>
+  <text x="338" y="530" text-anchor="middle" fill="#ffaa44" font-size="10">고임피던스 노드 아래</text>
+  <text x="338" y="544" text-anchor="middle" fill="#ffaa44" font-size="10">내층 GND 플레인을</text>
+  <text x="338" y="558" text-anchor="middle" fill="#ffaa44" font-size="10">Copper Pour Cutout으로</text>
+  <text x="338" y="572" text-anchor="middle" fill="#ffaa44" font-size="10">제거 (Plane Keepout)</text>
+  <text x="338" y="590" text-anchor="middle" fill="#ff6666" font-size="10">⚠️ 가드링보다</text>
+  <text x="338" y="604" text-anchor="middle" fill="#ff6666" font-size="10">약간 크게 설정</text>
+
+  <!-- Step 3 -->
+  <rect x="446" y="445" width="180" height="180" rx="6" fill="#1a1a0a" stroke="#7a7a2a" stroke-width="1.5"/>
+  <text x="536" y="465" text-anchor="middle" fill="#aaaa4a" font-size="12" font-weight="bold">③ 솔더레지스트 제거</text>
+  <text x="536" y="482" text-anchor="middle" fill="#cccc88" font-size="10">고임피던스 구간의</text>
+  <text x="536" y="497" text-anchor="middle" fill="#cccc88" font-size="10">Solder Mask를 제거</text>
+  <text x="536" y="515" text-anchor="middle" fill="#cccc88" font-size="10">PADS: 해당 트레이스</text>
+  <text x="536" y="529" text-anchor="middle" fill="#cccc88" font-size="10">선택 → Properties</text>
+  <text x="536" y="543" text-anchor="middle" fill="#cccc88" font-size="10">→ Solder Mask</text>
+  <text x="536" y="557" text-anchor="middle" fill="#cccc88" font-size="10">Override 체크</text>
+  <text x="536" y="575" text-anchor="middle" fill="#ffaa44" font-size="10">또는 Solder Mask</text>
+  <text x="536" y="589" text-anchor="middle" fill="#ffaa44" font-size="10">레이어에 직접 개구부</text>
+  <text x="536" y="603" text-anchor="middle" fill="#ffaa44" font-size="10">도형 추가</text>
+
+  <!-- Step 4 -->
+  <rect x="644" y="445" width="200" height="180" rx="6" fill="#1a0a0a" stroke="#7a2a2a" stroke-width="1.5"/>
+  <text x="744" y="465" text-anchor="middle" fill="#aa4a4a" font-size="12" font-weight="bold">④ 부품 배치 주의사항</text>
+  <text x="744" y="485" text-anchor="middle" fill="#cc8888" font-size="10">R12, C10, OP0P/OP0N</text>
+  <text x="744" y="499" text-anchor="middle" fill="#cc8888" font-size="10">최대한 가까이 배치</text>
+  <text x="744" y="518" text-anchor="middle" fill="#ffaa44" font-size="10">✓ 고임피던스 트레이스</text>
+  <text x="744" y="532" text-anchor="middle" fill="#ffaa44" font-size="10">   최단 길이 유지</text>
+  <text x="744" y="546" text-anchor="middle" fill="#ffaa44" font-size="10">✓ 발열 부품과 최대한</text>
+  <text x="744" y="560" text-anchor="middle" fill="#ffaa44" font-size="10">   이격 배치</text>
+  <text x="744" y="574" text-anchor="middle" fill="#ffaa44" font-size="10">✓ 챔버(J1) 인접 배치로</text>
+  <text x="744" y="588" text-anchor="middle" fill="#ffaa44" font-size="10">   외부 노이즈 최소화</text>
+  <text x="744" y="606" text-anchor="middle" fill="#ff6666" font-size="10">⚠️ 이 영역 세척/코팅 필수</text>
+
+</svg>
