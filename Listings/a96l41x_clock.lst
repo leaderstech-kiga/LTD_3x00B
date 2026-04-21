@@ -1,4 +1,4 @@
-C51 COMPILER V9.54   A96L41X_CLOCK                                                         04/16/2026 10:27:06 PAGE 1   
+C51 COMPILER V9.54   A96L41X_CLOCK                                                         04/21/2026 18:38:47 PAGE 1   
 
 
 C51 COMPILER V9.54, COMPILATION OF MODULE A96L41X_CLOCK
@@ -62,7 +62,7 @@ line level    source
   52          *******************************************************************************/
   53          
   54          /*******************************************************************************
-C51 COMPILER V9.54   A96L41X_CLOCK                                                         04/16/2026 10:27:06 PAGE 2   
+C51 COMPILER V9.54   A96L41X_CLOCK                                                         04/21/2026 18:38:47 PAGE 2   
 
   55          * Public Function
   56          *******************************************************************************/
@@ -126,7 +126,7 @@ line level    source
  114   3            temp_reg = OSCCR;
  115   3                  /* Disable Low Frequency(32kHz) Internal RC OSC for system clock */
  116   3                  temp_reg &= ~(osc_enable << 7);
-C51 COMPILER V9.54   A96L41X_CLOCK                                                         04/16/2026 10:27:06 PAGE 3   
+C51 COMPILER V9.54   A96L41X_CLOCK                                                         04/21/2026 18:38:47 PAGE 3   
 
  117   3              }
  118   2              else if(osc_enable == OSC_EN)

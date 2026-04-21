@@ -30,6 +30,9 @@
 	
 #define AMP_AUTO_DIS         0
 
+#define SysClock_4MHZ         1
+
+
 #ifdef SysClock_1MHZ		
 	#define T_USEC               (unsigned short)(500)                        // n[usec] at 1MHz
 	#define TIME_4S              (unsigned short)(1000000/512*4)                 // 4sec
@@ -43,6 +46,8 @@
 	#define TIME_1S              (unsigned short)(1000000/512*4)                 // 1sec
 	#define TIME_500mS           (unsigned short)(1000000/512*2)                  // 0.5sec	
 #endif
+	
+		
 	
 #define CHK_T1IFR()          (T1CRL&(1<<4))
 #define CLR_T1IFR()          T1CRL = (T1CRL&(~(1<<4)))
@@ -72,11 +77,53 @@ extern uint16_t Audio_max_length;
 ////////////////End  오디오 변수//////////// 
 
 
-////////////////Start  시스템 상태 함수//////////// 
+////////////////Start  시스템 상태 변수//////////// 
 
 extern uint8_t SystemStatus;
 
 
-////////////////End  시스템 상태 함수//////////// 
+////////////////End  시스템 상태 변수//////////// 
+
 
 /* Private Function Prototype ------------------------------------------------*/
+
+
+////////////////Start  딜레이 함수 //////////// 
+
+void Delay_ms(uint16_t msec);
+void Delay_s(uint16_t sec);
+
+////////////////End  딜레이 함수 //////////// 
+
+
+////////////////Start  시스템 초기화  함수 //////////// 
+
+void hw_initial(void);
+void hw_initial_Wait(int msec);
+
+////////////////End  시스템 초기화  함수 //////////// 
+
+////////////////Start  와치독  함수 //////////// 
+
+void BeforeStop(void);
+void AfterStop(void);
+void WD_Reset(void);
+
+////////////////End  와치독  함수 //////////// 
+
+////////////////Start  ADC  함수 //////////// 
+
+uint16_t Data_Avr(uint16_t *adc_data, uint8_t count);
+uint16_t TEMP_ADC(void);
+uint16_t BAT_ADC(void);
+uint16_t Dust_ADC_1AMP(void);
+
+////////////////End  ADC  함수 //////////// 
+
+////////////////Start  UART  함수 //////////// 
+
+
+void Uart_Out(void);
+void Uart_Out_Int(uint32_t Value);
+
+////////////////End  UART  함수 //////////// 

@@ -71,8 +71,6 @@
 unsigned char write_data[10];
 unsigned char read_data[10];
 
-
-
 /**********************************************************************
  * @brief		Audio_Initial
  * @param   	None
@@ -101,7 +99,6 @@ void Audio_Initial(void)
 	//Timer0_Start();	
 
 
-	
     	/* Timer1 initialize @ 4MHz */
 	Timer1_Initial(T1_PPG_REPEAT_MODE, TIMER1_DIV1);	
 	 /* Timer1 PPG Polarity Start Low */
@@ -117,8 +114,6 @@ void Audio_Initial(void)
 	//Timer1_Start();	
 
 }
-
-
 
 
 void TIMER1_Int(void) interrupt T1_MATCH_VECT
