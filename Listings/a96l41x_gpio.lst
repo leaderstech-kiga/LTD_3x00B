@@ -1,4 +1,4 @@
-C51 COMPILER V9.54   A96L41X_GPIO                                                          04/21/2026 18:38:48 PAGE 1   
+C51 COMPILER V9.54   A96L41X_GPIO                                                          04/24/2026 14:37:13 PAGE 1   
 
 
 C51 COMPILER V9.54, COMPILATION OF MODULE A96L41X_GPIO
@@ -62,7 +62,7 @@ line level    source
   52          
   53          /*******************************************************************************
   54          * Public Function
-C51 COMPILER V9.54   A96L41X_GPIO                                                          04/21/2026 18:38:48 PAGE 2   
+C51 COMPILER V9.54   A96L41X_GPIO                                                          04/24/2026 14:37:13 PAGE 2   
 
   55          *******************************************************************************/
   56          
@@ -126,7 +126,7 @@ line level    source
  114   1          // P2 setting    
  115   1          //P20:  /CS   
  116   1          P2  = _0000_1111;   // 0 : Low, 1 : High
-C51 COMPILER V9.54   A96L41X_GPIO                                                          04/21/2026 18:38:48 PAGE 3   
+C51 COMPILER V9.54   A96L41X_GPIO                                                          04/24/2026 14:37:13 PAGE 3   
 
  117   1          P2OD  = _0000_0000;   // 0 : Disable, 1 : Enable (Open-drain)
  118   1          P2PU  = _0000_0000;   // 0 : Disable, 1 : Enable (Pull-up)
@@ -190,7 +190,7 @@ line level    source
  176   2            break;
  177   2            case 2:
  178   2              P2IO &= ~(1<<pin);
-C51 COMPILER V9.54   A96L41X_GPIO                                                          04/21/2026 18:38:48 PAGE 4   
+C51 COMPILER V9.54   A96L41X_GPIO                                                          04/24/2026 14:37:13 PAGE 4   
 
  179   2              P2PU |= (mode<<pin);
  180   2            break;
@@ -254,7 +254,7 @@ line level    source
  238   3                temp_reg = P2FSR;
  239   3                temp_reg  &= ~(1<<pin);
  240   3                temp_reg  |= (val<<pin);
-C51 COMPILER V9.54   A96L41X_GPIO                                                          04/21/2026 18:38:48 PAGE 5   
+C51 COMPILER V9.54   A96L41X_GPIO                                                          04/24/2026 14:37:13 PAGE 5   
 
  241   3                
  242   3                P2FSR = temp_reg;
@@ -318,7 +318,7 @@ line level    source
  300   2              P1 &= ~(1<<pin);
  301   2            break;
  302   2            case 2:
-C51 COMPILER V9.54   A96L41X_GPIO                                                          04/21/2026 18:38:48 PAGE 6   
+C51 COMPILER V9.54   A96L41X_GPIO                                                          04/24/2026 14:37:13 PAGE 6   
 
  303   2              P2 &= ~(1<<pin);
  304   2            break;
@@ -382,7 +382,7 @@ line level    source
  362   1          return result;
  363   1      }
  364          
-C51 COMPILER V9.54   A96L41X_GPIO                                                          04/21/2026 18:38:48 PAGE 7   
+C51 COMPILER V9.54   A96L41X_GPIO                                                          04/24/2026 14:37:13 PAGE 7   
 
  365          /**
  366          * @brief  Enable the channel of external interrupt pin as input.
@@ -446,7 +446,7 @@ line level    source
  424   2              IE &= ~(1<<3);
  425   2            break;
  426   2            case 4:
-C51 COMPILER V9.54   A96L41X_GPIO                                                          04/21/2026 18:38:48 PAGE 8   
+C51 COMPILER V9.54   A96L41X_GPIO                                                          04/24/2026 14:37:13 PAGE 8   
 
  427   2            case 5:
  428   2            case 6:
@@ -510,7 +510,7 @@ line level    source
  486   2                EIPOL0 = temp_reg;
  487   2                break;
  488   2            case 4:
-C51 COMPILER V9.54   A96L41X_GPIO                                                          04/21/2026 18:38:48 PAGE 9   
+C51 COMPILER V9.54   A96L41X_GPIO                                                          04/24/2026 14:37:13 PAGE 9   
 
  489   2            case 5:
  490   2            case 6:
@@ -574,7 +574,7 @@ line level    source
  548   2            case 10:
  549   2              result = (EIFLAG & (1<<4)) ? 1 : 0;
  550   2            break;
-C51 COMPILER V9.54   A96L41X_GPIO                                                          04/21/2026 18:38:48 PAGE 10  
+C51 COMPILER V9.54   A96L41X_GPIO                                                          04/24/2026 14:37:13 PAGE 10  
 
  551   2            case 11:
  552   2              result = (EIFLAG & (1<<5)) ? 1 : 0;
@@ -638,7 +638,7 @@ line level    source
  610   2            case 12:
  611   2              EIFLAG  = ~(1<<6);
  612   2            break;
-C51 COMPILER V9.54   A96L41X_GPIO                                                          04/21/2026 18:38:48 PAGE 11  
+C51 COMPILER V9.54   A96L41X_GPIO                                                          04/24/2026 14:37:13 PAGE 11  
 
  613   2            default:
  614   2            break;      

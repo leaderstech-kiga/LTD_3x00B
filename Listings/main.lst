@@ -1,4 +1,4 @@
-C51 COMPILER V9.54   MAIN                                                                  04/21/2026 18:38:49 PAGE 1   
+C51 COMPILER V9.54   MAIN                                                                  04/24/2026 14:37:15 PAGE 1   
 
 
 C51 COMPILER V9.54, COMPILATION OF MODULE MAIN
@@ -62,7 +62,7 @@ line level    source
   52          *Information in this document supersedes and replaces the information previously
   53          *supplied in any former versions of this document.
   54          *2020 ABOV Semiconductor  All rights reserved
-C51 COMPILER V9.54   MAIN                                                                  04/21/2026 18:38:49 PAGE 2   
+C51 COMPILER V9.54   MAIN                                                                  04/24/2026 14:37:15 PAGE 2   
 
   55          *
   56          */
@@ -86,21 +86,16 @@ line level    source
   74          
   75          
   76          #include "main.h"
-  77          #include "audio.h"
-  78          #include "flash.h"
-  79          
+  77          #include "math.h"
+  78          #include "audio.h"
+  79          #include "flash.h"
   80          
-  81          /* Private Pre-processor Definition & Macro ----------------------------------*/
-  82          /* Private Typedef -----------------------------------------------------------*/
-  83          /* Private Variable ----------------------------------------------------------*/
-  84          
-  85          //////////////////////////////////////////////////////////////////////////////////////////////////////////
-             -////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-             -////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-             -////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-             -////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-             -//////////////////////////////////////////////////////
-  86          
+  81          
+  82          /* Private Pre-processor Definition & Macro ----------------------------------*/
+  83          /* Private Typedef -----------------------------------------------------------*/
+  84          /* Private Variable ----------------------------------------------------------*/
+  85          
+  86          ////////////////////////////////////////////////////////////////////////////////////////////////
   87          
   88          ////////////////Start  오디오 변수//////////// 
   89          // Audio Data : 8000bps , 8bit 
@@ -126,13 +121,13 @@ line level    source
  109          uint8_t  Audio3_runtime  = 1;
  110          ////////////////End  오디오 변수//////////// 
  111          
-C51 COMPILER V9.54   MAIN                                                                  04/21/2026 18:38:49 PAGE 3   
-
  112          ////////////////Start  Debug용 uart text//////////// 
  113          uint8_t Dust_MODE[10] = "Dust_MODE:";
  114          uint8_t Visu_MODE[10] = "Visu_MODE:";
  115          uint8_t Temp_MODE[10] = "Temp_MODE:";
  116          
+C51 COMPILER V9.54   MAIN                                                                  04/24/2026 14:37:15 PAGE 3   
+
  117          uint8_t ADC[4] = "ADC:";
  118          uint8_t CHR[4] = "CHR:";
  119          uint8_t INF[4] = "INF:";
@@ -142,458 +137,515 @@ line level    source
  123          uint8_t Dust_avr[7] = "Dust_A:";
  124          uint8_t Temp[5] = "Temp:";
  125          uint8_t Bat[4] = "Bat:";
- 126          uint8_t Tab[4] = "    ";
- 127          uint8_t End[4] = "\n\r";
- 128          uint8_t int_val ;
- 129          uint16_t tmp ;
+ 126          uint8_t Space[1] = " ";
+ 127          uint8_t Tab[4] = "    ";
+ 128          uint8_t End[4] = "\n\r";
+ 129          
  130          
- 131          uint8_t opamp1[5] = "OPA1:";
- 132          uint8_t opamp2[5] = "OPA2:";
- 133          
- 134          uint8_t Avr[9] = "Average: ";
- 135          
- 136          uint8_t Dust_Si_Off[7] = "Si_Off:";
- 137          uint8_t Dust_Si_On[6] = "Si_On:";
- 138          uint8_t Dust_Si_Deta[6] = "Si_Da:";
- 139          
- 140          uint8_t Dust_Du_Off[7] = "Du_Off:";
- 141          uint8_t Dust_Du_On[6] = "Du_On:";
- 142          uint8_t Dust_Du_Deta[6] = "Si_Da:";
- 143          ////////////////End  Debug용 uart text//////////// 
- 144          
- 145          ////////////////Start  시스템 상태 변수 //////////// 
- 146          uint8_t deviceID[3];
- 147          uint8_t SystemStatus;
- 148          
- 149          uint8_t  SYS_mode , ADC_mode , Bat_mode;
- 150          
- 151          #define Dust_mode   1
- 152          #define Temp_mode 2
- 153          
- 154          #define Normal_mode 1
- 155          #define UART_mode   2
- 156          #define In_Fire_al_mode   3
- 157          #define Ex_Fire_al_mode   4
- 158          #define Al_Stop_mode    6
- 159          
+ 131          
+ 132          uint8_t opamp1[5] = "OPA1:";
+ 133          uint8_t opamp2[5] = "OPA2:";
+ 134          
+ 135          uint8_t Avr[9] = "Average: ";
+ 136          
+ 137          uint8_t Dust_Si_Off[7] = "Si_Off:";
+ 138          uint8_t Dust_Si_On[6] = "Si_On:";
+ 139          uint8_t Dust_Si_Deta[6] = "Si_Da:";
+ 140          
+ 141          uint8_t Dust_Du_Off[7] = "Du_Off:";
+ 142          uint8_t Dust_Du_On[6] = "Du_On:";
+ 143          uint8_t Dust_Du_Deta[6] = "Si_Da:";
+ 144          ////////////////End  Debug용 uart text//////////// 
+ 145          
+ 146          ////////////////Start  시스템 상태 변수 //////////// 
+ 147          uint8_t deviceID[3];
+ 148          uint8_t SystemStatus;
+ 149          
+ 150          uint8_t  SYS_mode , ADC_mode , Bat_mode;
+ 151          
+ 152          #define Dust_mode   1
+ 153          #define Temp_mode 2
+ 154          
+ 155          #define Normal_mode 1
+ 156          #define UART_mode   2
+ 157          #define In_Fire_al_mode   3
+ 158          #define Ex_Fire_al_mode   4
+ 159          #define Al_Stop_mode    6
  160          
- 161          #define Bat_High_mode   1
- 162          #define Bat_Low_mode    2
- 163          
- 164          uint8_t visual_type = 0;  //시각형 type
- 165          
+ 161          
+ 162          #define Bat_High_mode   1
+ 163          #define Bat_Low_mode    2
+ 164          
+ 165          uint8_t visual_type = 0;  //시각형 type
  166          
- 167          uint16_t system_count = 0;
- 168          uint16_t adc_time = 8 * 5;  // adc time , 0.192초 주기
- 169          uint16_t ck_led_time  = 56 * 5  + 12; // 8 * 7 초 , , 0.192초 주기 > 0.192 * 5* 56  = 53.7  -> 2.3초 모자름
+ 167          
+ 168          uint16_t system_count = 0;
+ 169          uint16_t adc_time = 8 * 5;  // adc time , 0.192초 주기
+ 170          uint16_t ck_led_time  = 56 * 5  + 12; // 8 * 7 초 , , 0.192초 주기 > 0.192 * 5* 56  = 53.7  -> 2.3초 모자름
              - : 0.192 * 12 더해줌
- 170          uint16_t Bat_al_time  = 280  * 5  + 58 ;  // 280 초 , , 0.192초 주기  -> 0.192 * 5* 280  = 268.8  -> 11.2초 
+ 171          uint16_t Bat_al_time  = 280  * 5  + 58 ;  // 280 초 , , 0.192초 주기  -> 0.192 * 5* 280  = 268.8  -> 11.2초 
              -모자름 : 0.192 * 58 더해줌  
- 171          ////////////////End  시스템 상태 변수//////////// 
-C51 COMPILER V9.54   MAIN                                                                  04/21/2026 18:38:49 PAGE 4   
+ 172          ////////////////End  시스템 상태 변수//////////// 
+ 173          
+ 174          ////////////////Start  ADC 변수 //////////// 
+ 175          
+ 176          #define VBGR_CV        92u      // VBGR voltage × 100 (chip-specific, calibrate!)
+C51 COMPILER V9.54   MAIN                                                                  04/24/2026 14:37:15 PAGE 4   
 
- 172          
- 173          ////////////////Start  ADC 변수 //////////// 
- 174          
- 175          #define  ADC_BUFFER_SIZE 8
- 176          uint16_t ADC_temp_data[ADC_BUFFER_SIZE];
- 177          
- 178          uint16_t ADC1_Bat_Val;
- 179          uint16_t ADC1_On_Dust_Val;
- 180          uint16_t ADC1_Off_Dust_Val;
- 181          
- 182          ////////////////End  ADC 변수 //////////// 
+ 177          #define ADC_FS         1024u    // 10-bit
+ 178          
+ 179          #define System_Ck_Value 40
+ 180          
+ 181          #define  ADC_BUFFER_SIZE 8
+ 182          uint16_t ADC_temp_data[ADC_BUFFER_SIZE];
  183          
  184          
- 185          ////////////////Start  debug 변수 //////////// 
- 186          //초기 디버그 진입 모드 선택
+ 185          #define TEMP_OFFSET  20
+ 186          #define TEMP_IDX(t)  ((t) + TEMP_OFFSET)
  187          
- 188          #define Debug_On  1
- 189          #define Debug_Off 0
- 190          
- 191          uint8_t  uart_debug_mode = Debug_Off ;  // 연기 감지시  uart출력 설정 , 양산시 미적용
- 192          uint8_t  start_uart_debug_mode = Debug_On ; //전원 인가시 연동 버튼을 누르면 uart 모드로 adc 출력하는 모드
+ 188          code uint16_t Temp_Table[140] = {
+ 189            /* -20°C */ 30, 32, 34, 36, 38, 40, 42, 45, 47, 50, 
+ 190            /* -10°C */ 52, 55, 58, 61, 64, 67, 71, 74, 78, 82, 
+ 191            /*  0°C */ 86, 90, 95, 99, 104, 109, 114, 119, 124, 130, 
+ 192            /*  10°C */ 135, 141, 147, 153, 159, 166, 172, 179, 186, 192, 
+ 193            /*  20°C */ 199, 207, 214, 221, 229, 236, 244, 252, 261, 269, 
+ 194            /*  30°C */ 278, 286, 295, 304, 313, 322, 331, 341, 350, 359, 
+ 195            /*  40°C */ 369, 379, 388, 398, 407, 417, 427, 437, 446, 456, 
+ 196            /*  50°C */ 466, 476, 485, 495, 504, 514, 524, 533, 542, 552, 
+ 197            /*  60°C */ 561, 570, 579, 588, 597, 606, 615, 623, 632, 640, 
+ 198            /*  70°C */ 648, 656, 664, 672, 680, 688, 695, 703, 710, 717, 
+ 199            /*  80°C */ 724, 731, 738, 744, 751, 757, 763, 769, 775, 781, 
+ 200            /*  90°C */ 787, 793, 798, 803, 809, 814, 819, 824, 829, 833, 
+ 201            /* 100°C */ 838, 842,  847,  851,  855,  859,  863,  867,  871,  874,
+ 202            /* 110°C */ 878, 881,  885,  888,  891,  895,  898,  901,  904,  906
+ 203            };
+ 204          
+ 205          uint16_t ADC_Bat_Val;
+ 206          
+ 207          uint16_t ADC_Temp_Val;
+ 208          
+ 209          uint16_t ADC1_Bat_Val;
+ 210          uint16_t ADC1_On_Dust_Val;
+ 211          uint16_t ADC1_Off_Dust_Val;
+ 212          
+ 213          ////////////////End  ADC 변수 //////////// 
+ 214          
+ 215          
+ 216          ////////////////Start  debug 변수 //////////// 
+ 217          //초기 디버그 진입 모드 선택
+ 218          
+ 219          #define Debug_On  1
+ 220          #define Debug_Off 0
+ 221          
+ 222          uint8_t  uart_debug_mode = Debug_Off ;  // 연기 감지시  uart출력 설정 , 양산시 미적용
+ 223          uint8_t  start_uart_debug_mode = Debug_On ; //전원 인가시 연동 버튼을 누르면 uart 모드로 adc 출력하는 모드
              - ,  양산시 미적용
- 193          //uint8_t  start_uart_debug = 0 ;
- 194          
- 195          ////////////////End  debug 변수 //////////// 
- 196          
- 197          /* Public Variable -----------------------------------------------------------*/
- 198          /* Public Function -----------------------------------------------------------*/
- 199          
- 200          /**********************************************************************
- 201           * @brief   Main program
- 202           * @param     None
- 203           * @return      None
- 204           **********************************************************************/
- 205          void Main(void)
- 206          {
- 207   1        
- 208   1      
- 209   1        LDO_OFF;
- 210   1        FLASH_OFF;
- 211   1        AUDIO_OFF;
- 212   1        system_count = 0;
- 213   1        
- 214   1        hw_initial_Wait(10);
- 215   1        
- 216   1        LED_G_ON;
- 217   1        Delay_ms(5);    
- 218   1        LED_G_OFF;
- 219   1        
- 220   1        LED_R_ON;
- 221   1        Delay_ms(5);    
- 222   1        LED_R_OFF;  
- 223   1        
- 224   1        
- 225   1        Port_SetInputpin(PORT1, PIN2, 1);  //key input & mode0  -> button input , 초기 눌려 있으면 UART mode
- 226   1        Delay_ms(10);   
- 227   1        
- 228   1        ADC_mode = Temp_mode;
- 229   1        
- 230   1          /* 시작시 uart 출력 모드  */
- 231   1        if(start_uart_debug_mode == Debug_On){
- 232   2          
-C51 COMPILER V9.54   MAIN                                                                  04/21/2026 18:38:49 PAGE 5   
+ 224          //uint8_t  start_uart_debug = 0 ;
+ 225          
+ 226          ////////////////End  debug 변수 //////////// 
+ 227          
+ 228          /* Public Variable -----------------------------------------------------------*/
+ 229          /* Public Function -----------------------------------------------------------*/
+ 230          
+ 231          /**********************************************************************
+ 232           * @brief   Main program
+ 233           * @param     None
+ 234           * @return      None
+ 235           **********************************************************************/
+ 236           
+ 237           
+C51 COMPILER V9.54   MAIN                                                                  04/24/2026 14:37:15 PAGE 5   
 
- 233   2          if(Port_GetInputpinValue(PORT1, PIN2)  == 0){
- 234   3              SYS_mode = UART_mode;
- 235   3            }
- 236   2            else{
- 237   3              SYS_mode = Normal_mode;
- 238   3            }
- 239   2            
- 240   2            LED_G_ON;
- 241   2            Delay_ms(5);  
- 242   2            LED_G_OFF;
- 243   2            
- 244   2            // 연동 key 풀릴때까지 대기 
- 245   2            if(SYS_mode == UART_mode){
- 246   3                while(1){
- 247   4                  LED_G_ON;
- 248   4                  if(Port_GetInputpinValue(PORT1, PIN2)  == 1){
- 249   5                    break;
- 250   5                  }
- 251   4                }
- 252   3                
- 253   3                LED_G_OFF;
- 254   3                
- 255   3                //UART mode 동작 
- 256   3            //    Uart_Set();
- 257   3                
- 258   3                while(1){
- 259   4          
- 260   4                  LED_R_ON;
- 261   4                
- 262   4                  Uart_Out();
- 263   4                  
- 264   4                  Delay_ms(250);  
- 265   4                  LED_R_OFF;
- 266   4                  Delay_ms(250);  
- 267   4                }
- 268   3      
- 269   3          }
- 270   2        }
- 271   1        
- 272   1        while(1)
- 273   1        {
- 274   2          
- 275   2          
- 276   2          if(system_count%adc_time == 0){
- 277   3            
- 278   3            hw_initial_Wait(1);
- 279   3            
- 280   3            LED_G_ON;
- 281   3            
- 282   3            Delay_ms(5);
- 283   3            
- 284   3            LED_G_OFF;
- 285   3            
- 286   3            hw_initial_Wait(1);
- 287   3            
- 288   3            system_count = 0;
- 289   3          }
- 290   2          
- 291   2          system_count++;
- 292   2      
- 293   2          
- 294   2          // 와치독 타이머 
-C51 COMPILER V9.54   MAIN                                                                  04/21/2026 18:38:49 PAGE 6   
+ 238           
+ 239           
+ 240          void Main(void)
+ 241          {
+ 242   1        
+ 243   1      
+ 244   1        LDO_OFF;
+ 245   1        FLASH_OFF;
+ 246   1        AUDIO_OFF;
+ 247   1        system_count = 0;
+ 248   1        
+ 249   1        hw_initial_Wait(10);
+ 250   1        
+ 251   1        LED_G_ON;
+ 252   1        Delay_ms(5);    
+ 253   1        LED_G_OFF;
+ 254   1        
+ 255   1        LED_R_ON;
+ 256   1        Delay_ms(5);    
+ 257   1        LED_R_OFF;  
+ 258   1        
+ 259   1        //Set_Temp_Table();
+ 260   1        
+ 261   1        Port_SetInputpin(PORT1, PIN2, 1);  //key input & mode0  -> button input , 초기 눌려 있으면 UART mode
+ 262   1        Delay_ms(300);                            // system mode를 확인하기전 adc 안정화 시간 필요
+ 263   1        
+ 264   1        ADC_mode = Check_System();
+ 265   1      
+ 266   1          /* 시작시 uart 출력 모드  */
+ 267   1        if(start_uart_debug_mode == Debug_On){
+ 268   2          
+ 269   2          if(Port_GetInputpinValue(PORT1, PIN2)  == 0){
+ 270   3              SYS_mode = UART_mode;
+ 271   3            }
+ 272   2            else{
+ 273   3              SYS_mode = Normal_mode;
+ 274   3            }
+ 275   2            
+ 276   2            LED_G_ON;
+ 277   2            Delay_ms(5);  
+ 278   2            LED_G_OFF;
+ 279   2            
+ 280   2            // 연동 key 풀릴때까지 대기 
+ 281   2            if(SYS_mode == UART_mode){
+ 282   3                while(1){
+ 283   4                  LED_G_ON;
+ 284   4                  if(Port_GetInputpinValue(PORT1, PIN2)  == 1){
+ 285   5                    break;
+ 286   5                  }
+ 287   4                }
+ 288   3                
+ 289   3                LED_G_OFF;
+ 290   3                
+ 291   3                //UART mode 동작 
+ 292   3                
+ 293   3                while(1){
+ 294   4          
+ 295   4                  LED_R_ON;
+ 296   4                  
+ 297   4                  ADC_Bat_Val = Get_Bat_Voltage_cV();
+ 298   4                  ADC_Temp_Val = TEMP_ADC();
+ 299   4                  /*
+C51 COMPILER V9.54   MAIN                                                                  04/24/2026 14:37:15 PAGE 6   
 
- 295   2          BeforeStop();
- 296   2          GLOBAL_INTERRUPT_EN();  
- 297   2          Stop();
- 298   2          AfterStop();
- 299   2            
- 300   2        }
- 301   1      
- 302   1      }
- 303          
- 304          ////////////////Start  딜레이 변수 //////////// 
- 305          
- 306          /**********************************************************************
- 307           * @brief   Delay_ms
- 308           * @param     None
- 309           * @return  None
- 310           **********************************************************************/
- 311          void Delay_ms(uint16_t msec)
- 312          {
- 313   1      
- 314   1        int i;
- 315   1        
- 316   1        for(i=0;i<msec;i++){
- 317   2          NOP_20us_Delay(50);
- 318   2        }
- 319   1      
- 320   1      }
- 321          
- 322          /**********************************************************************
- 323           * @brief   Delay_s
- 324           * @param     None
- 325           * @return  None
- 326           **********************************************************************/
- 327          void Delay_s(uint16_t sec)
- 328          {
- 329   1      
- 330   1        int i;
- 331   1        
- 332   1        for(i=0;i<sec;i++){
- 333   2          NOP_20us_Delay(50000);
- 334   2        }
- 335   1      
- 336   1      }
- 337          
- 338          ////////////////End  딜레이 변수 //////////// 
- 339          
- 340            
- 341          ////////////////Start  시스템 초기화  변수 //////////// 
- 342          
- 343          /**********************************************************************
- 344           * @brief   hw_initial_Wait
- 345           * @param     None
- 346           * @return  None
- 347           **********************************************************************/
- 348          // 하드웨어를 초가화 한 후 ms 대기한다. 
- 349          void hw_initial_Wait(int msec){
- 350   1        
- 351   1        GLOBAL_INTERRUPT_DIS();     
- 352   1        hw_initial();
- 353   1        
- 354   1        CVDD_OFF;
- 355   1        Port_SetOutputpin(PORT1, PIN3, 0); // CS 핀
+ 300   4                  Port_SetAlterFunctionpin(PORT1, PIN2, 0x1);
+ 301   4                  USART_Initial(9600, USART_DATA_8BIT, USART_STOP_1BIT, USART_PARITY_NO, USART_TX_RX_MODE);
+ 302   4                  
+ 303   4                    for( i=0; i< sizeof(ADC_temp_data); i++){
+ 304   4                      Uart_Out_Int(ADC_temp_data[i]);
+ 305   4                      USART_SendDataWithPolling(&Space, sizeof(Space));
+ 306   4                    }
+ 307   4                    
+ 308   4                    USART_SendDataWithPolling(&End, 4);
+ 309   4                    
+ 310   4                  
+ 311   4                    Port_SetAlterFunctionpin(PORT1, PIN2, 0);
+ 312   4        
+ 313   4                  */
+ 314   4                  
+ 315   4                  ADC_Temp_Val = TEMP_ADC();
+ 316   4                  
+ 317   4                  Uart_Out();
+ 318   4                  
+ 319   4                  Delay_ms(250);  
+ 320   4                  LED_R_OFF;
+ 321   4                  Delay_ms(250);  
+ 322   4                }
+ 323   3      
+ 324   3          }
+ 325   2        }
+ 326   1        
+ 327   1        while(1)
+ 328   1        {
+ 329   2          
+ 330   2          
+ 331   2          if(system_count%adc_time == 0){
+ 332   3            
+ 333   3            hw_initial_Wait(1);
+ 334   3            
+ 335   3            LED_G_ON;
+ 336   3            
+ 337   3            Delay_ms(5);
+ 338   3            
+ 339   3            LED_G_OFF;
+ 340   3            
+ 341   3            hw_initial_Wait(1);
+ 342   3            
+ 343   3            system_count = 0;
+ 344   3          }
+ 345   2          
+ 346   2          system_count++;
+ 347   2      
+ 348   2          
+ 349   2          // 와치독 타이머 
+ 350   2          BeforeStop();
+ 351   2          GLOBAL_INTERRUPT_EN();  
+ 352   2          Stop();
+ 353   2          AfterStop();
+ 354   2            
+ 355   2        }
  356   1      
-C51 COMPILER V9.54   MAIN                                                                  04/21/2026 18:38:49 PAGE 7   
+ 357   1      }
+ 358          
+ 359          ////////////////Start  딜레이 변수 //////////// 
+ 360          
+ 361          /**********************************************************************
+C51 COMPILER V9.54   MAIN                                                                  04/24/2026 14:37:15 PAGE 7   
 
- 357   1        Delay_ms(msec);
- 358   1        
- 359   1          /* Enable INT */
- 360   1        GLOBAL_INTERRUPT_EN();  
- 361   1        
- 362   1      }
- 363          
- 364          
- 365          void hw_initial(void) {
- 366   1        
- 367   1        // hw_initial() 호출 전 오디오 완전 정지
- 368   1        if(Audio_start == 1) {
- 369   2            SLAVEDESELECT;      // CS 닫기
- 370   2            AUDIO_OFF;          // 앰프 끄기
- 371   2            Timer0_Stop();      // PWM 정지
- 372   2            Audio_start = 0;
- 373   2            Audio_length = 0;
- 374   2        }
- 375   1      
- 376   1        BITCR = 0x60;                                              // BIT cnt cleared, Select 0Bit overflow perio
+ 362           * @brief   Delay_ms
+ 363           * @param     None
+ 364           * @return  None
+ 365           **********************************************************************/
+ 366          void Delay_ms(uint16_t msec)
+ 367          {
+ 368   1      
+ 369   1        int i;
+ 370   1        
+ 371   1        for(i=0;i<msec;i++){
+ 372   2          NOP_20us_Delay(50);
+ 373   2        }
+ 374   1      
+ 375   1      }
+ 376          
+ 377          /**********************************************************************
+ 378           * @brief   Delay_s
+ 379           * @param     None
+ 380           * @return  None
+ 381           **********************************************************************/
+ 382          void Delay_s(uint16_t sec)
+ 383          {
+ 384   1      
+ 385   1        int i;
+ 386   1        
+ 387   1        for(i=0;i<sec;i++){
+ 388   2          NOP_20us_Delay(50000);
+ 389   2        }
+ 390   1      
+ 391   1      }
+ 392          
+ 393          ////////////////End  딜레이 변수 //////////// 
+ 394          
+ 395            
+ 396          ////////////////Start  시스템 초기화  변수 //////////// 
+ 397          
+ 398          /**********************************************************************
+ 399           * @brief   hw_initial_Wait
+ 400           * @param     None
+ 401           * @return  None
+ 402           **********************************************************************/
+ 403          // 하드웨어를 초가화 한 후 ms 대기한다. 
+ 404          void hw_initial_Wait(int msec){
+ 405   1        
+ 406   1        GLOBAL_INTERRUPT_DIS();     
+ 407   1        hw_initial();
+ 408   1        
+ 409   1        CVDD_OFF;
+ 410   1        Port_SetOutputpin(PORT1, PIN3, 0); // CS 핀
+ 411   1      
+ 412   1        Delay_ms(msec);
+ 413   1        
+ 414   1          /* Enable INT */
+ 415   1        GLOBAL_INTERRUPT_EN();  
+ 416   1        
+ 417   1      }
+ 418          
+ 419          
+ 420          void hw_initial(void) {
+ 421   1        
+ 422   1        // hw_initial() 호출 전 오디오 완전 정지
+ 423   1        if(Audio_start == 1) {
+C51 COMPILER V9.54   MAIN                                                                  04/24/2026 14:37:15 PAGE 8   
+
+ 424   2            SLAVEDESELECT;      // CS 닫기
+ 425   2            AUDIO_OFF;          // 앰프 끄기
+ 426   2            Timer0_Stop();      // PWM 정지
+ 427   2            Audio_start = 0;
+ 428   2            Audio_length = 0;
+ 429   2        }
+ 430   1      
+ 431   1        BITCR = 0x60;                                              // BIT cnt cleared, Select 0Bit overflow perio
              -d
- 377   1        
- 378   1      #ifdef SysClock_1MHZ  
+ 432   1        
+ 433   1      #ifdef SysClock_1MHZ  
                 OSCCR = 0x08;                                            // System clock: 1MHz
               #else 
- 381   1        OSCCR = 0x18;                                            // System clock: 4MHz
- 382   1                                                                // If 0x00/0x08/0x10/0x18, 0.5MHz/1MHz/2MHz/4MHz
- 383   1      #endif
- 384   1      
- 385   1        RSTFR = 0x00;                                            // Clear all reset flags
- 386   1      
- 387   1        
- 388   1        // Port 0
- 389   1        P0 = 0xC0;                      // 0 : Low, 1 : High
- 390   1        P0OD = 0x00;                // 0 : Disable, 1 : Enable (Open-drain)
- 391   1        P0PU = 0X00;                 // 0 : Disable,  1 : Enable (Pull-up)
- 392   1        P0IO = 0xc1;                  // 0 : Input, 1 : Output
- 393   1        //P0FSRH = 0x05;                                                          // P[7]: normal I/O, P[5:0]: Am
+ 436   1        OSCCR = 0x18;                                            // System clock: 4MHz
+ 437   1                                                                // If 0x00/0x08/0x10/0x18, 0.5MHz/1MHz/2MHz/4MHz
+ 438   1      #endif
+ 439   1      
+ 440   1        RSTFR = 0x00;                                            // Clear all reset flags
+ 441   1      
+ 442   1        
+ 443   1        // Port 0
+ 444   1        P0 = 0xC0;                      // 0 : Low, 1 : High
+ 445   1        P0OD = 0x00;                // 0 : Disable, 1 : Enable (Open-drain)
+ 446   1        P0PU = 0X00;                 // 0 : Disable,  1 : Enable (Pull-up)
+ 447   1        P0IO = 0xc1;                  // 0 : Input, 1 : Output
+ 448   1        //P0FSRH = 0x05;                                                          // P[7]: normal I/O, P[5:0]: Am
              -p
- 394   1        //P0FSRL = 0x55;
- 395   1        P0FSRH  = 0
- 396   1          | ( 0 << 6)       //P07     // 0 : I/O (EINT3), 1 : ICS1                  // LED_R        
- 397   1          | ( 0 << 4)       //P06     // 0 : I/O (EINT2), 1 : ICS0                  // LED_G
- 398   1          | ( 1 << 2)       //P05     // 0 : I/O, 1 : OP0P,                       // SENISNG OP0P
- 399   1          | ( 1 << 0);      //P04     // 0 : I/O, 1 : OP0N                          // SENSING OP0N
- 400   1          
- 401   1        P0FSRL  = 0
- 402   1          | ( 1 << 6)       //P03     // 0 : I/O, 1 : OP0OUT,   2 : AN3,      3 : Not used          // SENSING IN ADC 
- 403   1          | ( 1 << 4)       //P02     // 0 : I/O, 1 : OP1P,   2 : AN2,      3 : Not used          // 
- 404   1          | ( 1 << 2)       //P01     // 0 : I/O (EINT1), 1 : OP1N,  2 : AN1, 3 : Not used        // Not use
- 405   1          | ( 0 << 0);      //P00     // 0 : I/O (EINT0), 1 : OP1OUT,   2 : AN0,  3 : Not used      // C_VDD
- 406   1          
- 407   1        P0DB  = 0
- 408   1          | ( 0 << 6)     //DBCLK[1:0]  // 00 : fx (SCLK),  01 : fx/4,  10 : fx/16, 11 : fx/64
- 409   1          | ( 0 << 3)     //P07DB   // 0 : Disable, 1 : Enable
- 410   1          | ( 0 << 2)     //P06DB   // 0 : Disable, 1 : Enable
- 411   1          | ( 0 << 1)     //P10DB   // 0 : Disable, 1 : Enable
- 412   1          | ( 0 << 0);    //P00DB   // 0 : Disable, 1 : Enable
- 413   1                                                 // Low level
- 414   1      
- 415   1        // Port 1
- 416   1        
-C51 COMPILER V9.54   MAIN                                                                  04/21/2026 18:38:49 PAGE 8   
-
- 417   1        P1 = 0x00;                      // 0 : Low, 1 : High                // audio off
- 418   1        P1OD = 0x00;                  // 0 : Disable, 1 : Enable (Open-drain)
- 419   1        P1PU = 0x04;                  // 0 : Disable, 1 : Enable (Pull-up) // 테스트 스위치 풀업 필요
- 420   1        //P1PU = 0x0;                   // 0 : Disable, 1 : Enable (Pull-up)
- 421   1        P1IO = 0x32;                  // 0 : Input, 1 : Output
- 422   1        
- 423   1      
- 424   1        //P12DB = 0x00;                     //P1/P2 Debounce disable
- 425   1        //P1FSRH = 0x08;                                                          // P1[5]: AN6, others: normal I
-             -/O
- 426   1        //P1FSRL = 0x00;                                                          // P1[3:0]: Normal I/O
- 427   1        P1FSRH  = 0
- 428   1          | ( 1 << 2)       //P15  // 0 : I/O,  1 : LDO23,   2 : AN6, 3 : (SDA)           // LDO23
- 429   1          | ( 0 << 0);      //P14  // 0 : I/O (EINT11), 1 : T1O/PWM1O,   2 : SCL, 3 : Not used    // /AUD ON
- 430   1          
- 431   1          P1FSRL  = 0
- 432   1          | ( 0 << 6)       //P13  // 0 : I/O (EC1),  1 : (RXD/MISO)              // DSDA
- 433   1          | ( 0 << 4)       //P12  // 0 : I/O (EC0),  1 : (TXD/MOSI)                // DSCL
- 434   1          | ( 1 << 2)       //P11  // 0 : I/O (EINT10), 1 : T0O/PWM0O             // AUDIO SIG
- 435   1          | ( 0 << 0);      //P10  // 0 : I/O,  1 : (SCK)                   // SENSE PW
- 436   1      
- 437   1          P12DB = 0
- 438   1          | ( 0 << 5)     //P21DB   // 0 : Disable, 1 : Enable
- 439   1          | ( 0 << 4)     //P20DB   // 0 : Disable, 1 : Enable
- 440   1          | ( 0 << 2)     //P14DB   // 0 : Disable, 1 : Enable
- 441   1          | ( 0 << 1)     //P11DB   // 0 : Disable, 1 : Enable
- 442   1          | ( 0 << 0);      //P10DB   // 0 : Disable, 1 : Enable
- 443   1          
- 444   1        
- 445   1          
- 446   1        // Port 2
- 447   1        P2 = 0x00;                        // 0 : Low, 1 : High
- 448   1        P2OD = 0x00;                    // 0 : Disable, 1 : Enable (Open-drain)
- 449   1        P2PU = 0x00;                    // 0 : Disable, 1 : Enable (Pull-up)
- 450   1        P2IO = 0x0f;                      // 0 : Input, 1 : Output
- 451   1        //P2FSR = 0x00;                      // P2[3:0]: I/O
- 452   1        P2FSR   = 0
- 453   1          | ( 1 << 6)     // 0 : P23,  1 : TXD/MOSI,  2 : AN5,     3 : Not used         //mosi
- 454   1          | ( 1 << 4)     // 0 : P22,  1 : RXD/MISO,  2 : AN4,     3 : Not used         // miso
- 455   1          | ( 1 << 2)         // 0 : P21 (EC2),  1 : SCK,   2 : (SCL),     3 : Not used           // sck
- 456   1          | ( 0 << 0);        // 0 : P20 (EINT12),  1 : T2O/PWM2O,   2 : SDA,     3 : Not used      // cs 
- 457   1      
- 458   1      
- 459   1      
- 460   1        
- 461   1          // Timer 0 
- 462   1        T0CRL = 0x80;                                                           // Timer 0: fx/4
- 463   1        T0CRH = 0x01;                                                           // Timer 0: disable, clear counte
-             -r
- 464   1        T0ADRH = (unsigned char)(T_USEC>>8);
- 465   1        T0ADRL = (unsigned char)(T_USEC&0xff);
- 466   1        // Timer 1
- 467   1        T1CRL = 0x00
- 468   1            |(1<<5);                                                          // Timer 1: if 0/1/2.../7, fx divide
-             -d by 2048/512/64/8/4/2/1/EC1
- 469   1        T1CRH = 0x81;                                                           // Timer 1: if 0/8, Dis/Enable, c
-             -lear counter
- 470   1        //T1CRH = 0x01;                                                           // Timer 1: if 0/8, Dis/Enable,
-             - clear counter
- 471   1        T1ADRH = (unsigned char)(TIME_2S>>8);
- 472   1        T1ADRL = (unsigned char)(TIME_2S&0xff);
- 473   1      
-C51 COMPILER V9.54   MAIN                                                                  04/21/2026 18:38:49 PAGE 9   
-
- 474   1        
- 475   1        // Timer 2
- 476   1        T2CRL = 0x00;                                            // Timer 2: fx/1
- 477   1        T2CRH = 0x00;                                            // Timer 2: Disable, Clear counter
+ 449   1        //P0FSRL = 0x55;
+ 450   1        P0FSRH  = 0
+ 451   1          | ( 0 << 6)       //P07     // 0 : I/O (EINT3), 1 : ICS1                  // LED_R        
+ 452   1          | ( 0 << 4)       //P06     // 0 : I/O (EINT2), 1 : ICS0                  // LED_G
+ 453   1          | ( 0 << 2)       //P05     // 0 : I/O, 1 : OP0P,                       // SENISNG OP0P
+ 454   1          | ( 0 << 0);      //P04     // 0 : I/O, 1 : OP0N                          // SENSING OP0N
+ 455   1          
+ 456   1        P0FSRL  = 0
+ 457   1          | ( 0 << 6)       //P03     // 0 : I/O, 1 : OP0OUT,   2 : AN3,      3 : Not used          // SENSING IN ADC 
+ 458   1          | ( 0 << 4)       //P02     // 0 : I/O, 1 : OP1P,   2 : AN2,      3 : Not used          // 
+ 459   1          | ( 0 << 2)       //P01     // 0 : I/O (EINT1), 1 : OP1N,  2 : AN1, 3 : Not used        // Not use
+ 460   1          | ( 0 << 0);      //P00     // 0 : I/O (EINT0), 1 : OP1OUT,   2 : AN0,  3 : Not used      // C_VDD
+ 461   1          
+ 462   1        P0DB  = 0
+ 463   1          | ( 0 << 6)     //DBCLK[1:0]  // 00 : fx (SCLK),  01 : fx/4,  10 : fx/16, 11 : fx/64
+ 464   1          | ( 0 << 3)     //P07DB   // 0 : Disable, 1 : Enable
+ 465   1          | ( 0 << 2)     //P06DB   // 0 : Disable, 1 : Enable
+ 466   1          | ( 0 << 1)     //P10DB   // 0 : Disable, 1 : Enable
+ 467   1          | ( 0 << 0);    //P00DB   // 0 : Disable, 1 : Enable
+ 468   1                                                 // Low level
+ 469   1      
+ 470   1        // Port 1
+ 471   1        
+ 472   1        P1 = 0x00;                      // 0 : Low, 1 : High                // audio off
+ 473   1        P1OD = 0x00;                  // 0 : Disable, 1 : Enable (Open-drain)
+ 474   1        P1PU = 0x04;                  // 0 : Disable, 1 : Enable (Pull-up) // 테스트 스위치 풀업 필요
+ 475   1        //P1PU = 0x0;                   // 0 : Disable, 1 : Enable (Pull-up)
+ 476   1        P1IO = 0x32;                  // 0 : Input, 1 : Output
+ 477   1        
  478   1      
- 479   1        // WDT
- 480   1        WDTCR = 0x00
- 481   1            |(0<<7)                                            // If 0/1, Diable/Enable WDT operation
- 482   1            |(0<<6)                                            // If 0/1, "Free running 8-bit timer"/"Reset by WDT"
- 483   1            |(1<<5)                                            // If 0/1, "No effect"/"Clear WDT Counter"
- 484   1            |(0<<1)                                            // If 0/1/2, Select WDT Clock as "BIT Overflow"/ LFI
-             -RC /WDTRC
- 485   1            |(0<<0);                                           // Clear WDTIFR
- 486   1        
- 487   1        // LVR
- 488   1        LVRIDR = 0x59;                                           // Id value to write data to the LVRCR register
- 489   1        LVRCR = 0x01;                                            // LVR Disable
- 490   1       
- 491   1        // Amp
- 492   1        AMPCR0 = 0x00
- 493   1            |(0<<6)                                                         // If 0/1, Disable/Enable filter OP1OUT
-             - for ADC
- 494   1            |(0<<4)                                                         // If 0/1/2/3, Select No/AMP0/AMP1/"AMP
-             -0/1" discharge channel
- 495   1            |(0<<2)                                                         // If 0/1/2/3, Select discharge time du
-             -ring Disable/100us/200us/300us
- 496   1            |(AMP_AUTO_DIS<<1)                                              // If 0/1, AMP1 Always/"Auto disable af
-             -ter ADC"
- 497   1            |(AMP_AUTO_DIS<<0);                                             // If 0/1, AMP0 Always/"Auto disable af
-             -ter ADC"
- 498   1            
- 499   1        AMPCR1 = 0x00
- 500   1            |(0<<7)                                                       // If 0/1, Disable/Enable Amp1
- 501   1            |(0<<4)                                                       // If 0/1/2/3/4/5/6/7, "Disable gain"/x1/
-             -x2/x10/x15/x20/x30/x60
- 502   1            |(0<<3)                                                       // If 0/1, Disable/Enable Amp0
- 503   1            |(0<<0);                                                      // If 0/1/2/3, "Disable gain"/x5/x10/x20
- 504   1            
- 505   1        CHPCR = (0<<0);                                                         // If 0/1/2/3, 125/167/250/500 [k
-             -Hz] chopper clock
- 506   1        // ADC
- 507   1        ADCCRH = 0x00
- 508   1            |(0<<7)                                                         // Clear ADCIFR
- 509   1            |(0<<3)                                                         // If 0/1, ADC Trigger Signal: ADST/"Ti
-             -mer 0"
- 510   1            |(0<<2)                                                         // If 0/1, ADC Data Align: MSB/LSB . 0 
-             -= MSB
- 511   1            |(0<<0);                                                        // If 0/1/2/3, 1/0.5/0.25/0.125 [MHz]
- 512   1        ADCCRL = 0x00
- 513   1            |(0<<7)                                                         // If 0/1, Disable/Enable ADC Module
- 514   1            |(0<<6)                                                         // If 0/1, No/Start
- 515   1            |(0<<5)                                                         // If 0/1, Reference VDD/AVREF
- 516   1            |(0x6<<0);                                                      // sel. AN6
- 517   1            //|(0xA<<0);                                                      // If 0/1////, AN0/AN1/////AMP1
- 518   1        // USART
- 519   1        USTBD = (unsigned char)(4000000/9600/16 - 1);            // 4MHz/(Baud Rate)/16 - 1
- 520   1        USTCR1 = 0x00
- 521   1            |(0<<6)                                           // If 0/1/2/3, UART/Synchronous/Reserved/SPI Mode
- 522   1            |(0<<4)                                           // If 0/1/2/3, No/Reserved/Even/Odd Parity
- 523   1            |(3<<1)                                           // If 0/1/2/3/7, 5/6/7/8/9-bit Data
- 524   1            |(0<<0);                                          // If 0/1, TxD change @Rising/@Falling only SPI mode
- 525   1        USTCR2 = 0x00
-C51 COMPILER V9.54   MAIN                                                                  04/21/2026 18:38:49 PAGE 10  
+ 479   1        //P12DB = 0x00;                     //P1/P2 Debounce disable
+ 480   1        //P1FSRH = 0x08;                                                          // P1[5]: AN6, others: normal I
+             -/O
+ 481   1        //P1FSRL = 0x00;                                                          // P1[3:0]: Normal I/O
+ 482   1        P1FSRH  = 0
+C51 COMPILER V9.54   MAIN                                                                  04/24/2026 14:37:15 PAGE 9   
 
- 526   1            |(0<<7)                                           // If 0/1, Disable/Enable DRE Interrupt
- 527   1            |(0<<6)                                           // If 0/1, Disable/Enable TXC Interrupt
- 528   1            |(0<<5)                                           // If 0/1, Disable/Enable RXC Interrupt
- 529   1            |(0<<4)                                           // If 0/1, Disable/Enable WAKE Interrupt
- 530   1            |(0<<3)                                           // If 0/1, Disable/Enable Transmitter
- 531   1            |(0<<2)                                           // If 0/1, Disable/Enable Receiver
- 532   1            |(0<<1)                                           // If 0/1, Disable/Enable USART Block
- 533   1            |(0<<0);                                          // If 0/1, Normal/Double Speed Operation
- 534   1        USTCR3 = 0x00
- 535   1            |(0<<7)                                           // If 0/1, Slave/Master in SPI or Synchronous mode
- 536   1            |(0<<6)                                           // If 0/1, Normal/"Loop back" Operation
- 537   1            |(0<<5)                                           // When synchronous mode only
- 538   1            |(0<<4)                                           // If 0/1, Disable/Enable SS Pin
- 539   1            |(0<<3)                                           // If 0/1, No/Exchange MOSI and MISO
- 540   1            |(0<<2);                                          // If 0/1, 1/2 Stop bit
- 541   1      
- 542   1        // ICSx
- 543   1        #ifdef CC_USE
+ 483   1          | ( 1 << 2)       //P15  // 0 : I/O,  1 : LDO23,   2 : AN6, 3 : (SDA)           // LDO23
+ 484   1          | ( 0 << 0);      //P14  // 0 : I/O (EINT11), 1 : T1O/PWM1O,   2 : SCL, 3 : Not used    // /AUD ON
+ 485   1          
+ 486   1          P1FSRL  = 0
+ 487   1          | ( 0 << 6)       //P13  // 0 : I/O (EC1),  1 : (RXD/MISO)              // DSDA
+ 488   1          | ( 0 << 4)       //P12  // 0 : I/O (EC0),  1 : (TXD/MOSI)                // DSCL
+ 489   1          | ( 1 << 2)       //P11  // 0 : I/O (EINT10), 1 : T0O/PWM0O             // AUDIO SIG
+ 490   1          | ( 0 << 0);      //P10  // 0 : I/O,  1 : (SCK)                   // SENSE PW
+ 491   1      
+ 492   1          P12DB = 0
+ 493   1          | ( 0 << 5)     //P21DB   // 0 : Disable, 1 : Enable
+ 494   1          | ( 0 << 4)     //P20DB   // 0 : Disable, 1 : Enable
+ 495   1          | ( 0 << 2)     //P14DB   // 0 : Disable, 1 : Enable
+ 496   1          | ( 0 << 1)     //P11DB   // 0 : Disable, 1 : Enable
+ 497   1          | ( 0 << 0);      //P10DB   // 0 : Disable, 1 : Enable
+ 498   1          
+ 499   1        
+ 500   1          
+ 501   1        // Port 2
+ 502   1        P2 = 0x00;                        // 0 : Low, 1 : High
+ 503   1        P2OD = 0x00;                    // 0 : Disable, 1 : Enable (Open-drain)
+ 504   1        P2PU = 0x00;                    // 0 : Disable, 1 : Enable (Pull-up)
+ 505   1        P2IO = 0x0f;                      // 0 : Input, 1 : Output
+ 506   1        //P2FSR = 0x00;                      // P2[3:0]: I/O
+ 507   1        P2FSR   = 0
+ 508   1          | ( 1 << 6)     // 0 : P23,  1 : TXD/MOSI,  2 : AN5,     3 : Not used         //mosi
+ 509   1          | ( 1 << 4)     // 0 : P22,  1 : RXD/MISO,  2 : AN4,     3 : Not used         // miso
+ 510   1          | ( 1 << 2)         // 0 : P21 (EC2),  1 : SCK,   2 : (SCL),     3 : Not used           // sck
+ 511   1          | ( 0 << 0);        // 0 : P20 (EINT12),  1 : T2O/PWM2O,   2 : SDA,     3 : Not used      // cs 
+ 512   1      
+ 513   1      
+ 514   1      
+ 515   1        
+ 516   1          // Timer 0 
+ 517   1        T0CRL = 0x80;                                                           // Timer 0: fx/4
+ 518   1        T0CRH = 0x01;                                                           // Timer 0: disable, clear counte
+             -r
+ 519   1        T0ADRH = (unsigned char)(T_USEC>>8);
+ 520   1        T0ADRL = (unsigned char)(T_USEC&0xff);
+ 521   1        // Timer 1
+ 522   1        T1CRL = 0x00
+ 523   1            |(1<<5);                                                          // Timer 1: if 0/1/2.../7, fx divide
+             -d by 2048/512/64/8/4/2/1/EC1
+ 524   1        T1CRH = 0x81;                                                           // Timer 1: if 0/8, Dis/Enable, c
+             -lear counter
+ 525   1        //T1CRH = 0x01;                                                           // Timer 1: if 0/8, Dis/Enable,
+             - clear counter
+ 526   1        T1ADRH = (unsigned char)(TIME_2S>>8);
+ 527   1        T1ADRL = (unsigned char)(TIME_2S&0xff);
+ 528   1      
+ 529   1        
+ 530   1        // Timer 2
+ 531   1        T2CRL = 0x00;                                            // Timer 2: fx/1
+ 532   1        T2CRH = 0x00;                                            // Timer 2: Disable, Clear counter
+ 533   1      
+ 534   1        // WDT
+ 535   1        WDTCR = 0x00
+ 536   1            |(0<<7)                                            // If 0/1, Diable/Enable WDT operation
+ 537   1            |(0<<6)                                            // If 0/1, "Free running 8-bit timer"/"Reset by WDT"
+ 538   1            |(1<<5)                                            // If 0/1, "No effect"/"Clear WDT Counter"
+ 539   1            |(0<<1)                                            // If 0/1/2, Select WDT Clock as "BIT Overflow"/ LFI
+             -RC /WDTRC
+C51 COMPILER V9.54   MAIN                                                                  04/24/2026 14:37:15 PAGE 10  
+
+ 540   1            |(0<<0);                                           // Clear WDTIFR
+ 541   1        
+ 542   1        // LVR
+ 543   1        LVRIDR = 0x59;                                           // Id value to write data to the LVRCR register
+ 544   1        LVRCR = 0x01;                                            // LVR Disable
+ 545   1       
+ 546   1        // Amp
+ 547   1        AMPCR0 = 0x00
+ 548   1            |(0<<6)                                                         // If 0/1, Disable/Enable filter OP1OUT
+             - for ADC
+ 549   1            |(0<<4)                                                         // If 0/1/2/3, Select No/AMP0/AMP1/"AMP
+             -0/1" discharge channel
+ 550   1            |(0<<2)                                                         // If 0/1/2/3, Select discharge time du
+             -ring Disable/100us/200us/300us
+ 551   1            |(AMP_AUTO_DIS<<1)                                              // If 0/1, AMP1 Always/"Auto disable af
+             -ter ADC"
+ 552   1            |(AMP_AUTO_DIS<<0);                                             // If 0/1, AMP0 Always/"Auto disable af
+             -ter ADC"
+ 553   1            
+ 554   1        AMPCR1 = 0x00
+ 555   1            |(0<<7)                                                       // If 0/1, Disable/Enable Amp1
+ 556   1            |(0<<4)                                                       // If 0/1/2/3/4/5/6/7, "Disable gain"/x1/
+             -x2/x10/x15/x20/x30/x60
+ 557   1            |(0<<3)                                                       // If 0/1, Disable/Enable Amp0
+ 558   1            |(0<<0);                                                      // If 0/1/2/3, "Disable gain"/x5/x10/x20
+ 559   1            
+ 560   1        CHPCR = (0<<0);                                                         // If 0/1/2/3, 125/167/250/500 [k
+             -Hz] chopper clock
+ 561   1        // ADC
+ 562   1        ADCCRH = 0x00
+ 563   1            |(0<<7)                                                         // Clear ADCIFR
+ 564   1            |(0<<3)                                                         // If 0/1, ADC Trigger Signal: ADST/"Ti
+             -mer 0"
+ 565   1            |(0<<2)                                                         // If 0/1, ADC Data Align: MSB/LSB . 0 
+             -= MSB
+ 566   1            |(0<<0);                                                        // If 0/1/2/3, 1/0.5/0.25/0.125 [MHz]
+ 567   1        ADCCRL = 0x00
+ 568   1            |(0<<7)                                                         // If 0/1, Disable/Enable ADC Module
+ 569   1            |(0<<6)                                                         // If 0/1, No/Start
+ 570   1            |(0<<5)                                                         // If 0/1, Reference VDD/AVREF
+ 571   1            |(0x6<<0);                                                      // sel. AN6
+ 572   1            //|(0xA<<0);                                                      // If 0/1////, AN0/AN1/////AMP1
+ 573   1        // USART
+ 574   1        USTBD = (unsigned char)(4000000/9600/16 - 1);            // 4MHz/(Baud Rate)/16 - 1
+ 575   1        USTCR1 = 0x00
+ 576   1            |(0<<6)                                           // If 0/1/2/3, UART/Synchronous/Reserved/SPI Mode
+ 577   1            |(0<<4)                                           // If 0/1/2/3, No/Reserved/Even/Odd Parity
+ 578   1            |(3<<1)                                           // If 0/1/2/3/7, 5/6/7/8/9-bit Data
+ 579   1            |(0<<0);                                          // If 0/1, TxD change @Rising/@Falling only SPI mode
+ 580   1        USTCR2 = 0x00
+ 581   1            |(0<<7)                                           // If 0/1, Disable/Enable DRE Interrupt
+ 582   1            |(0<<6)                                           // If 0/1, Disable/Enable TXC Interrupt
+ 583   1            |(0<<5)                                           // If 0/1, Disable/Enable RXC Interrupt
+ 584   1            |(0<<4)                                           // If 0/1, Disable/Enable WAKE Interrupt
+ 585   1            |(0<<3)                                           // If 0/1, Disable/Enable Transmitter
+ 586   1            |(0<<2)                                           // If 0/1, Disable/Enable Receiver
+ 587   1            |(0<<1)                                           // If 0/1, Disable/Enable USART Block
+ 588   1            |(0<<0);                                          // If 0/1, Normal/Double Speed Operation
+ 589   1        USTCR3 = 0x00
+ 590   1            |(0<<7)                                           // If 0/1, Slave/Master in SPI or Synchronous mode
+ 591   1            |(0<<6)                                           // If 0/1, Normal/"Loop back" Operation
+ 592   1            |(0<<5)                                           // When synchronous mode only
+C51 COMPILER V9.54   MAIN                                                                  04/24/2026 14:37:15 PAGE 11  
+
+ 593   1            |(0<<4)                                           // If 0/1, Disable/Enable SS Pin
+ 594   1            |(0<<3)                                           // If 0/1, No/Exchange MOSI and MISO
+ 595   1            |(0<<2);                                          // If 0/1, 1/2 Stop bit
+ 596   1      
+ 597   1        // ICSx
+ 598   1        #ifdef CC_USE
               
                 ICSCR = 0x00;                                            // If 0x00/0x05/0x0a, Disable/"Enable ICS0"/"Ena
              -ble ICS1"
@@ -601,326 +653,577 @@ line level    source
                 ICSDR1 = 0x06;                                           // If 0/1/.../15, abot 50 + 15 x data [mA]
                 P0FSRH |= 0xF0;                     // P07 function set to ICS1, P06 function set to ICS0
                 #else
- 550   1        ICSCR = 0x00;                                            // If 0x00/0x05/0x0a, Disable/"Enable ICS0"/"Ena
+ 605   1        ICSCR = 0x00;                                            // If 0x00/0x05/0x0a, Disable/"Enable ICS0"/"Ena
              -ble ICS1"
- 551   1        ICSDR0 = 0x00;                                           // If 0/1/.../15, abot 50 + 15 x data [mA]
- 552   1        ICSDR1 = 0x00;                                           // If 0/1/.../15, abot 50 + 15 x data [mA]
- 553   1        
- 554   1        #endif
- 555   1        // External Interrupt
- 556   1        EIPOL0 = 0x00                                            // If 0x00/0x01/0x02/0x03, Disable/Rising/Fallin
-             -g/Both
- 557   1            |(0x00<<6)                                        // EINT3
- 558   1            |(0x00<<4)                                        // EINT2
- 559   1            |(0x00<<2)                                        // EINT1
- 560   1            |(0x00<<0);                                       // EINT0
- 561   1        EIPOL1 = 0x00                                            // If 0x00/0x01/0x02/0x03, Disable/Rising/Fallin
-             -g/Both
- 562   1            |(0x00<<4)                      // EINT12
- 563   1            |(0x00<<2)                                        // EINT11
- 564   1            |(0x00<<0);                                       // EINT10
- 565   1        EIFLAG = 0x00;                                           // Clear all external interrupt flags
- 566   1      
- 567   1        // Initialize Interrupt Registers
- 568   1        IP = 0x00;                                         // Priority level 0
- 569   1        IP1 = 0x00;                                        // Priority level 0
- 570   1        IE = 0x00
- 571   1          |(0<<5)                                              // EINT11
- 572   1          |(0<<4)                                              // EINT10
- 573   1          |(0<<3)                                              // EINT3
- 574   1          |(0<<2)                                              // EINT2
- 575   1          |(0<<1)                                              // EINT1
- 576   1          |(0<<0);                                             // EINT0
- 577   1        IE1 = 0x00
- 578   1          |(0<<5)                                              // EINT12 Interrupt
- 579   1          |(0<<1)                                              // I2C Interrupt
- 580   1          |(0<<0);                                             // ADC Interrupt
- 581   1        IE2 = 0x00
- 582   1          |(0<<5)                                              // USART Tx Interrupt
- 583   1          |(0<<4)                                              // USART Rx Interrupt
-C51 COMPILER V9.54   MAIN                                                                  04/21/2026 18:38:49 PAGE 11  
-
- 584   1          |(0<<2)                                              // Timer 2 Interrupt
- 585   1          |(0<<1)                                              // Timer 1 Interrupt
- 586   1          |(0<<0);                                             // Timer 0 Interrupt
- 587   1        IE3 = 0x00
- 588   1          |(0<<4)                                              // BIT Interrupt
- 589   1          |(0<<3);                                             // WDT Interrupt
- 590   1      
- 591   1      }
- 592          
- 593          
- 594          ////////////////End  시스템 초기화  함수 //////////// 
- 595          
- 596          ////////////////Start  와치독  함수 //////////// 
- 597          
- 598          void BeforeStop(void)
- 599          {
- 600   1        
- 601   1        OSCCR = 0x80;
- 602   1        WDTCR = 0xA2;
- 603   1        
- 604   1        WDTDR = 2;              // entrance to every 0.192sec
- 605   1        //WDTDR = 5;              // entrance to every 0.384sec
- 606   1        //WDTDR = 7;              // entrance to every 0.512sec
- 607   1        //WDTDR = 124;              // entrance to every 8sec
+ 606   1        ICSDR0 = 0x00;                                           // If 0/1/.../15, abot 50 + 15 x data [mA]
+ 607   1        ICSDR1 = 0x00;                                           // If 0/1/.../15, abot 50 + 15 x data [mA]
  608   1        
- 609   1        //WDTCR = 0xA3;     // set WDT enable , clock source LFIRC, WDT interrupt
- 610   1        //WDTCR = 0xA4;       // set WDT enable , clock source WDTRC
- 611   1        
- 612   1        IE3 |= 0x08;              // WDT interrupt enable 
- 613   1        
- 614   1      }
- 615          
- 616          void AfterStop(void)
- 617          {
- 618   1      
- 619   1        IE3 &= ~(0x08);                     // WDT interrupt disable
- 620   1        //WDTCR = 0x00;
- 621   1        
- 622   1        
- 623   1      #ifdef SysClock_1MHZ  
+ 609   1        #endif
+ 610   1        // External Interrupt
+ 611   1        EIPOL0 = 0x00                                            // If 0x00/0x01/0x02/0x03, Disable/Rising/Fallin
+             -g/Both
+ 612   1            |(0x00<<6)                                        // EINT3
+ 613   1            |(0x00<<4)                                        // EINT2
+ 614   1            |(0x00<<2)                                        // EINT1
+ 615   1            |(0x00<<0);                                       // EINT0
+ 616   1        EIPOL1 = 0x00                                            // If 0x00/0x01/0x02/0x03, Disable/Rising/Fallin
+             -g/Both
+ 617   1            |(0x00<<4)                      // EINT12
+ 618   1            |(0x00<<2)                                        // EINT11
+ 619   1            |(0x00<<0);                                       // EINT10
+ 620   1        EIFLAG = 0x00;                                           // Clear all external interrupt flags
+ 621   1      
+ 622   1        // Initialize Interrupt Registers
+ 623   1        IP = 0x00;                                         // Priority level 0
+ 624   1        IP1 = 0x00;                                        // Priority level 0
+ 625   1        IE = 0x00
+ 626   1          |(0<<5)                                              // EINT11
+ 627   1          |(0<<4)                                              // EINT10
+ 628   1          |(0<<3)                                              // EINT3
+ 629   1          |(0<<2)                                              // EINT2
+ 630   1          |(0<<1)                                              // EINT1
+ 631   1          |(0<<0);                                             // EINT0
+ 632   1        IE1 = 0x00
+ 633   1          |(0<<5)                                              // EINT12 Interrupt
+ 634   1          |(0<<1)                                              // I2C Interrupt
+ 635   1          |(0<<0);                                             // ADC Interrupt
+ 636   1        IE2 = 0x00
+ 637   1          |(0<<5)                                              // USART Tx Interrupt
+ 638   1          |(0<<4)                                              // USART Rx Interrupt
+ 639   1          |(0<<2)                                              // Timer 2 Interrupt
+ 640   1          |(0<<1)                                              // Timer 1 Interrupt
+ 641   1          |(0<<0);                                             // Timer 0 Interrupt
+ 642   1        IE3 = 0x00
+ 643   1          |(0<<4)                                              // BIT Interrupt
+ 644   1          |(0<<3);                                             // WDT Interrupt
+ 645   1      
+ 646   1      }
+ 647          
+ 648          
+ 649          ////////////////End  시스템 초기화  함수 //////////// 
+ 650          
+C51 COMPILER V9.54   MAIN                                                                  04/24/2026 14:37:15 PAGE 12  
+
+ 651          ////////////////Start  와치독  함수 //////////// 
+ 652          
+ 653          void BeforeStop(void)
+ 654          {
+ 655   1        
+ 656   1        OSCCR = 0x80;
+ 657   1        WDTCR = 0xA2;
+ 658   1        
+ 659   1        WDTDR = 2;              // entrance to every 0.192sec
+ 660   1        //WDTDR = 5;              // entrance to every 0.384sec
+ 661   1        //WDTDR = 7;              // entrance to every 0.512sec
+ 662   1        //WDTDR = 124;              // entrance to every 8sec
+ 663   1        
+ 664   1        //WDTCR = 0xA3;     // set WDT enable , clock source LFIRC, WDT interrupt
+ 665   1        //WDTCR = 0xA4;       // set WDT enable , clock source WDTRC
+ 666   1        
+ 667   1        IE3 |= 0x08;              // WDT interrupt enable 
+ 668   1        
+ 669   1      }
+ 670          
+ 671          void AfterStop(void)
+ 672          {
+ 673   1      
+ 674   1        IE3 &= ~(0x08);                     // WDT interrupt disable
+ 675   1        //WDTCR = 0x00;
+ 676   1        
+ 677   1        
+ 678   1      #ifdef SysClock_1MHZ  
                 OSCCR = 0x08;                                            // System clock: 1MHz
               #else 
- 626   1        OSCCR = 0x18;                                            // System clock: 4MHz
- 627   1                                                                // If 0x00/0x08/0x10/0x18, 0.5MHz/1MHz/2MHz/4MHz
- 628   1      #endif
- 629   1        
- 630   1      }
- 631          
- 632          void WD_Reset(void)
- 633          {
- 634   1        //WDTDR = 30;                       // entrance to every 2sec
- 635   1        WDTDR = 2;                        // entrance to every 0.192sec
- 636   1        //WDTCR = 0xA3;                     // set WDT enable , clock source LFIRC, WDT interrupt
- 637   1        WDTCR = 0xE5;                     // set WDT enable , clock source WDTRC, WDT interrupt
- 638   1        IE3 |= 0x08;                      // WDT interrupt enable 
- 639   1        
- 640   1      }
- 641          
- 642          ////////////////End  와치독  함수 //////////// 
- 643          
- 644          ////////////////Start  ADC  함수 //////////// 
- 645          
-C51 COMPILER V9.54   MAIN                                                                  04/21/2026 18:38:49 PAGE 12  
-
- 646          /**********************************************************************
- 647           * @brief   Data_Avr
- 648           * @param     None
- 649           * @return  None
- 650           **********************************************************************/
- 651          // 평균 값 계산 함수 
- 652          uint16_t Data_Avr(uint16_t *adc_data, uint8_t count){
- 653   1        
- 654   1        uint32_t temp = 0;
- 655   1        uint8_t i;
- 656   1        
- 657   1        for(i=0; i<count ; i++){
- 658   2          temp = temp + adc_data[i];
- 659   2        }
- 660   1        
- 661   1        temp = (uint16_t)(temp / count);
- 662   1        
- 663   1        return temp;
- 664   1        
- 665   1      }
- 666          
- 667          
- 668          /**********************************************************************
- 669           * @brief   TEMP_ADC
- 670           * @param     None
- 671           * @return  None
- 672           **********************************************************************/
- 673          
- 674          uint16_t TEMP_ADC(void)
- 675          {
- 676   1        int Temp_adc_data= 0;
- 677   1        
- 678   1        
- 679   1        
- 680   1        P0FSRL  = 0
- 681   1          | ( 2 << 6)       //P03     // 0 : I/O, 1 : OP0OUT,   2 : AN3,      3 : Not used          // SENSING IN ADC 
- 682   1          | ( 2 << 4)       //P02     // 0 : I/O, 1 : OP1P,   2 : AN2,      3 : Not used          // 
- 683   1          | ( 2<< 2)       //P10     // 0 : I/O (EINT1),  1 : OP1N,  2 : AN1, 3 : Not used        // BAT_ADC
- 684   1          | ( 0 << 0);      //P00     // 0 : I/O (EINT0), 1 : OP1OUT,   2 : AN0,  3 : Not used      // C_VDD
- 685   1        
- 686   1        OP0_Enable(FALSE);
- 687   1        OP1_Enable(FALSE);
- 688   1        LDO_ON;
- 689   1        ADC_Initial(ADC_CLK_1M, ADC_SW_TRIG, ADC_LDO_REF, ADC_LSB);
- 690   1        ADC_SelectChannel(ADC_CH3);
- 691   1        
- 692   1        Delay_ms(1);
- 693   1        
- 694   1        ADC_GetDataWithPolling(ADC_temp_data, ADC_MAX_BUFFER_SIZE);
- 695   1        
- 696   1        LDO_OFF;
- 697   1      
- 698   1        Temp_adc_data = Data_Avr(ADC_temp_data, ADC_MAX_BUFFER_SIZE);
- 699   1        
- 700   1        return Temp_adc_data;
- 701   1        
- 702   1      }
- 703          /*
- 704          **********************************************************************
- 705           * @brief   BAT_ADC
- 706           * @param     None
- 707           * @return  None
-C51 COMPILER V9.54   MAIN                                                                  04/21/2026 18:38:49 PAGE 13  
-
- 708           **********************************************************************/
- 709          
- 710          uint16_t BAT_ADC(void){
+ 681   1        OSCCR = 0x18;                                            // System clock: 4MHz
+ 682   1                                                                // If 0x00/0x08/0x10/0x18, 0.5MHz/1MHz/2MHz/4MHz
+ 683   1      #endif
+ 684   1        
+ 685   1      }
+ 686          
+ 687          void WD_Reset(void)
+ 688          {
+ 689   1        //WDTDR = 30;                       // entrance to every 2sec
+ 690   1        WDTDR = 2;                        // entrance to every 0.192sec
+ 691   1        //WDTCR = 0xA3;                     // set WDT enable , clock source LFIRC, WDT interrupt
+ 692   1        WDTCR = 0xE5;                     // set WDT enable , clock source WDTRC, WDT interrupt
+ 693   1        IE3 |= 0x08;                      // WDT interrupt enable 
+ 694   1        
+ 695   1      }
+ 696          
+ 697          ////////////////End  와치독  함수 //////////// 
+ 698          
+ 699          ////////////////Start  ADC  함수 //////////// 
+ 700          
+ 701          /**********************************************************************
+ 702           * @brief   Data_Avr
+ 703           * @param     None
+ 704           * @return  None
+ 705           **********************************************************************/
+ 706          // 평균 값 계산 함수 
+ 707          uint16_t Data_Avr(uint16_t *adc_data, uint8_t count){
+ 708   1        
+ 709   1        uint32_t temp = 0;
+ 710   1        uint8_t i;
  711   1        
- 712   1        uint16_t Bat_ADC;
- 713   1        
- 714   1        uint32_t op;
+ 712   1        if(count < 1){
+C51 COMPILER V9.54   MAIN                                                                  04/24/2026 14:37:15 PAGE 13  
+
+ 713   2          return 0;
+ 714   2        }
  715   1        
- 716   1        P0FSRL  = 0
- 717   1          | ( 1 << 6)       //P03     // 0 : I/O, 1 : OP0OUT,   2 : AN3,      3 : Not used          // SENSING IN ADC 
- 718   1          | ( 1 << 4)       //P02     // 0 : I/O, 1 : OP1P,   2 : AN2,      3 : Not used          // 
- 719   1          | ( 1<< 2)       //P10     // 0 : I/O (EINT1),  1 : OP1N,  2 : AN1, 3 : Not used        // BAT_ADC
- 720   1          | ( 0 << 0);      //P00     // 0 : I/O (EINT0), 1 : OP1OUT,   2 : AN0,  3 : Not used      // C_VDD
+ 716   1        for(i=0; i<count ; i++){
+ 717   2          temp = temp + adc_data[i];
+ 718   2        }
+ 719   1        
+ 720   1        temp = temp / count;
  721   1        
- 722   1      
- 723   1        ADC_Initial(ADC_CLK_1M, ADC_SW_TRIG, ADC_INTERNAL_REF, ADC_LSB);    
- 724   1        ADC_SelectChannel(ADC_VBGR);
- 725   1      
- 726   1        Delay_ms(1);
- 727   1        
- 728   1        ADC_GetDataWithPolling(ADC_temp_data, ADC_MAX_BUFFER_SIZE);
- 729   1        
- 730   1        op=92;
- 731   1        op*=1024;
- 732   1        op/= Data_Avr(ADC_temp_data, ADC_MAX_BUFFER_SIZE);
- 733   1        Bat_ADC=op;
+ 722   1        return temp;
+ 723   1        
+ 724   1      }
+ 725          
+ 726          void Data_Sorting(uint16_t *adc_data, uint8_t count)
+ 727          {
+ 728   1        uint8_t i,j;
+ 729   1        uint16_t temp;
+ 730   1      
+ 731   1        if(count < 1){
+ 732   2          return;
+ 733   2        }
  734   1        
- 735   1        return Bat_ADC;
- 736   1      }
- 737          
- 738          /**********************************************************************
- 739           * @brief   Dust_ADC
- 740           * @param     None
- 741           * @return  None
- 742           **********************************************************************/
- 743          
- 744          uint16_t Dust_ADC_1AMP(void)
- 745          {
- 746   1        
- 747   1        int Dust_adc_data= 0;
- 748   1        uint32_t op;
- 749   1        
- 750   1        
- 751   1        P0FSRL  = 0
- 752   1          | ( 1 << 6)       //P03     // 0 : I/O, 1 : OP0OUT,   2 : AN3,      3 : Not used          // SENSING IN ADC 
- 753   1          | ( 1 << 4)       //P02     // 0 : I/O, 1 : OP1P,   2 : AN2,      3 : Not used          // 
- 754   1          | ( 2<< 2)       //P10     // 0 : I/O (EINT1),  1 : OP1N,  2 : AN1, 3 : Not used        // BAT_ADC
- 755   1          | ( 1 << 0);      //P00     // 0 : I/O (EINT0), 1 : OP1OUT,   2 : AN0,  3 : Not used      // C_VDD
- 756   1        
- 757   1        OPAMP_Initial(GAIN1_DIS, GAIN0_DIS, chp_125KHz);
- 758   1        OP0_Enable(TRUE);
- 759   1        OP1_Enable(FALSE);
- 760   1      
- 761   1        ADC_Initial(ADC_CLK_1M, ADC_SW_TRIG, ADC_INTERNAL_REF, ADC_LSB);  
- 762   1        
- 763   1        ADC_SelectChannel(ADC_VBGR);
- 764   1        
- 765   1        Delay_ms(1);
- 766   1        
- 767   1        ADC_GetDataWithPolling(ADC_temp_data, ADC_MAX_BUFFER_SIZE);
- 768   1        
- 769   1        if(ADC_temp_data[buf_cnt/2] == 0) ADC_temp_data[buf_cnt/2] = 1;
-C51 COMPILER V9.54   MAIN                                                                  04/21/2026 18:38:49 PAGE 14  
+ 735   1        for(i = 0; i < (count-1); i++)
+ 736   1        {
+ 737   2          for(j = i+1; j < count; j++)
+ 738   2          {
+ 739   3            
+ 740   3            if(adc_data[i] > adc_data[j])
+ 741   3            {
+ 742   4              temp = adc_data[i];
+ 743   4              adc_data[i]=adc_data[j];
+ 744   4              adc_data[j]=temp;
+ 745   4            }
+ 746   3          }
+ 747   2        }
+ 748   1      }
+ 749          
+ 750          uint16_t Data_TrimmedMean(uint16_t *adc_data, uint8_t count){
+ 751   1      
+ 752   1        uint32_t temp = 0;
+ 753   1        uint8_t i;
+ 754   1        
+ 755   1        if(count < 3){
+ 756   2          return 0;
+ 757   2        }
+ 758   1        
+ 759   1        
+ 760   1        Data_Sorting(adc_data, count);
+ 761   1        
+ 762   1        for(i=1; i<(count -1) ; i++){
+ 763   2          temp = temp + adc_data[i];
+ 764   2        }
+ 765   1        
+ 766   1        temp = temp / (count -2);
+ 767   1        
+ 768   1        return temp;
+ 769   1        
+ 770   1      }
+ 771          
+ 772          /**********************************************************************
+ 773           * @brief   Check_System
+ 774           * @param     None
+C51 COMPILER V9.54   MAIN                                                                  04/24/2026 14:37:15 PAGE 14  
 
-*** ERROR C202 IN LINE 769 OF src\main.c: 'buf_cnt': undefined identifier
-*** ERROR C202 IN LINE 769 OF src\main.c: 'buf_cnt': undefined identifier
- 770   1        op=92;
- 771   1        op*=1024;
- 772   1        op/=Data_Avr(ADC_temp_data, ADC_MAX_BUFFER_SIZE);
- 773   1        ADC1_Bat_Val=op;
- 774   1      
- 775   1        LDO_ON;
- 776   1        ADC_SelectChannel(ADC_OP0OUT);
- 777   1        Delay_ms(1);
- 778   1        
- 779   1        ADC_GetDataWithPolling(ADC_temp_data, ADC_MAX_BUFFER_SIZE);
- 780   1        LDO_OFF;
- 781   1        
- 782   1        op=ADC1_Bat_Val;
- 783   1        op *=Data_Avr(ADC_temp_data, ADC_MAX_BUFFER_SIZE);
- 784   1        op/=1024;
- 785   1        ADC1_On_Dust_Val=op;
- 786   1        
- 787   1        //led off 시 센서값 읽기;
- 788   1        ADC_Initial(ADC_CLK_1M, ADC_SW_TRIG, ADC_INTERNAL_REF, ADC_LSB);  
- 789   1        ADC_SelectChannel(ADC_OP0OUT);
- 790   1        Delay_ms(1);
+ 775           * @return  None
+ 776           **********************************************************************/
+ 777          
+ 778          
+ 779          
+ 780          uint16_t Check_System(void)
+ 781          {
+ 782   1        int V25_On_adc_data= 0 , V25_Off_adc_data= 0;
+ 783   1        uint16_t System_Mode_Ck;
+ 784   1        
+ 785   1        // op amp  -> input 변경 
+ 786   1        P0FSRL  = 0
+ 787   1          | ( 2 << 6)       //P03     // 0 : I/O, 1 : OP0OUT,   2 : AN3,      3 : Not used          // SENSING IN ADC 
+ 788   1          | ( 2 << 4)       //P02     // 0 : I/O, 1 : OP1P,   2 : AN2,      3 : Not used              // Temperature_ADC
+ 789   1          | ( 2<< 2)        //P01     // 0 : I/O (EINT1), 1 : OP1N,  2 : AN1, 3 : Not used        // 
+ 790   1          | ( 0 << 0);      //P00     // 0 : I/O (EINT0), 1 : OP1OUT,   2 : AN0,  3 : Not used      // C_VDD
  791   1        
- 792   1        ADC_GetDataWithPolling(ADC_temp_data, ADC_MAX_BUFFER_SIZE);
- 793   1        
- 794   1        op=ADC1_Bat_Val;
- 795   1        op *=Data_Avr(ADC_temp_data, ADC_MAX_BUFFER_SIZE);
- 796   1        op/=1024;
- 797   1        ADC1_Off_Dust_Val=op;
- 798   1        
- 799   1        Dust_adc_data = ADC1_On_Dust_Val - ADC1_Off_Dust_Val;
- 800   1        
- 801   1        return Dust_adc_data;
- 802   1        
- 803   1      }
- 804          
- 805          
- 806          ////////////////End  ADC  함수 //////////// 
- 807          
- 808          ////////////////Start  UART  함수 //////////// 
- 809          
- 810          
- 811          void Uart_Out(void){
- 812   1      
- 813   1        Port_SetAlterFunctionpin(PORT1, PIN2, 0x1);
- 814   1                  
- 815   1        USART_Initial(9600, USART_DATA_8BIT, USART_STOP_1BIT, USART_PARITY_NO, USART_TX_RX_MODE);
- 816   1        
- 817   1        if(ADC_mode == Dust_mode){
- 818   2          
- 819   2          if(visual_type == 1){
- 820   3            USART_SendDataWithPolling(&Visu_MODE, 10);
- 821   3            USART_SendDataWithPolling(&Tab, 4);
- 822   3          }
- 823   2          else{
- 824   3            USART_SendDataWithPolling(&Dust_MODE, 10);
- 825   3            USART_SendDataWithPolling(&Tab, 4);
- 826   3          }
- 827   2        }
- 828   1        else if(ADC_mode == Temp_mode){
- 829   2          
-C51 COMPILER V9.54   MAIN                                                                  04/21/2026 18:38:49 PAGE 15  
-
- 830   2          USART_SendDataWithPolling(&Temp_MODE, 10);
- 831   2          USART_SendDataWithPolling(&Tab, 4);
- 832   2        }
+ 792   1        OP0_Enable(FALSE);
+ 793   1        OP1_Enable(FALSE);
+ 794   1        LDO_ON;
+ 795   1        ADC_Initial(ADC_CLK_1M, ADC_SW_TRIG, ADC_INTERNAL_REF, ADC_LSB);   //ADC_INTERNAL_REF 를 사용하고 LDO_ON을
+             - 제어했을때 adc 차이를 가지고 system mode 확인
+ 796   1        ADC_SelectChannel(ADC_CH3);
+ 797   1        
+ 798   1        Delay_ms(1);
+ 799   1        
+ 800   1        ADC_GetDataWithPolling(ADC_temp_data, sizeof(ADC_temp_data));
+ 801   1        
+ 802   1        LDO_OFF;
+ 803   1      
+ 804   1        V25_On_adc_data = Data_TrimmedMean(ADC_temp_data, sizeof(ADC_temp_data));
+ 805   1        
+ 806   1        Delay_ms(20);
+ 807   1        
+ 808   1        ADC_GetDataWithPolling(ADC_temp_data, sizeof(ADC_temp_data));
+ 809   1        V25_Off_adc_data = Data_TrimmedMean(ADC_temp_data, sizeof(ADC_temp_data));
+ 810   1      
+ 811   1        if( abs(V25_On_adc_data - V25_Off_adc_data) > System_Ck_Value){
+ 812   2          System_Mode_Ck = Temp_mode;
+ 813   2        }
+ 814   1        else{
+ 815   2          System_Mode_Ck = Dust_mode;
+ 816   2        }
+ 817   1      
+ 818   1        return System_Mode_Ck;
+ 819   1        
+ 820   1      }
+ 821          
+ 822          
+ 823          /**********************************************************************
+ 824           * @brief   TEMP_ADC
+ 825           * @param     None
+ 826           * @return  None
+ 827           **********************************************************************/
+ 828          
+ 829          uint16_t TEMP_ADC(void)
+ 830          {
+ 831   1        int Temp_adc_data= 0 , Temp_Data;
+ 832   1        int i;
  833   1        
- 834   1        USART_SendDataWithPolling(&End, 4);
- 835   1        
- 836   1        Port_SetAlterFunctionpin(PORT1, PIN2, 0);
- 837   1      }
- 838          
- 839          void Uart_Out_Int(uint32_t Value){
- 840   1      
- 841   1        uint8_t int_val ,tmp;
- 842   1        
- 843   1        int_val = Value / 1000 + 48;
- 844   1        USART_SendDataWithPolling(&int_val, 1);
- 845   1        tmp= Value % 1000 ;
- 846   1        int_val = (tmp/ 100 )+ 48;
- 847   1        USART_SendDataWithPolling(&int_val, 1);
- 848   1        tmp= Value % 100 ;
- 849   1        int_val = (tmp/ 10 )+ 48;
- 850   1        USART_SendDataWithPolling(&int_val, 1);
- 851   1        tmp= Value % 10 ;
- 852   1        int_val = (tmp/ 1) + 48;
- 853   1        USART_SendDataWithPolling(&int_val, 1);
- 854   1      }
- 855          ////////////////End  UART  함수 //////////// 
+ 834   1        // op amp  -> input 변경 
+ 835   1        P0FSRL  = 0
+C51 COMPILER V9.54   MAIN                                                                  04/24/2026 14:37:15 PAGE 15  
 
-C51 COMPILATION COMPLETE.  0 WARNING(S),  2 ERROR(S)
+ 836   1          | ( 2 << 6)       //P03     // 0 : I/O, 1 : OP0OUT,   2 : AN3,      3 : Not used          // SENSING IN ADC 
+ 837   1          | ( 2 << 4)       //P02     // 0 : I/O, 1 : OP1P,   2 : AN2,      3 : Not used              // Temperature_AD
+             -C
+ 838   1          | ( 2<< 2)        //P01     // 0 : I/O (EINT1), 1 : OP1N,  2 : AN1, 3 : Not used        // BAT_ADC
+ 839   1          | ( 0 << 0);      //P00     // 0 : I/O (EINT0), 1 : OP1OUT,   2 : AN0,  3 : Not used      // C_VDD
+ 840   1        
+ 841   1        OP0_Enable(FALSE);
+ 842   1        OP1_Enable(FALSE);
+ 843   1        LDO_ON;
+ 844   1        ADC_Initial(ADC_CLK_1M, ADC_SW_TRIG, ADC_LDO_REF, ADC_LSB);  //ADC_LDO_REF 를 서미스터에 적용해 베터리 값
+             -이 떨어져도 온도값 번화없게 설계
+ 845   1        ADC_SelectChannel(ADC_CH3);
+ 846   1        
+ 847   1        Delay_ms(1);
+ 848   1        
+ 849   1        ADC_GetDataWithPolling(ADC_temp_data, sizeof(ADC_temp_data));
+ 850   1        
+ 851   1        LDO_OFF;
+ 852   1      
+ 853   1        Temp_adc_data = Data_TrimmedMean(ADC_temp_data, sizeof(ADC_temp_data));
+ 854   1        
+ 855   1        for(i=TEMP_OFFSET;i<(TEMP_OFFSET + 100);i++){
+ 856   2          if(Temp_Table[i] > Temp_adc_data){
+ 857   3            break;
+ 858   3          }
+ 859   2        }
+ 860   1        
+ 861   1        if(i == (TEMP_OFFSET + 100)){
+ 862   2          Temp_Data = 100;
+ 863   2        }
+ 864   1        else if (i==TEMP_OFFSET){
+ 865   2          Temp_Data = 0;
+ 866   2        }
+ 867   1        else{
+ 868   2          Temp_Data = i -TEMP_OFFSET - 1 ;
+ 869   2        }
+ 870   1        return Temp_Data;
+ 871   1        
+ 872   1      }
+ 873          
+ 874          /*
+ 875          **********************************************************************
+ 876           * @brief   BAT_ADC
+ 877           * @param     None
+ 878           * @return  None
+ 879           **********************************************************************/
+ 880          
+ 881          uint16_t Get_Bat_Voltage_cV(void)   // 단위: 0.01V
+ 882          {
+ 883   1          uint32_t adc_avg;
+ 884   1          uint32_t vbat_cv;
+ 885   1        
+ 886   1      
+ 887   1          ADC_Initial(ADC_CLK_2M, ADC_SW_TRIG, ADC_INTERNAL_REF, ADC_LSB);   //ADC_INTERNAL_REF 를 읽어 VBGR_CV 
+             -값과 비교해 베커리값 계산 
+ 888   1          ADC_SelectChannel(ADC_VBGR);
+ 889   1          Delay_ms(1);
+ 890   1      
+ 891   1          ADC_GetDataWithPolling(ADC_temp_data, sizeof(ADC_temp_data));
+ 892   1      
+ 893   1          adc_avg = Data_TrimmedMean(ADC_temp_data, sizeof(ADC_temp_data));
+ 894   1      
+C51 COMPILER V9.54   MAIN                                                                  04/24/2026 14:37:15 PAGE 16  
+
+ 895   1          if (adc_avg == 0) return 0;   // 방어코드
+ 896   1      
+ 897   1          vbat_cv = ((uint32_t)VBGR_CV * ADC_FS) / adc_avg;
+ 898   1      
+ 899   1          // sanity clamp (optional)
+ 900   1          if (vbat_cv > 400) vbat_cv = 400;   // 4.00V 이상은 비정상
+ 901   1      
+ 902   1          return (uint16_t)vbat_cv;
+ 903   1      }
+ 904          
+ 905          /**********************************************************************
+ 906           * @brief   Dust_ADC
+ 907           * @param     None
+ 908           * @return  None
+ 909           **********************************************************************/
+ 910          
+ 911          uint16_t Dust_ADC_1AMP(void)
+ 912          {
+ 913   1        
+ 914   1        int Dust_adc_data= 0;
+ 915   1        uint32_t op;
+ 916   1        
+ 917   1        
+ 918   1        P0FSRL  = 0
+ 919   1          | ( 1 << 6)       //P03     // 0 : I/O, 1 : OP0OUT,   2 : AN3,      3 : Not used          // SENSING IN ADC 
+ 920   1          | ( 1 << 4)       //P02     // 0 : I/O, 1 : OP1P,   2 : AN2,      3 : Not used          // 
+ 921   1          | ( 2<< 2)        //P01     // 0 : I/O (EINT1), 1 : OP1N,  2 : AN1, 3 : Not used        // BAT_ADC
+ 922   1          | ( 1 << 0);      //P00     // 0 : I/O (EINT0), 1 : OP1OUT,   2 : AN0,  3 : Not used      // C_VDD
+ 923   1        
+ 924   1        OPAMP_Initial(GAIN1_DIS, GAIN0_DIS, chp_125KHz);
+ 925   1        OP0_Enable(TRUE);
+ 926   1        OP1_Enable(FALSE);
+ 927   1      
+ 928   1        ADC_Initial(ADC_CLK_1M, ADC_SW_TRIG, ADC_INTERNAL_REF, ADC_LSB);  
+ 929   1        
+ 930   1        ADC_SelectChannel(ADC_VBGR);
+ 931   1        
+ 932   1        Delay_ms(1);
+ 933   1        
+ 934   1        ADC_GetDataWithPolling(ADC_temp_data, sizeof(ADC_temp_data));
+ 935   1        
+ 936   1        op=92;
+ 937   1        op*=1024;
+ 938   1        op/=Data_Avr(ADC_temp_data, sizeof(ADC_temp_data));
+ 939   1        ADC1_Bat_Val=op;
+ 940   1      
+ 941   1        LDO_ON;
+ 942   1        ADC_SelectChannel(ADC_OP0OUT);
+ 943   1        Delay_ms(1);
+ 944   1        
+ 945   1        ADC_GetDataWithPolling(ADC_temp_data, sizeof(ADC_temp_data));
+ 946   1        LDO_OFF;
+ 947   1        
+ 948   1        op=ADC1_Bat_Val;
+ 949   1        op *=Data_Avr(ADC_temp_data, sizeof(ADC_temp_data));
+ 950   1        op/=1024;
+ 951   1        ADC1_On_Dust_Val=op;
+ 952   1        
+ 953   1        //led off 시 센서값 읽기;
+ 954   1        ADC_Initial(ADC_CLK_1M, ADC_SW_TRIG, ADC_INTERNAL_REF, ADC_LSB);  
+ 955   1        ADC_SelectChannel(ADC_OP0OUT);
+ 956   1        Delay_ms(1);
+C51 COMPILER V9.54   MAIN                                                                  04/24/2026 14:37:15 PAGE 17  
+
+ 957   1        
+ 958   1        ADC_GetDataWithPolling(ADC_temp_data, sizeof(ADC_temp_data));
+ 959   1        
+ 960   1        op=ADC1_Bat_Val;
+ 961   1        op *=Data_Avr(ADC_temp_data, sizeof(ADC_temp_data));
+ 962   1        op/=1024;
+ 963   1        ADC1_Off_Dust_Val=op;
+ 964   1        
+ 965   1        Dust_adc_data = ADC1_On_Dust_Val - ADC1_Off_Dust_Val;
+ 966   1        
+ 967   1        return Dust_adc_data;
+ 968   1        
+ 969   1      }
+ 970          /*
+ 971          void Set_Temp_Table(void){
+ 972            
+ 973          Temp_Table[0]=86;
+ 974          Temp_Table[1]=90;
+ 975          Temp_Table[2]=95;
+ 976          Temp_Table[3]=99;
+ 977          Temp_Table[4]=104;
+ 978          Temp_Table[5]=109;
+ 979          Temp_Table[6]=114;
+ 980          Temp_Table[7]=119;
+ 981          Temp_Table[8]=124;
+ 982          Temp_Table[9]=130;
+ 983          Temp_Table[10]=135;
+ 984          Temp_Table[11]=141;
+ 985          Temp_Table[12]=147;
+ 986          Temp_Table[13]=153;
+ 987          Temp_Table[14]=159;
+ 988          Temp_Table[15]=166;
+ 989          Temp_Table[16]=172;
+ 990          Temp_Table[17]=179;
+ 991          Temp_Table[18]=186;
+ 992          Temp_Table[19]=192;
+ 993          Temp_Table[20]=199;
+ 994          Temp_Table[21]=207;
+ 995          Temp_Table[22]=214;
+ 996          Temp_Table[23]=221;
+ 997          Temp_Table[24]=229;
+ 998          Temp_Table[25]=236;
+ 999          Temp_Table[26]=244;
+1000          Temp_Table[27]=252;
+1001          Temp_Table[28]=261;
+1002          Temp_Table[29]=269;
+1003          Temp_Table[30]=278;
+1004          Temp_Table[31]=286;
+1005          Temp_Table[32]=295;
+1006          Temp_Table[33]=304;
+1007          Temp_Table[34]=313;
+1008          Temp_Table[35]=322;
+1009          Temp_Table[36]=331;
+1010          Temp_Table[37]=341;
+1011          Temp_Table[38]=350;
+1012          Temp_Table[39]=359;
+1013          Temp_Table[40]=369;
+1014          Temp_Table[41]=379;
+1015          Temp_Table[42]=388;
+1016          Temp_Table[43]=398;
+1017          Temp_Table[44]=407;
+1018          Temp_Table[45]=417;
+C51 COMPILER V9.54   MAIN                                                                  04/24/2026 14:37:15 PAGE 18  
+
+1019          Temp_Table[46]=427;
+1020          Temp_Table[47]=437;
+1021          Temp_Table[48]=446;
+1022          Temp_Table[49]=456;
+1023          Temp_Table[50]=466;
+1024          Temp_Table[51]=476;
+1025          Temp_Table[52]=485;
+1026          Temp_Table[53]=495;
+1027          Temp_Table[54]=504;
+1028          Temp_Table[55]=514;
+1029          Temp_Table[56]=524;
+1030          Temp_Table[57]=533;
+1031          Temp_Table[58]=542;
+1032          Temp_Table[59]=552;
+1033          Temp_Table[60]=561;
+1034          Temp_Table[61]=570;
+1035          Temp_Table[62]=579;
+1036          Temp_Table[63]=588;
+1037          Temp_Table[64]=597;
+1038          Temp_Table[65]=606;
+1039          Temp_Table[66]=615;
+1040          Temp_Table[67]=623;
+1041          Temp_Table[68]=632;
+1042          Temp_Table[69]=640;
+1043          Temp_Table[70]=648;
+1044          Temp_Table[71]=656;
+1045          Temp_Table[72]=664;
+1046          Temp_Table[73]=672;
+1047          Temp_Table[74]=680;
+1048          Temp_Table[75]=688;
+1049          Temp_Table[76]=695;
+1050          Temp_Table[77]=703;
+1051          Temp_Table[78]=710;
+1052          Temp_Table[79]=717;
+1053          Temp_Table[80]=724;
+1054          Temp_Table[81]=731;
+1055          Temp_Table[82]=738;
+1056          Temp_Table[83]=744;
+1057          Temp_Table[84]=751;
+1058          Temp_Table[85]=757;
+1059          Temp_Table[86]=763;
+1060          Temp_Table[87]=769;
+1061          Temp_Table[88]=775;
+1062          Temp_Table[89]=781;
+1063          Temp_Table[90]=787;
+1064          Temp_Table[91]=793;
+1065          Temp_Table[92]=798;
+1066          Temp_Table[93]=803;
+1067          Temp_Table[94]=809;
+1068          Temp_Table[95]=814;
+1069          Temp_Table[96]=819;
+1070          Temp_Table[97]=824;
+1071          Temp_Table[98]=829;
+1072          Temp_Table[99]=833;
+1073          }
+1074          */
+1075          ////////////////End  ADC  함수 //////////// 
+1076          
+1077          ////////////////Start  UART  함수 //////////// 
+1078          
+1079          
+1080          void Uart_Out(void){
+C51 COMPILER V9.54   MAIN                                                                  04/24/2026 14:37:15 PAGE 19  
+
+1081   1      
+1082   1        Port_SetAlterFunctionpin(PORT1, PIN2, 0x1);
+1083   1                  
+1084   1        USART_Initial(9600, USART_DATA_8BIT, USART_STOP_1BIT, USART_PARITY_NO, USART_TX_RX_MODE);
+1085   1        
+1086   1        if(ADC_mode == Dust_mode){
+1087   2          
+1088   2          if(visual_type == 1){
+1089   3            USART_SendDataWithPolling(&Visu_MODE, sizeof(Visu_MODE));
+1090   3            USART_SendDataWithPolling(&Space, sizeof(Space));
+1091   3            USART_SendDataWithPolling(&Bat, sizeof(Bat));
+1092   3            Uart_Out_Int(ADC_Bat_Val);
+1093   3          }
+1094   2          else{
+1095   3            USART_SendDataWithPolling(&Dust_MODE, sizeof(Dust_MODE));
+1096   3            USART_SendDataWithPolling(&Space, sizeof(Space));
+1097   3            USART_SendDataWithPolling(&Bat, sizeof(Bat));
+1098   3            Uart_Out_Int(ADC_Bat_Val);
+1099   3          }
+1100   2        }
+1101   1        else if(ADC_mode == Temp_mode){
+1102   2          USART_SendDataWithPolling(&Temp_MODE, sizeof(Temp_MODE));
+1103   2          USART_SendDataWithPolling(&Space, sizeof(Space));
+1104   2          USART_SendDataWithPolling(&Bat, sizeof(Bat));
+1105   2          Uart_Out_Int(ADC_Bat_Val);
+1106   2          USART_SendDataWithPolling(&Space, sizeof(Space));
+1107   2          USART_SendDataWithPolling(&Temp, sizeof(Temp));
+1108   2          Uart_Out_Int(ADC_Temp_Val);
+1109   2        }
+1110   1        
+1111   1        USART_SendDataWithPolling(&End, 4);
+1112   1        
+1113   1        Port_SetAlterFunctionpin(PORT1, PIN2, 0);
+1114   1      }
+1115          
+1116          void Uart_Out_Int(uint16_t Value){
+1117   1      
+1118   1        uint16_t int_val;
+1119   1        uint8_t tmp;
+1120   1        
+1121   1        if(Value > 9999){
+1122   2          Value = 9999;
+1123   2        }
+1124   1        
+1125   1        tmp = Value / 1000 + 48;
+1126   1        USART_SendDataWithPolling(&tmp, 1);
+1127   1        int_val= Value % 1000 ;
+1128   1        tmp = (int_val/ 100 )+ 48;
+1129   1        USART_SendDataWithPolling(&tmp, 1);
+1130   1        int_val= Value % 100 ;
+1131   1        tmp = (int_val/ 10 )+ 48;
+1132   1        USART_SendDataWithPolling(&tmp, 1);
+1133   1        int_val= Value % 10 ;
+1134   1        tmp = (int_val/ 1) + 48;
+1135   1        USART_SendDataWithPolling(&tmp, 1);
+1136   1      }
+1137          
+1138          
+1139          ////////////////End  UART  함수 //////////// 
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+C51 COMPILER V9.54   MAIN                                                                  04/24/2026 14:37:15 PAGE 20  
+
+   CODE SIZE        =   2530    ----
+   CONSTANT SIZE    =    280    ----
+   XDATA SIZE       =    204      57
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

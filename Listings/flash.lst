@@ -1,4 +1,4 @@
-C51 COMPILER V9.54   FLASH                                                                 04/21/2026 18:38:49 PAGE 1   
+C51 COMPILER V9.54   FLASH                                                                 04/24/2026 14:37:15 PAGE 1   
 
 
 C51 COMPILER V9.54, COMPILATION OF MODULE FLASH
@@ -62,7 +62,7 @@ line level    source
   52          *Information in this document supersedes and replaces the information previously
   53          *supplied in any former versions of this document.
   54          *2020 ABOV Semiconductor  All rights reserved
-C51 COMPILER V9.54   FLASH                                                                 04/21/2026 18:38:49 PAGE 2   
+C51 COMPILER V9.54   FLASH                                                                 04/24/2026 14:37:15 PAGE 2   
 
   55          *
   56          */
@@ -126,7 +126,7 @@ line level    source
               
                 wait= 0x1000;
                 USTCR2 |= (DRIE);
-C51 COMPILER V9.54   FLASH                                                                 04/21/2026 18:38:49 PAGE 3   
+C51 COMPILER V9.54   FLASH                                                                 04/24/2026 14:37:15 PAGE 3   
 
                 while((!(USTST & (DRE)))&&(wait--));
                 wait= 0x1000;
@@ -190,7 +190,7 @@ line level    source
                 SLAVESELECT;
                 SPI_Transfer(COMMAND_RDSR);
                 status = SPI_Transfer(DUMMY);
-C51 COMPILER V9.54   FLASH                                                                 04/21/2026 18:38:49 PAGE 4   
+C51 COMPILER V9.54   FLASH                                                                 04/24/2026 14:37:15 PAGE 4   
 
                 SLAVEDESELECT;
                 return status;
@@ -254,7 +254,7 @@ line level    source
  237   1        id[0] = SPI_Transfer(DUMMY);
  238   1        id[1] = SPI_Transfer(DUMMY);
  239   1        id[2] = SPI_Transfer(DUMMY);
-C51 COMPILER V9.54   FLASH                                                                 04/21/2026 18:38:49 PAGE 5   
+C51 COMPILER V9.54   FLASH                                                                 04/24/2026 14:37:15 PAGE 5   
 
  240   1        SLAVEDESELECT;
  241   1      }
@@ -318,7 +318,7 @@ line level    source
  299   1      }
  300          
  301          
-C51 COMPILER V9.54   FLASH                                                                 04/21/2026 18:38:49 PAGE 6   
+C51 COMPILER V9.54   FLASH                                                                 04/24/2026 14:37:15 PAGE 6   
 
  302          
  303          void FastRead(unsigned long address, char * value, uint16_t length)

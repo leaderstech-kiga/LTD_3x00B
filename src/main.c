@@ -74,6 +74,7 @@
 
 
 #include "main.h"
+#include "math.h"
 #include "audio.h"
 #include "flash.h"
 
@@ -82,8 +83,7 @@
 /* Private Typedef -----------------------------------------------------------*/
 /* Private Variable ----------------------------------------------------------*/
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
+////////////////////////////////////////////////////////////////////////////////////////////////
 
 ////////////////Start  오디오 변수//////////// 
 // Audio Data : 8000bps , 8bit 
@@ -123,10 +123,11 @@ uint8_t Dust_ori[7] = "Dust_O:";
 uint8_t Dust_avr[7] = "Dust_A:";
 uint8_t Temp[5] = "Temp:";
 uint8_t Bat[4] = "Bat:";
+uint8_t Space[1] = " ";
 uint8_t Tab[4] = "    ";
 uint8_t End[4] = "\n\r";
-uint8_t int_val ;
-uint16_t tmp ;
+
+
 
 uint8_t opamp1[5] = "OPA1:";
 uint8_t opamp2[5] = "OPA2:";
@@ -172,8 +173,38 @@ uint16_t Bat_al_time	= 280  * 5  + 58 ;	// 280 초 , , 0.192초 주기  -> 0.192 * 5
 
 ////////////////Start  ADC 변수 //////////// 
 
+#define VBGR_CV        92u      // VBGR voltage × 100 (chip-specific, calibrate!)
+#define ADC_FS         1024u    // 10-bit
+
+#define	System_Ck_Value	40
+
 #define  ADC_BUFFER_SIZE 8
 uint16_t ADC_temp_data[ADC_BUFFER_SIZE];
+
+
+#define TEMP_OFFSET  20
+#define TEMP_IDX(t)  ((t) + TEMP_OFFSET)
+
+code uint16_t Temp_Table[140] = {
+	/* -20°C */ 30, 32, 34, 36, 38, 40, 42, 45, 47, 50, 
+	/* -10°C */ 52, 55, 58, 61, 64, 67, 71, 74, 78, 82, 
+	/*  0°C */ 86, 90, 95, 99, 104, 109, 114, 119, 124, 130, 
+	/*  10°C */ 135, 141, 147, 153, 159, 166, 172, 179, 186, 192, 
+	/*  20°C */ 199, 207, 214, 221, 229, 236, 244, 252, 261, 269, 
+	/*  30°C */ 278, 286, 295, 304, 313, 322, 331, 341, 350, 359, 
+	/*  40°C */ 369, 379, 388, 398, 407, 417, 427, 437, 446, 456, 
+	/*  50°C */ 466, 476, 485, 495, 504, 514, 524, 533, 542, 552, 
+	/*  60°C */ 561, 570, 579, 588, 597, 606, 615, 623, 632, 640, 
+	/*  70°C */ 648, 656, 664, 672, 680, 688, 695, 703, 710, 717, 
+	/*  80°C */ 724, 731, 738, 744, 751, 757, 763, 769, 775, 781, 
+	/*  90°C */ 787, 793, 798, 803, 809, 814, 819, 824, 829, 833, 
+	/* 100°C */ 838, 842,  847,  851,  855,  859,  863,  867,  871,  874,
+	/* 110°C */ 878, 881,  885,  888,  891,  895,  898,  901,  904,  906
+	};
+
+uint16_t ADC_Bat_Val;
+
+uint16_t ADC_Temp_Val;
 
 uint16_t ADC1_Bat_Val;
 uint16_t ADC1_On_Dust_Val;
@@ -202,6 +233,10 @@ uint8_t  start_uart_debug_mode = Debug_On ;	//전원 인가시 연동 버튼을 누르면 uar
  * @param   	None
  * @return	    None
  **********************************************************************/
+ 
+ 
+ 
+ 
 void Main(void)
 {
 	
@@ -221,12 +256,13 @@ void Main(void)
 	Delay_ms(5);		
 	LED_R_OFF;	
 	
+	//Set_Temp_Table();
 	
 	Port_SetInputpin(PORT1, PIN2, 1);  //key input & mode0  -> button input , 초기 눌려 있으면 UART mode
-	Delay_ms(10);		
+	Delay_ms(300);														// system mode를 확인하기전 adc 안정화 시간 필요
 	
-	ADC_mode = Temp_mode;
-	
+	ADC_mode = Check_System();
+
 		/* 시작시 uart 출력 모드  */
 	if(start_uart_debug_mode == Debug_On){
 		
@@ -253,12 +289,31 @@ void Main(void)
 					LED_G_OFF;
 					
 					//UART mode 동작 
-			//		Uart_Set();
 					
 					while(1){
 		
 						LED_R_ON;
-					
+						
+						ADC_Bat_Val = Get_Bat_Voltage_cV();
+						ADC_Temp_Val = TEMP_ADC();
+						/*
+						Port_SetAlterFunctionpin(PORT1, PIN2, 0x1);
+						USART_Initial(9600, USART_DATA_8BIT, USART_STOP_1BIT, USART_PARITY_NO, USART_TX_RX_MODE);
+						
+							for( i=0; i< sizeof(ADC_temp_data); i++){
+								Uart_Out_Int(ADC_temp_data[i]);
+								USART_SendDataWithPolling(&Space, sizeof(Space));
+							}
+							
+							USART_SendDataWithPolling(&End, 4);
+							
+						
+							Port_SetAlterFunctionpin(PORT1, PIN2, 0);
+	
+						*/
+						
+						ADC_Temp_Val = TEMP_ADC();
+						
 						Uart_Out();
 						
 						Delay_ms(250);	
@@ -395,13 +450,13 @@ void hw_initial(void) {
 	P0FSRH  = 0
 		| ( 0 << 6)       //P07     // 0 : I/O (EINT3), 1 : ICS1									// LED_R				
 		| ( 0 << 4)       //P06     // 0 : I/O (EINT2), 1 : ICS0									// LED_G
-		| ( 1 << 2)       //P05     // 0 : I/O, 1 : OP0P,    										// SENISNG OP0P
-		| ( 1 << 0);      //P04     // 0 : I/O, 1 : OP0N													// SENSING OP0N
+		| ( 0 << 2)       //P05     // 0 : I/O, 1 : OP0P,    										// SENISNG OP0P
+		| ( 0 << 0);      //P04     // 0 : I/O, 1 : OP0N													// SENSING OP0N
 		
 	P0FSRL  = 0
-		| ( 1 << 6)       //P03     // 0 : I/O, 1 : OP0OUT,   2 : AN3,      3 : Not used					// SENSING IN ADC 
-		| ( 1 << 4)       //P02     // 0 : I/O, 1 : OP1P,   2 : AN2,      3 : Not used					// 
-		| ( 1 << 2)       //P01     // 0 : I/O (EINT1),	1 : OP1N,  2 : AN1,	3 : Not used				// Not use
+		| ( 0 << 6)       //P03     // 0 : I/O, 1 : OP0OUT,   2 : AN3,      3 : Not used					// SENSING IN ADC 
+		| ( 0 << 4)       //P02     // 0 : I/O, 1 : OP1P,   2 : AN2,      3 : Not used					// 
+		| ( 0 << 2)       //P01     // 0 : I/O (EINT1),	1 : OP1N,  2 : AN1,	3 : Not used				// Not use
 		| ( 0 << 0);      //P00     // 0 : I/O (EINT0),	1 : OP1OUT,   2 : AN0,	3 : Not used			// C_VDD
 		
 	P0DB	= 0
@@ -654,13 +709,113 @@ uint16_t Data_Avr(uint16_t *adc_data, uint8_t count){
 	uint32_t temp = 0;
 	uint8_t i;
 	
+	if(count < 1){
+		return 0;
+	}
+	
 	for(i=0; i<count ; i++){
 		temp = temp + adc_data[i];
 	}
 	
-	temp = (uint16_t)(temp / count);
+	temp = temp / count;
 	
 	return temp;
+	
+}
+
+void Data_Sorting(uint16_t *adc_data, uint8_t count)
+{
+	uint8_t i,j;
+	uint16_t temp;
+
+	if(count < 1){
+		return;
+	}
+	
+	for(i = 0; i < (count-1); i++)
+	{
+		for(j = i+1; j < count; j++)
+		{
+			
+			if(adc_data[i] > adc_data[j])
+			{
+				temp = adc_data[i];
+				adc_data[i]=adc_data[j];
+				adc_data[j]=temp;
+			}
+		}
+	}
+}
+
+uint16_t Data_TrimmedMean(uint16_t *adc_data, uint8_t count){
+
+	uint32_t temp = 0;
+	uint8_t i;
+	
+	if(count < 3){
+		return 0;
+	}
+	
+	
+	Data_Sorting(adc_data, count);
+	
+	for(i=1; i<(count -1) ; i++){
+		temp = temp + adc_data[i];
+	}
+	
+	temp = temp / (count -2);
+	
+	return temp;
+	
+}
+
+/**********************************************************************
+ * @brief		Check_System
+ * @param   	None
+ * @return	None
+ **********************************************************************/
+
+
+
+uint16_t Check_System(void)
+{
+	int V25_On_adc_data= 0 , V25_Off_adc_data= 0;
+	uint16_t System_Mode_Ck;
+	
+	// op amp  -> input 변경 
+	P0FSRL  = 0
+		| ( 2 << 6)       //P03     // 0 : I/O, 1 : OP0OUT,   2 : AN3,      3 : Not used					// SENSING IN ADC 
+		| ( 2 << 4)       //P02     // 0 : I/O, 1 : OP1P,   2 : AN2,      3 : Not used							// Temperature_ADC
+		| ( 2<< 2)        //P01     // 0 : I/O (EINT1),	1 : OP1N,  2 : AN1,	3 : Not used				// 
+		| ( 0 << 0);      //P00     // 0 : I/O (EINT0),	1 : OP1OUT,   2 : AN0,	3 : Not used			// C_VDD
+	
+	OP0_Enable(FALSE);
+	OP1_Enable(FALSE);
+	LDO_ON;
+	ADC_Initial(ADC_CLK_1M, ADC_SW_TRIG, ADC_INTERNAL_REF, ADC_LSB);	 //ADC_INTERNAL_REF 를 사용하고 LDO_ON을 제어했을때 adc 차이를 가지고 system mode 확인
+	ADC_SelectChannel(ADC_CH3);
+	
+	Delay_ms(1);
+	
+	ADC_GetDataWithPolling(ADC_temp_data, sizeof(ADC_temp_data));
+	
+	LDO_OFF;
+
+	V25_On_adc_data = Data_TrimmedMean(ADC_temp_data, sizeof(ADC_temp_data));
+	
+	Delay_ms(20);
+	
+	ADC_GetDataWithPolling(ADC_temp_data, sizeof(ADC_temp_data));
+	V25_Off_adc_data = Data_TrimmedMean(ADC_temp_data, sizeof(ADC_temp_data));
+
+	if( abs(V25_On_adc_data - V25_Off_adc_data) > System_Ck_Value){
+		System_Mode_Ck = Temp_mode;
+	}
+	else{
+		System_Mode_Ck = Dust_mode;
+	}
+
+	return System_Mode_Ck;
 	
 }
 
@@ -673,33 +828,49 @@ uint16_t Data_Avr(uint16_t *adc_data, uint8_t count){
 
 uint16_t TEMP_ADC(void)
 {
-	int Temp_adc_data= 0;
+	int Temp_adc_data= 0 , Temp_Data;
+	int i;
 	
-	
-	
+	// op amp  -> input 변경 
 	P0FSRL  = 0
 		| ( 2 << 6)       //P03     // 0 : I/O, 1 : OP0OUT,   2 : AN3,      3 : Not used					// SENSING IN ADC 
-		| ( 2 << 4)       //P02     // 0 : I/O, 1 : OP1P,   2 : AN2,      3 : Not used					// 
-		| ( 2<< 2)       //P10     // 0 : I/O (EINT1),	1 : OP1N,  2 : AN1,	3 : Not used				// BAT_ADC
+		| ( 2 << 4)       //P02     // 0 : I/O, 1 : OP1P,   2 : AN2,      3 : Not used					    // Temperature_ADC
+		| ( 2<< 2)        //P01     // 0 : I/O (EINT1),	1 : OP1N,  2 : AN1,	3 : Not used				// BAT_ADC
 		| ( 0 << 0);      //P00     // 0 : I/O (EINT0),	1 : OP1OUT,   2 : AN0,	3 : Not used			// C_VDD
 	
 	OP0_Enable(FALSE);
 	OP1_Enable(FALSE);
 	LDO_ON;
-	ADC_Initial(ADC_CLK_1M, ADC_SW_TRIG, ADC_LDO_REF, ADC_LSB);
+	ADC_Initial(ADC_CLK_1M, ADC_SW_TRIG, ADC_LDO_REF, ADC_LSB);	 //ADC_LDO_REF 를 서미스터에 적용해 베터리 값이 떨어져도 온도값 번화없게 설계
 	ADC_SelectChannel(ADC_CH3);
 	
 	Delay_ms(1);
 	
-	ADC_GetDataWithPolling(ADC_temp_data, ADC_MAX_BUFFER_SIZE);
+	ADC_GetDataWithPolling(ADC_temp_data, sizeof(ADC_temp_data));
 	
 	LDO_OFF;
 
-	Temp_adc_data = Data_Avr(ADC_temp_data, ADC_MAX_BUFFER_SIZE);
+	Temp_adc_data = Data_TrimmedMean(ADC_temp_data, sizeof(ADC_temp_data));
 	
-	return Temp_adc_data;
+	for(i=TEMP_OFFSET;i<(TEMP_OFFSET + 100);i++){
+		if(Temp_Table[i] > Temp_adc_data){
+			break;
+		}
+	}
+	
+	if(i == (TEMP_OFFSET + 100)){
+		Temp_Data = 100;
+	}
+	else if (i==TEMP_OFFSET){
+		Temp_Data = 0;
+	}
+	else{
+		Temp_Data = i -TEMP_OFFSET - 1 ;
+	}
+	return Temp_Data;
 	
 }
+
 /*
 **********************************************************************
  * @brief		BAT_ADC
@@ -707,32 +878,28 @@ uint16_t TEMP_ADC(void)
  * @return	None
  **********************************************************************/
 
-uint16_t BAT_ADC(void){
-	
-	uint16_t Bat_ADC;
-	
-	uint32_t op;
-	
-	P0FSRL  = 0
-		| ( 1 << 6)       //P03     // 0 : I/O, 1 : OP0OUT,   2 : AN3,      3 : Not used					// SENSING IN ADC 
-		| ( 1 << 4)       //P02     // 0 : I/O, 1 : OP1P,   2 : AN2,      3 : Not used					// 
-		| ( 1<< 2)       //P10     // 0 : I/O (EINT1),	1 : OP1N,  2 : AN1,	3 : Not used				// BAT_ADC
-		| ( 0 << 0);      //P00     // 0 : I/O (EINT0),	1 : OP1OUT,   2 : AN0,	3 : Not used			// C_VDD
+uint16_t Get_Bat_Voltage_cV(void)   // 단위: 0.01V
+{
+    uint32_t adc_avg;
+    uint32_t vbat_cv;
 	
 
-	ADC_Initial(ADC_CLK_1M, ADC_SW_TRIG, ADC_INTERNAL_REF, ADC_LSB);		
-	ADC_SelectChannel(ADC_VBGR);
+    ADC_Initial(ADC_CLK_2M, ADC_SW_TRIG, ADC_INTERNAL_REF, ADC_LSB);   //ADC_INTERNAL_REF 를 읽어 VBGR_CV 값과 비교해 베커리값 계산 
+    ADC_SelectChannel(ADC_VBGR);
+    Delay_ms(1);
 
-	Delay_ms(1);
-	
-	ADC_GetDataWithPolling(ADC_temp_data, ADC_MAX_BUFFER_SIZE);
-	
-	op=92;
-	op*=1024;
-	op/= Data_Avr(ADC_temp_data, ADC_MAX_BUFFER_SIZE);
-  Bat_ADC=op;
-	
-	return Bat_ADC;
+    ADC_GetDataWithPolling(ADC_temp_data, sizeof(ADC_temp_data));
+
+	  adc_avg = Data_TrimmedMean(ADC_temp_data, sizeof(ADC_temp_data));
+
+    if (adc_avg == 0) return 0;   // 방어코드
+
+    vbat_cv = ((uint32_t)VBGR_CV * ADC_FS) / adc_avg;
+
+    // sanity clamp (optional)
+    if (vbat_cv > 400) vbat_cv = 400;   // 4.00V 이상은 비정상
+
+    return (uint16_t)vbat_cv;
 }
 
 /**********************************************************************
@@ -751,7 +918,7 @@ uint16_t Dust_ADC_1AMP(void)
 	P0FSRL  = 0
 		| ( 1 << 6)       //P03     // 0 : I/O, 1 : OP0OUT,   2 : AN3,      3 : Not used					// SENSING IN ADC 
 		| ( 1 << 4)       //P02     // 0 : I/O, 1 : OP1P,   2 : AN2,      3 : Not used					// 
-		| ( 2<< 2)       //P10     // 0 : I/O (EINT1),	1 : OP1N,  2 : AN1,	3 : Not used				// BAT_ADC
+		| ( 2<< 2)        //P01     // 0 : I/O (EINT1),	1 : OP1N,  2 : AN1,	3 : Not used				// BAT_ADC
 		| ( 1 << 0);      //P00     // 0 : I/O (EINT0),	1 : OP1OUT,   2 : AN0,	3 : Not used			// C_VDD
 	
 	OPAMP_Initial(GAIN1_DIS, GAIN0_DIS, chp_125KHz);
@@ -764,23 +931,22 @@ uint16_t Dust_ADC_1AMP(void)
 	
 	Delay_ms(1);
 	
-	ADC_GetDataWithPolling(ADC_temp_data, ADC_MAX_BUFFER_SIZE);
+	ADC_GetDataWithPolling(ADC_temp_data, sizeof(ADC_temp_data));
 	
-	if(ADC_temp_data[buf_cnt/2] == 0) ADC_temp_data[buf_cnt/2] = 1;
 	op=92;
 	op*=1024;
-	op/=Data_Avr(ADC_temp_data, ADC_MAX_BUFFER_SIZE);
+	op/=Data_Avr(ADC_temp_data, sizeof(ADC_temp_data));
   ADC1_Bat_Val=op;
 
 	LDO_ON;
 	ADC_SelectChannel(ADC_OP0OUT);
 	Delay_ms(1);
 	
-	ADC_GetDataWithPolling(ADC_temp_data, ADC_MAX_BUFFER_SIZE);
+	ADC_GetDataWithPolling(ADC_temp_data, sizeof(ADC_temp_data));
 	LDO_OFF;
 	
 	op=ADC1_Bat_Val;
-	op *=Data_Avr(ADC_temp_data, ADC_MAX_BUFFER_SIZE);
+	op *=Data_Avr(ADC_temp_data, sizeof(ADC_temp_data));
 	op/=1024;
   ADC1_On_Dust_Val=op;
 	
@@ -789,10 +955,10 @@ uint16_t Dust_ADC_1AMP(void)
 	ADC_SelectChannel(ADC_OP0OUT);
 	Delay_ms(1);
 	
-	ADC_GetDataWithPolling(ADC_temp_data, ADC_MAX_BUFFER_SIZE);
+	ADC_GetDataWithPolling(ADC_temp_data, sizeof(ADC_temp_data));
 	
 	op=ADC1_Bat_Val;
-	op *=Data_Avr(ADC_temp_data, ADC_MAX_BUFFER_SIZE);
+	op *=Data_Avr(ADC_temp_data, sizeof(ADC_temp_data));
 	op/=1024;
   ADC1_Off_Dust_Val=op;
 	
@@ -801,8 +967,111 @@ uint16_t Dust_ADC_1AMP(void)
 	return Dust_adc_data;
 	
 }
-
-
+/*
+void Set_Temp_Table(void){
+	
+Temp_Table[0]=86;
+Temp_Table[1]=90;
+Temp_Table[2]=95;
+Temp_Table[3]=99;
+Temp_Table[4]=104;
+Temp_Table[5]=109;
+Temp_Table[6]=114;
+Temp_Table[7]=119;
+Temp_Table[8]=124;
+Temp_Table[9]=130;
+Temp_Table[10]=135;
+Temp_Table[11]=141;
+Temp_Table[12]=147;
+Temp_Table[13]=153;
+Temp_Table[14]=159;
+Temp_Table[15]=166;
+Temp_Table[16]=172;
+Temp_Table[17]=179;
+Temp_Table[18]=186;
+Temp_Table[19]=192;
+Temp_Table[20]=199;
+Temp_Table[21]=207;
+Temp_Table[22]=214;
+Temp_Table[23]=221;
+Temp_Table[24]=229;
+Temp_Table[25]=236;
+Temp_Table[26]=244;
+Temp_Table[27]=252;
+Temp_Table[28]=261;
+Temp_Table[29]=269;
+Temp_Table[30]=278;
+Temp_Table[31]=286;
+Temp_Table[32]=295;
+Temp_Table[33]=304;
+Temp_Table[34]=313;
+Temp_Table[35]=322;
+Temp_Table[36]=331;
+Temp_Table[37]=341;
+Temp_Table[38]=350;
+Temp_Table[39]=359;
+Temp_Table[40]=369;
+Temp_Table[41]=379;
+Temp_Table[42]=388;
+Temp_Table[43]=398;
+Temp_Table[44]=407;
+Temp_Table[45]=417;
+Temp_Table[46]=427;
+Temp_Table[47]=437;
+Temp_Table[48]=446;
+Temp_Table[49]=456;
+Temp_Table[50]=466;
+Temp_Table[51]=476;
+Temp_Table[52]=485;
+Temp_Table[53]=495;
+Temp_Table[54]=504;
+Temp_Table[55]=514;
+Temp_Table[56]=524;
+Temp_Table[57]=533;
+Temp_Table[58]=542;
+Temp_Table[59]=552;
+Temp_Table[60]=561;
+Temp_Table[61]=570;
+Temp_Table[62]=579;
+Temp_Table[63]=588;
+Temp_Table[64]=597;
+Temp_Table[65]=606;
+Temp_Table[66]=615;
+Temp_Table[67]=623;
+Temp_Table[68]=632;
+Temp_Table[69]=640;
+Temp_Table[70]=648;
+Temp_Table[71]=656;
+Temp_Table[72]=664;
+Temp_Table[73]=672;
+Temp_Table[74]=680;
+Temp_Table[75]=688;
+Temp_Table[76]=695;
+Temp_Table[77]=703;
+Temp_Table[78]=710;
+Temp_Table[79]=717;
+Temp_Table[80]=724;
+Temp_Table[81]=731;
+Temp_Table[82]=738;
+Temp_Table[83]=744;
+Temp_Table[84]=751;
+Temp_Table[85]=757;
+Temp_Table[86]=763;
+Temp_Table[87]=769;
+Temp_Table[88]=775;
+Temp_Table[89]=781;
+Temp_Table[90]=787;
+Temp_Table[91]=793;
+Temp_Table[92]=798;
+Temp_Table[93]=803;
+Temp_Table[94]=809;
+Temp_Table[95]=814;
+Temp_Table[96]=819;
+Temp_Table[97]=824;
+Temp_Table[98]=829;
+Temp_Table[99]=833;
+}
+*/
 ////////////////End  ADC  함수 //////////// 
 
 ////////////////Start  UART  함수 //////////// 
@@ -817,18 +1086,26 @@ void Uart_Out(void){
 	if(ADC_mode == Dust_mode){
 		
 		if(visual_type == 1){
-			USART_SendDataWithPolling(&Visu_MODE, 10);
-			USART_SendDataWithPolling(&Tab, 4);
+			USART_SendDataWithPolling(&Visu_MODE, sizeof(Visu_MODE));
+			USART_SendDataWithPolling(&Space, sizeof(Space));
+			USART_SendDataWithPolling(&Bat, sizeof(Bat));
+			Uart_Out_Int(ADC_Bat_Val);
 		}
 		else{
-			USART_SendDataWithPolling(&Dust_MODE, 10);
-			USART_SendDataWithPolling(&Tab, 4);
+			USART_SendDataWithPolling(&Dust_MODE, sizeof(Dust_MODE));
+			USART_SendDataWithPolling(&Space, sizeof(Space));
+			USART_SendDataWithPolling(&Bat, sizeof(Bat));
+			Uart_Out_Int(ADC_Bat_Val);
 		}
 	}
 	else if(ADC_mode == Temp_mode){
-		
-		USART_SendDataWithPolling(&Temp_MODE, 10);
-		USART_SendDataWithPolling(&Tab, 4);
+		USART_SendDataWithPolling(&Temp_MODE, sizeof(Temp_MODE));
+		USART_SendDataWithPolling(&Space, sizeof(Space));
+		USART_SendDataWithPolling(&Bat, sizeof(Bat));
+		Uart_Out_Int(ADC_Bat_Val);
+		USART_SendDataWithPolling(&Space, sizeof(Space));
+		USART_SendDataWithPolling(&Temp, sizeof(Temp));
+		Uart_Out_Int(ADC_Temp_Val);
 	}
 	
 	USART_SendDataWithPolling(&End, 4);
@@ -836,20 +1113,27 @@ void Uart_Out(void){
 	Port_SetAlterFunctionpin(PORT1, PIN2, 0);
 }
 
-void Uart_Out_Int(uint32_t Value){
+void Uart_Out_Int(uint16_t Value){
 
-	uint8_t int_val ,tmp;
+	uint16_t int_val;
+	uint8_t tmp;
 	
-	int_val = Value / 1000 + 48;
-	USART_SendDataWithPolling(&int_val, 1);
-	tmp= Value % 1000 ;
-	int_val = (tmp/ 100 )+ 48;
-	USART_SendDataWithPolling(&int_val, 1);
-	tmp= Value % 100 ;
-	int_val = (tmp/ 10 )+ 48;
-	USART_SendDataWithPolling(&int_val, 1);
-	tmp= Value % 10 ;
-	int_val = (tmp/ 1) + 48;
-	USART_SendDataWithPolling(&int_val, 1);
+	if(Value > 9999){
+		Value = 9999;
+	}
+	
+	tmp = Value / 1000 + 48;
+	USART_SendDataWithPolling(&tmp, 1);
+	int_val= Value % 1000 ;
+	tmp = (int_val/ 100 )+ 48;
+	USART_SendDataWithPolling(&tmp, 1);
+	int_val= Value % 100 ;
+	tmp = (int_val/ 10 )+ 48;
+	USART_SendDataWithPolling(&tmp, 1);
+	int_val= Value % 10 ;
+	tmp = (int_val/ 1) + 48;
+	USART_SendDataWithPolling(&tmp, 1);
 }
+
+
 ////////////////End  UART  함수 //////////// 

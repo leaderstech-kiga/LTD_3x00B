@@ -1,4 +1,4 @@
-A51 MACRO ASSEMBLER  DELAY                                                                04/21/2026 18:38:49 PAGE     1
+A51 MACRO ASSEMBLER  DELAY                                                                04/24/2026 14:37:15 PAGE     1
 
 
 MACRO ASSEMBLER A51 V8.02c
@@ -65,7 +65,7 @@ LOC  OBJ            LINE     SOURCE
                       48     ; /* Private Typedef -----------------------------------------------------------*/
                       49     ; /* Private Variable ----------------------------------------------------------*/
                       50     ; /* Private Function Prototype ------------------------------------------------*/
-A51 MACRO ASSEMBLER  DELAY                                                                04/21/2026 18:38:49 PAGE     2
+A51 MACRO ASSEMBLER  DELAY                                                                04/24/2026 14:37:15 PAGE     2
 
                       51     ; /* Public Variable -----------------------------------------------------------*/
                       52     ; /* Public Function -----------------------------------------------------------*/
@@ -133,7 +133,7 @@ LOC  OBJ            LINE     SOURCE
                      113     ;     // Reference Link : http://www.keil.com/support/docs/2622.htm
                      114     ;     // delay -> [r6:r7]
                      115     ;     
-A51 MACRO ASSEMBLER  DELAY                                                                04/21/2026 18:38:49 PAGE     3
+A51 MACRO ASSEMBLER  DELAY                                                                04/24/2026 14:37:15 PAGE     3
 
                      116     ;     delay = delay;  // dummy
                      117                             ; SOURCE LINE # 85
@@ -201,7 +201,7 @@ LOC  OBJ            LINE     SOURCE
 002A 9400            179               subb    a,#0                         
                      180     ;         mov     r6,a                        // 1cycle
 002C FE              181               mov     r6,a                         
-A51 MACRO ASSEMBLER  DELAY                                                                04/21/2026 18:38:49 PAGE     4
+A51 MACRO ASSEMBLER  DELAY                                                                04/24/2026 14:37:15 PAGE     4
 
                      182     ;         jnc     _nop_20us_delay_loop        // 2cycle
 002D 50E5            183               jnc     _nop_20us_delay_loop         
@@ -221,7 +221,7 @@ LOC  OBJ            LINE     SOURCE
                      197     ; END OF _NOP_20us_Delay
                      198     
                      199             END
-A51 MACRO ASSEMBLER  DELAY                                                                04/21/2026 18:38:49 PAGE     5
+A51 MACRO ASSEMBLER  DELAY                                                                04/24/2026 14:37:15 PAGE     5
 
 SYMBOL TABLE LISTING
 ------ ----- -------

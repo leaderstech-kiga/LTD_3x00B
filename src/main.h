@@ -114,9 +114,14 @@ void WD_Reset(void);
 ////////////////Start  ADC  함수 //////////// 
 
 uint16_t Data_Avr(uint16_t *adc_data, uint8_t count);
+uint16_t Data_TrimmedMean(uint16_t *adc_data, uint8_t count);
+void Data_Sorting(uint16_t *adc_data, uint8_t count);
+uint16_t Check_System(void);
 uint16_t TEMP_ADC(void);
 uint16_t BAT_ADC(void);
+uint16_t Get_Bat_Voltage_cV(void);   // 단위: 0.01V
 uint16_t Dust_ADC_1AMP(void);
+void Set_Temp_Table(void);
 
 ////////////////End  ADC  함수 //////////// 
 
@@ -124,6 +129,6 @@ uint16_t Dust_ADC_1AMP(void);
 
 
 void Uart_Out(void);
-void Uart_Out_Int(uint32_t Value);
+void Uart_Out_Int(uint16_t Value);
 
 ////////////////End  UART  함수 //////////// 
