@@ -76,8 +76,6 @@ enum OSCEnable {
 /*******************************************************************************
 * Exported Public Function
 *******************************************************************************/
-void Clock_Initial(uint8_t clock_sel);
-void Clock_ConfigureOSC(uint8_t osc_sel, uint8_t hsirc_div, uint8_t osc_enable);
 uint32_t Clock_GetSystemFreq(void);
 #endif  /* End of __CLOCK_H_ */
 /* --------------------------------- End Of File ------------------------------ */

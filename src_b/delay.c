@@ -1,0 +1,128 @@
+/**
+*   @file       delay.c
+*   @brief      Polling Delay subroutine
+*   @author     Application Team, ABOV Semiconductor Co., Ltd.
+*   @version    V1.00
+*   @date       29. MAY. 2020
+*
+* Copyright(C) 2020, ABOV Semiconductor
+* All rights reserved.
+*
+********************************************************************************
+* ABOV Disclaimer
+*
+*IMPORTANT NOTICE - PLEASE READ CAREFULLY
+*ABOV Semiconductor ("ABOV") reserves the right to make changes, corrections, enhancements, 
+*modifications, and improvements to ABOV products and/or to this document at any time without notice. 
+*ABOV does not give warranties as to the accuracy or completeness of the information included herein.
+*Purchasers should obtain the latest relevant information of ABOV products before placing orders. 
+*Purchasers are entirely responsible for the choice, selection, and use of ABOV products and 
+*ABOV assumes no liability for application assistance or the design of purchasers' products. No license, 
+*express or implied, to any intellectual property rights is granted by ABOV herein. 
+*ABOV disclaims all express and implied warranties and shall not be responsible or
+*liable for any injuries or damages related to use of ABOV products in such unauthorized applications. 
+*ABOV and the ABOV logo are trademarks of ABOV.
+*All other product or service names are the property of their respective owners. 
+*Information in this document supersedes and replaces the information previously
+*supplied in any former versions of this document.
+*2020 ABOV Semiconductor  All rights reserved
+*
+*/
+
+/* Includes ------------------------------------------------------------------*/
+#include    "typedef.h"
+#include    "Intrins.h"
+#include    "delay.h"       //
+/* Private Pre-processor Definition & Macro ----------------------------------*/
+/* Private Typedef -----------------------------------------------------------*/
+/* Private Variable ----------------------------------------------------------*/
+/* Private Function Prototype ------------------------------------------------*/
+/* Public Variable -----------------------------------------------------------*/
+/* Public Function -----------------------------------------------------------*/
+/**
+* @brief    System NOP 4us Delay rountine. (MCLK = 4MHZ)
+* @note     1 machine cycle comprises 2 system clock cycles. (@ABOV 96 Core Series)
+*           16 system clock delay
+* @param    None
+* @return   None
+*/
+volatile void NOP_4us_Delay(void)
+{
+    // ACALL, LCALL : 2 cycle => 4 system clock cycle
+    NOP; NOP; NOP; NOP;     // NOP : 1 cycle => 2 sys. clock => 8 sys. clk
+    // RET : 2 cycle => 4 system clock cycle
+    // 16 sys. clk @4MHZ = 0.25us x 16 = 4us
+}
+/**
+* @brief    System NOP 20us Delay rountine. (MCLK = 4MHz)
+* @note     1 machine cycle comprises 2 system clock cycles. (@ABOV 96 Core Series)
+*           160 system clock delay
+*           1 machine cycle can be added depending on code optimization.
+*
+*           ex1)    MOV R7,#(Low byte of delay)
+*                   MOV R6,#(high byte of delay)
+*                   LCALL   NOP_20us_Delay
+*
+*           ex2)    MOV A,#(Low byte of delay) // Lower byte and higher byte are the same.
+*                   MOV R7,A
+*                   MOV R6,A
+*                   LCALL   NOP_20us_Delay
+*
+* @param    delay : unsigned int 1~65,355 (delay) * 10us (@System clock = 4MHz)
+* @return   None
+*/
+volatile void NOP_20us_Delay(unsigned int delay)
+{
+    // mov r7 <- low byte of delay      // 1cycle
+    // mov r6 <- high byte of delay     // 1cycle
+    // lcall NOP_20us_Delay             // 2cycle
+    
+    // dummy assignment to avoid warning
+    // 'unreferenced local variable'
+    // Reference Link : http://www.keil.com/support/docs/2622.htm
+    // delay -> [r6:r7]
+    
+    delay = delay;  // dummy
+                    
+    #pragma asm
+        lcall   NOP_4us_Delay
+        lcall   NOP_4us_Delay
+        lcall   NOP_4us_Delay
+        clr     c                           // 1cycle
+        mov     a,r7                        // 1cycle
+        subb    a,#2                        // 1cycle
+        mov     r7,a                        // 1cycle
+        mov     a,r6                        // 1cycle
+        subb    a,#0                        // 1cycle
+        mov     r6,a                        // 1cycle
+        jc     _nop_20us_delay_loop_end     // 2cycle
+        
+    _nop_20us_delay_loop:
+        lcall   NOP_4us_Delay
+        lcall   NOP_4us_Delay
+        lcall   NOP_4us_Delay
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        
+        clr     c                           // 1cycle
+        mov     a,r7                        // 1cycle
+        subb    a,#1                        // 1cycle
+        mov     r7,a                        // 1cycle
+        mov     a,r6                        // 1cycle
+        subb    a,#0                        // 1cycle
+        mov     r6,a                        // 1cycle
+        jnc     _nop_20us_delay_loop        // 2cycle
+
+    _nop_20us_delay_loop_end:
+        nop                                 // 1cycle
+        
+    #pragma endasm
+                                            // ret 2cycle
+}
+
+/* --------------------------------- End Of File ------------------------------ */

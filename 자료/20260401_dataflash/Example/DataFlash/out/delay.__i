@@ -1,0 +1,1 @@
+"src\delay.c" LARGE OPTIMIZE (8,SPEED) REGFILE (.\out\A96L41x_DataFlash.ORC) BROWSE DEBUG OBJECTEXTEND PRINT(.\out\delay.lst) TABS (2) SRC (.\out\delay.SRC)

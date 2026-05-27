@@ -1,4 +1,4 @@
-C51 COMPILER V9.54   FLASH                                                                 04/24/2026 14:37:15 PAGE 1   
+C51 COMPILER V9.54   FLASH                                                                 05/27/2026 12:19:58 PAGE 1   
 
 
 C51 COMPILER V9.54, COMPILATION OF MODULE FLASH
@@ -62,7 +62,7 @@ line level    source
   52          *Information in this document supersedes and replaces the information previously
   53          *supplied in any former versions of this document.
   54          *2020 ABOV Semiconductor  All rights reserved
-C51 COMPILER V9.54   FLASH                                                                 04/24/2026 14:37:15 PAGE 2   
+C51 COMPILER V9.54   FLASH                                                                 05/27/2026 12:19:58 PAGE 2   
 
   55          *
   56          */
@@ -77,287 +77,132 @@ line level    source
   65          #include "audio.h"
   66          
   67          
-  68          
-  69          
-  70          
-  71          /**********************************************************************
-  72           * @brief   SPI_Receive
-  73           * @param     none
-  74           * @return  data
-  75           **********************************************************************/
-  76          uint8_t SPI_Receive(void)
-  77          {
-  78   1        USTCR2 |= (DRIE);
-  79   1        while(!(USTST & (DRE)));
-  80   1        USTDR = 0xFF; //Dummy data
-  81   1        while(( USTST & RXC)!= RXC);    // Wait Data in
-  82   1        return USTDR;
-  83   1      }
-  84          
-  85          
-  86          
-  87          /**********************************************************************
-  88           * @brief   SPI_Send
-  89           * @param     data
-  90           * @return  None
-  91           **********************************************************************/
-  92           void SPI_Send(uint8_t value)
-  93          {
-  94   1        USTCR2 |= (DRIE);
-  95   1        while(!(USTST & (DRE)));
-  96   1          USTDR = value;
-  97   1        
-  98   1         while((USTST & RXC) != RXC);   // 전송 완료까지 대기 (추가)
-  99   1         (void)USTDR;                    // 수신 버퍼 더미 읽기로 RXC 클리어 (추가)
-*** WARNING C275 IN LINE 99 OF src\flash.c: expression with possibly no effect
- 100   1        
- 101   1      }
- 102          
- 103          
- 104          #if 0
-              /**********************************************************************
-               * @brief   SPI_Transfer
-               * @param     data
-               * @return  None
-               **********************************************************************/
-              uint8_t SPI_Transfer(uint8_t value)
-              {
-                uint16_t wait;
-              
-                wait= 0x1000;
-                USTCR2 |= (DRIE);
-C51 COMPILER V9.54   FLASH                                                                 04/24/2026 14:37:15 PAGE 3   
+  68          /* SPI timeout flag. Set by SPI_Transfer / SPI_Receive when their wait
+  69           * loops time out so callers can distinguish a real 0xFF data byte from
+  70           * an error. volatile because it may be set inside TIMER1_Int audio ISR
+  71           * (via Read_c) and consumed by main-thread code. */
+  72          volatile uint8_t SPI_Timeout = 0;
+  73          
+  74          
+  75          
+  76          /**********************************************************************
+  77           * @brief   SPI_Receive - clock out a 0xFF dummy and return the byte the
+  78           *          slave shifted back on MISO. Bounded wait loops with timeout
+  79           *          guards; sets SPI_Timeout on failure.
+  80           *          Used from TIMER1_Int audio streaming ISR - must not hang.
+  81           * @return  received byte, or 0xFF if timeout (check SPI_Timeout flag).
+  82           **********************************************************************/
+  83          uint8_t SPI_Receive(void)
+  84          {
+  85   1        uint16_t wait;
+  86   1      
+  87   1        USTCR2 |= (DRIE);
+  88   1      
+  89   1        wait = 0x1000;
+  90   1        while((!(USTST & (DRE))) && (--wait));
+  91   1        if ((USTST & DRE) == 0) {
+  92   2          SPI_Timeout = 1;
+  93   2          return 0xFF;
+  94   2        }
+  95   1      
+  96   1        USTDR = 0xFF;                            /* dummy byte to clock in MISO */
+  97   1      
+  98   1        wait = 0x1000;
+  99   1        while(((USTST & RXC) != RXC) && (--wait));
+ 100   1        if ((USTST & RXC) != RXC) {
+ 101   2          SPI_Timeout = 1;
+ 102   2          return 0xFF;
+ 103   2        }
+ 104   1      
+ 105   1        SPI_Timeout = 0;
+ 106   1        return USTDR;
+ 107   1      }
+ 108          
+ 109          
+ 110          
+ 111          /**********************************************************************
+ 112           * @brief   SPI_Transfer - clock out `value` on MOSI and return the byte
+ 113           *          shifted in on MISO. Sets SPI_Timeout on wait-loop timeout.
+ 114           * @param   value - byte to send
+ 115           * @return  received byte, or 0xFF if timeout (check SPI_Timeout flag).
+ 116           **********************************************************************/
+C51 COMPILER V9.54   FLASH                                                                 05/27/2026 12:19:58 PAGE 3   
 
-                while((!(USTST & (DRE)))&&(wait--));
-                wait= 0x1000;
-                USTDR = value;
-                while((( USTST & RXC)!= RXC)&&(wait--));    // Wait Data in
-                
-                    /* 타임아웃 체크: 루프 탈출 후 RXC가 실제로 세트됐는지 확인 */
-                  if((USTST & RXC) != RXC){
-                      return 0xFF;    // 타임아웃 시 오류값 반환 (추가)
-                  }
-                return USTDR;
-              }
-              #endif
- 128          
- 129          /**********************************************************************
- 130           * @brief   SPI_Transfer
- 131           * @param     data
- 132           * @return  None
- 133           **********************************************************************/
- 134          uint8_t SPI_Transfer(uint8_t value)
- 135          {
- 136   1        uint16_t wait;
+ 117          uint8_t SPI_Transfer(uint8_t value)
+ 118          {
+ 119   1        uint16_t wait;
+ 120   1      
+ 121   1        wait= 0x1000;
+ 122   1        while((!(USTST & (DRE)))&&(wait--));
+ 123   1      
+ 124   1        if ((USTST & DRE) == 0) {
+ 125   2          SPI_Timeout = 1;
+ 126   2          return 0xFF;
+ 127   2        }
+ 128   1      
+ 129   1        wait= 0x1000;
+ 130   1        USTDR = value;
+ 131   1        while((( USTST & RXC)!= RXC)&&(wait--));
+ 132   1      
+ 133   1        if((USTST & RXC) != RXC) {
+ 134   2          SPI_Timeout = 1;
+ 135   2          return 0xFF;
+ 136   2        }
  137   1      
- 138   1        wait= 0x1000;
- 139   1        //USTCR2 |= (DRIE);
- 140   1        while((!(USTST & (DRE)))&&(wait--));
- 141   1        wait= 0x1000;
- 142   1        USTDR = value;
- 143   1        while((( USTST & RXC)!= RXC)&&(wait--));    // Wait Data in
- 144   1      
- 145   1            /* 타임아웃 체크: RXC가 실제로 세트됐는지 확인 */
- 146   1          if((USTST & RXC) != RXC)
- 147   1              return 0xFF;    // 타임아웃 시 오류값 반환
- 148   1      
- 149   1          return USTDR;
- 150   1          
- 151   1      }
- 152          
- 153          
- 154          
- 155          #if 0
-              
-              /**********************************************************************
-               * @brief   Get_Identification
-               * @param     None
-               * @return  None
-               **********************************************************************/
-              void Get_Identification(uint8_t * id)
-              {
-                SLAVESELECT;
-                SPI_Transfer(COMMAND_RDID);
-                id[0] = SPI_Transfer(DUMMY);
-                id[1] = SPI_Transfer(DUMMY);
-                id[2] = SPI_Transfer(DUMMY);
-                SLAVEDESELECT;
-              }
-              
-              uint8_t GetStatus(void)
-              {
-                uint8_t status;
-                SLAVESELECT;
-                SPI_Transfer(COMMAND_RDSR);
-                status = SPI_Transfer(DUMMY);
-C51 COMPILER V9.54   FLASH                                                                 04/24/2026 14:37:15 PAGE 4   
+ 138   1        SPI_Timeout = 0;
+ 139   1        return USTDR;
+ 140   1      }
+ 141          
+ 142          
+ 143          
+ 144          /**********************************************************************
+ 145           * @brief   Get_Identification - read JEDEC ID (3 bytes)
+ 146           **********************************************************************/
+ 147          void Get_Identification(uint8_t * id)
+ 148          {
+ 149   1        SLAVESELECT;
+ 150   1        NOP_4us_Delay();                           /* ~4 us CS-setup delay */
+ 151   1        SPI_Transfer(COMMAND_RDID);
+ 152   1        id[0] = SPI_Transfer(DUMMY);
+ 153   1        id[1] = SPI_Transfer(DUMMY);
+ 154   1        id[2] = SPI_Transfer(DUMMY);
+ 155   1        SLAVEDESELECT;
+ 156   1      }
+ 157          
+ 158          
+ 159          void SetAddress(unsigned long address)
+ 160          {
+ 161   1        SPI_Transfer( (uint8_t) (address >> 16) );
+ 162   1        SPI_Transfer( (uint8_t) (address >> 8) );
+ 163   1        SPI_Transfer( (uint8_t) address );
+ 164   1      }
+ 165          
+ 166          
+ 167          void Read(unsigned long  address)
+ 168          {
+ 169   1        SLAVESELECT;
+ 170   1      
+ 171   1        SPI_Transfer(COMMAND_READ);                /* command_read */
+ 172   1        SetAddress(address);
+ 173   1        /* CS stays low - subsequent Read_c() calls clock out streaming bytes */
+ 174   1      }
+ 175          
+ 176          
+ 177          void Read_c( char * value)
+ 178          {
+C51 COMPILER V9.54   FLASH                                                                 05/27/2026 12:19:58 PAGE 4   
 
-                SLAVEDESELECT;
-                return status;
-              }
-              
-              void SetAddress(unsigned long address)
-              {
-                SPI_Transfer( (uint8_t) (address >> 16) );
-                SPI_Transfer( (uint8_t) (address >> 8) );
-                SPI_Transfer( (uint8_t) address );
-              }
-              
-              void Read(unsigned long  address, char * value, uint16_t  length)
-              {
-                uint16_t i;
-                
-                SLAVESELECT;
-                SPI_Transfer(COMMAND_READ);
-                SetAddress(address);
-                for(i = 0;i < length;i ++)
-                {
-                  *(value + i) = SPI_Transfer(DUMMY);
-                }
-                SLAVEDESELECT;
-                //while(GetStatus() & STATUS_WIP);
-              }
-              
-              
-              
-              void FastRead(unsigned long address, char * value, uint16_t length)
-              {
-                uint16_t i;
-              
-                SLAVESELECT;
-                SPI_Transfer(COMMAND_READ);
-                SetAddress(address);
-                SPI_Transfer(DUMMY);
-                for(i = 0;i < length;i ++)
-                {
-                  *(value + i) = SPI_Transfer(DUMMY);
-                }
-                SLAVEDESELECT;
-                //while(GetStatus() & STATUS_WIP);
-              }
-              #endif 
- 222          
- 223          
- 224          
- 225          /**********************************************************************
- 226           * @brief   Get_Identification
- 227           * @param     None
- 228           * @return  None
- 229           **********************************************************************/
- 230          void Get_Identification(uint8_t * id)
- 231          {
- 232   1        uint8_t i;
- 233   1        
- 234   1        SLAVESELECT;
- 235   1        for(i=0;i<10;i++);
- 236   1        SPI_Transfer(COMMAND_RDID);
- 237   1        id[0] = SPI_Transfer(DUMMY);
- 238   1        id[1] = SPI_Transfer(DUMMY);
- 239   1        id[2] = SPI_Transfer(DUMMY);
-C51 COMPILER V9.54   FLASH                                                                 04/24/2026 14:37:15 PAGE 5   
-
- 240   1        SLAVEDESELECT;
- 241   1      }
- 242          
- 243          
- 244          void SetAddress(unsigned long address)
- 245          {
- 246   1        SPI_Transfer( (uint8_t) (address >> 16) );
- 247   1        SPI_Transfer( (uint8_t) (address >> 8) );
- 248   1        SPI_Transfer( (uint8_t) address );
- 249   1      }
- 250          
- 251          #if 0
-              void Read_n(unsigned long  address, char * value, uint16_t  length)
-              {
-                uint16_t i;
-                
-                SLAVESELECT;
-                SPI_Transfer(COMMAND_READ);
-                SetAddress(address);
-                for(i = 0;i < length;i ++)
-                {
-                  *(value + i) = SPI_Receive();
-                }
-                SLAVEDESELECT;
-                //while(GetStatus() & STATUS_WIP);
-              }
-              #endif
- 267          
- 268          
- 269          void Read_v(unsigned long  address, char * value)
- 270          {
- 271   1        
- 272   1        SLAVESELECT;
- 273   1        
- 274   1        SPI_Transfer(COMMAND_READ);
- 275   1        SPI_Transfer( (uint8_t) (address >> 16) );
- 276   1        SPI_Transfer( (uint8_t) (address >> 8) );
- 277   1        SPI_Transfer( (uint8_t) address );
- 278   1        *(value) = SPI_Transfer(DUMMY);
- 279   1        
- 280   1        SLAVEDESELECT;  
- 281   1      }
- 282          
- 283          
- 284          void Read(unsigned long  address)
- 285          {
- 286   1        
- 287   1        SLAVESELECT;
- 288   1      
- 289   1        SPI_Transfer(COMMAND_READ);     // command_read
- 290   1        SetAddress(address);
- 291   1        //*(value) = SPI_Receive();
- 292   1      }
- 293          
- 294          
- 295          void Read_c( char * value)
- 296          {
- 297   1      
- 298   1        *(value) = SPI_Receive();
- 299   1      }
- 300          
- 301          
-C51 COMPILER V9.54   FLASH                                                                 04/24/2026 14:37:15 PAGE 6   
-
- 302          
- 303          void FastRead(unsigned long address, char * value, uint16_t length)
- 304          {
- 305   1        uint8_t i;
- 306   1      
- 307   1        SLAVESELECT;
- 308   1        for(i=0;i<10;i++);
- 309   1      
- 310   1        SPI_Send(COMMAND_READ);
- 311   1        SetAddress(address);
- 312   1        SPI_Send(DUMMY);
- 313   1        for(i = 0;i < length;i ++)
- 314   1        {
- 315   2          *(value + i) = SPI_Receive();
- 316   2        }
- 317   1        SLAVEDESELECT;
- 318   1      }
- 319          
- 320          
- 321          void Read_(unsigned long  address, char * value)
- 322          {
- 323   1        //uint16_t i;
- 324   1        
- 325   1        SLAVESELECT;
- 326   1        SPI_Transfer(COMMAND_READ);
- 327   1        SetAddress(address);
- 328   1        *(value) = SPI_Receive();
- 329   1        SLAVEDESELECT;
- 330   1      }
- 331          
- 332          
- 333          
+ 179   1        *(value) = SPI_Receive();
+ 180   1      }
+ 181          
+ 182          
+ 183          
 
 
 MODULE INFORMATION:   STATIC OVERLAYABLE
-   CODE SIZE        =    535    ----
+   CODE SIZE        =    311    ----
    CONSTANT SIZE    =   ----    ----
-   XDATA SIZE       =   ----      35
+   XDATA SIZE       =      1      11
    PDATA SIZE       =   ----    ----
    DATA SIZE        =   ----    ----
    IDATA SIZE       =   ----    ----
@@ -365,4 +210,4 @@ MODULE INFORMATION:   STATIC OVERLAYABLE
 END OF MODULE INFORMATION.
 
 
-C51 COMPILATION COMPLETE.  1 WARNING(S),  0 ERROR(S)
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

@@ -1,0 +1,10 @@
+".\out\Main.obj",
+".\out\delay.obj",
+".\out\a96l41x_clock.obj",
+".\out\a96l41x_dataflash.obj",
+".\out\a96l41x_gpio.obj",
+".\out\STARTUP.obj" 
+TO ".\out\A96L41x_DataFlash" REGFILE (.\out\A96L41x_DataFlash.ORC) 
+PRINT(".\out\A96L41x_DataFlash.m51") RAMSIZE(256) 
+CODE( 0X0000-0XFFFE )
+XDATA( 0X0000-0X08FF )

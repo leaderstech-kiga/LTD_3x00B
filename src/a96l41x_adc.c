@@ -45,9 +45,9 @@
 /*******************************************************************************
 * Private Variable
 *******************************************************************************/
-uint8_t adc_count = 0;
-uint16_t *adc_buff;
-uint8_t buff_cnt = 0;
+/* Timeout flag for ADC_GetDataWithPolling - set on bounded-wait timeout,
+ * cleared on success. volatile - read across interrupt boundaries. */
+volatile uint8_t ADC_Timeout = 0;
 /*******************************************************************************
 * Private Function Prototype
 *******************************************************************************/
@@ -121,26 +121,6 @@ void ADC_Initial(uint8_t clock_sel, uint8_t trigger_sel, uint8_t ref_voltage, ui
 }
 
 /**
-* @brief		Enables or disables the ADC peripheral.
-* @param   enable   This parameter contains the enable of this function. 
-*
-*			- FALSE 	= 0
-*			- TRUE 		= 1
-* @return		None
-*/
-void ADC_Enable(uint8_t enable)
-{
-	if(enable == TRUE)
-	{
-		ADCCRL |= (1 << 7);
-	}
-	else
-	{
-		ADCCRL &= ~(1 << 7);
-	}
-}
-
-/**
 * @brief		Enables the ADC Start conversion(For software trigger).
 * @param   		None
 * @return		None
@@ -188,91 +168,42 @@ uint8_t ADC_GetConversionStatus()
 }
 
 /**
-* @brief		Get data of ADC conversion for ADC interrupt.
-* @param   adc_data		This parameter contains the data of conversion ADC.
-* @param   count		This parameter contains the number of count.
-* @return		None
-*/
-void ADC_GetDataWithInterrupt(uint16_t *adc_data, uint8_t count)
-{
-	adc_count = count;
-	adc_buff = (uint16_t*)adc_data;
-	buff_cnt = 0;
-	
-	ADC_ConfigureInterrupt(TRUE);
-
-	if( ((ADCCRH & 0x08) == 0x00)) //SW trigger
-	{
-		ADC_StartSoftwareTrigger();
-	}
-	
-	while(0 < adc_count);  //adc interrupt subroutine execute
-
-}
-
-/**
-* @brief		Get data of ADC conversion for ADC polling.
-* @param   adc_data		This parameter contains the data of conversion ADC.
-* @param   count		This parameter contains the number of count.
-* @return		None
+* @brief   Get data of ADC conversion via polling.
+*          Each conversion-wait loop is bounded by a ~0x2000 iteration
+*          limit; ADC_Timeout is set on timeout so the caller can
+*          distinguish a real reading from a stuck-ADC sample.
+* @param   adc_data    pointer to buffer that receives the samples.
+* @param   count       number of samples to collect (1 .. buffer_size).
+* @return  None - check ADC_Timeout after the call.
 */
 void ADC_GetDataWithPolling(uint16_t *adc_data, uint8_t count)
 {
-	uint8_t i;
-	
+	uint8_t  i;
+	uint16_t wait;
+
 	for(i = 0; i < count; i++)
 	{
-		if( ((ADCCRH & 0x08) == 0x00) ) //SW trigger
+		if( ((ADCCRH & 0x08) == 0x00) )  /* SW trigger */
 			ADC_StartSoftwareTrigger();
-			
-		while(!(ADC_GetConversionStatus()));
-			
+
+		wait = 0x2000;
+		while((!(ADC_GetConversionStatus())) && (--wait));
+		if (wait == 0) {
+			ADC_Timeout = 1;
+			return;
+		}
+
 		adc_data[i] = ADCDR;
 	}
+
+	ADC_Timeout = 0;
 }
 
-/**
-* @brief		Configure the enable or disable ADC interrupt.
-* @param   enable   This parameter contains the enable of this function. 
-*
-*			- FALSE = 0
-*			- TRUE 	= 1
-* @return		None
-*/
-void ADC_ConfigureInterrupt(uint8_t enable)
-{
-	if(enable == TRUE)
-	{
-		IE1  |= 0x01; 
-	}
-	else
-	{
-		ADCCRH &= ~0x80;
-		IE1 &= ~0x01;
-	}
-}
-
-/**
-* @brief		Clear the ADC interrupt status.
-* @param   		None
-* @return		None
-*/
-void ADC_ClearInterruptStatus()
-{
-	ADCCRH &= ~0x80;
-}
-
-
-void ADC_Int_Handler(void) interrupt ADC_VECT
-{
-	if(((ADCCRH & 0x08) == 0x00) && (adc_count != 0)) //SW trigger
-		ADC_StartSoftwareTrigger();
-	
-	adc_count--;
-	adc_buff[buff_cnt++] = ADCDR;
-	
-	if(adc_count == 0)
-		ADC_ConfigureInterrupt(FALSE);
-}
+/*  Removed together with the interrupt path:
+ *   ADC_ConfigureInterrupt   - only called by ADC_GetDataWithInterrupt
+ *   ADC_ClearInterruptStatus - no callers
+ *   ADC_Int_Handler          - ADC_VECT ISR, IE1.0 is never enabled so it
+ *                              would never fire anyway.
+ * See git history if the interrupt mode is ever needed. */
 
 /* --------------------------------- End Of File ------------------------------ */

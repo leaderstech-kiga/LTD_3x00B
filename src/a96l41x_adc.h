@@ -43,6 +43,7 @@
 /*******************************************************************************
 * Public Macro
 *******************************************************************************/
+#define ADC_MAX_BUFFER_SIZE		3
 
 #define ADC_CLK_4M						0
 #define ADC_CLK_2M						1
@@ -78,17 +79,16 @@ enum  adc_channel{
 * Exported Public Function
 *******************************************************************************/
 void ADC_Initial(uint8_t clock_sel, uint8_t trigger_sel, uint8_t ref_voltage, uint8_t align_sel);
-void ADC_Enable(uint8_t enable);
 void ADC_SelectChannel(uint8_t channel);
 
 void ADC_StartSoftwareTrigger(void);
 uint8_t ADC_GetConversionStatus(void);
 
-void ADC_GetDataWithInterrupt(uint16_t *adc_data, uint8_t count);
 void ADC_GetDataWithPolling(uint16_t *adc_data, uint8_t count);
 
-void ADC_ConfigureInterrupt(uint8_t enable);
-void ADC_ClearInterruptStatus(void);
+/* Set to 1 by ADC_GetDataWithPolling when its bounded wait loop times out;
+ * cleared to 0 on a fully successful call. */
+extern volatile uint8_t ADC_Timeout;
 
 #endif  /* End of __ADC_H_ */
 /* --------------------------------- End Of File ------------------------------ */

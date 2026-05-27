@@ -55,8 +55,6 @@
 *
 */
 
-
-
 /* Includes ------------------------------------------------------------------*/
 #include    "Intrins.h"
 #include    "delay.h"     //
@@ -77,39 +75,94 @@
 #include "math.h"
 #include "audio.h"
 #include "flash.h"
+#include "calib.h"
+
 
 
 /* Private Pre-processor Definition & Macro ----------------------------------*/
 /* Private Typedef -----------------------------------------------------------*/
 /* Private Variable ----------------------------------------------------------*/
 
-////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////// Start: System state and mode constants ////////////////
 
-////////////////Start  오디오 변수//////////// 
-// Audio Data : 8000bps , 8bit 
-uint16_t Audio_length;
-uint16_t Audio_addr;
-uint8_t Audio_start_address;
-uint16_t Audio_max_length;
-/* [BUG-06 FIX] Duplicate declaration removed - SystemStatus already declared at line 168 */
-/* BEFORE: uint8_t SystemStatus; */
-/* uint8_t SystemStatus; */
+/* ---------- System status flag (set by SPI_Memory_Check, read by Audio_Initial in ISR) ---------- */
+/* volatile - ISR/main boundary. */
+volatile uint8_t SystemStatus;
 
-uint8_t EM_AL_Status = 0;
-uint8_t Audio_start =0;
+/* ---------- Main-loop cadence (units = sleep cycles, ~0.192 s each) ---------- */
+uint16_t adc_time    = 8 * 5;          /* sensor cadence  (currently empty body, ~7.7 s)  */
+uint16_t ck_led_time = 56 * 5 + 12;    /* power LED + Bat_Ck cadence (~56 s)              */
 
-uint16_t  Audio1_Address  = 0x0;
-uint16_t  Audio1_length  = 10801;
-uint8_t  Audio1_runtime  = 1;
-uint16_t  Audio2_Address  = 0x2baa;
-uint16_t  Audio2_length  = 21478;
-uint8_t  Audio2_runtime  = 1;
-uint16_t  Audio3_Address  = 0x8108;
-uint16_t  Audio3_length  = 24324;
-uint8_t  Audio3_runtime  = 1;
-////////////////End  오디오 변수//////////// 
+/* ---------- Run-time state ---------- */
+uint16_t Al_Stop_key_Count;            /* TIMER2_Int: SW2 long-press counter */
+uint16_t system_count   = 0;           /* main-loop sleep tick counter        */
+uint16_t Fire_Alarm_LED = 0;           /* TIMER2_Int: alarm LED state         */
+uint16_t Bat_Alarm_LED  = 0;           /* TIMER2_Int: low-bat LED state       */
+uint8_t  SYS_mode, ADC_mode, Bat_mode;
 
-////////////////Start  Debug용 uart text//////////// 
+
+/* ---------- TIMER2_Int internal counter ---------- */
+/* volatile - ISR sets it, read by other paths indirectly. */
+volatile uint8_t Timer2_cnt;
+
+
+#define Dust_mode		1
+#define Temp_mode	2
+
+#define Normal_mode	1
+#define UART_mode		2
+#define In_Fire_al_mode		3
+#define Ex_Fire_al_mode		4
+#define Al_Stop_mode		6
+
+
+#define Bat_High_mode		1
+#define Bat_Low_mode		2
+
+uint8_t visual_type = 1;	// visual indicator type
+
+//////////////// End:   System state and mode constants ////////////////
+
+
+//////////////// Start: Debug-mode flags ////////////////
+
+/* ---------- Compile-time constants ---------- */
+#define uart_debug_On      1           
+#define uart_debug_Off      0
+
+#define Debug_On	1
+#define Debug_Off	0
+
+uint8_t  uart_debug_mode = Debug_Off ;
+uint8_t  start_uart_debug_mode = Debug_On ;
+
+
+//////////////// End:   Debug-mode flags ////////////////
+
+//////////////// Start: Audio playback globals ////////////////
+
+/* ---------- Audio streaming globals (shared with TIMER1_Int in audio.c) ---------- */
+/* volatile - ISR/main boundary. */
+volatile uint16_t Audio_length;
+volatile uint16_t Audio_addr;
+volatile uint8_t  Audio_start = 0;     /* explicit init - was previously two-def */
+volatile uint16_t Audio_max_length;
+
+/* Audio clip table in Flash (code) memory.
+ *  Index    Macro                  Addr     Len     Duration (8 kHz 8-bit)
+ *    0      AUDIO_CLIP_BOOT        0x0000   10801   ~1.35 s   boot beep
+ *    1      AUDIO_CLIP_LOWBAT      0x2BAA   21478   ~2.68 s   low-battery
+ *    2      AUDIO_CLIP_FIRE        0x8108   24324   ~3.04 s   fire alarm
+ */
+code AudioClip_t Audio_Clips[AUDIO_CLIP_COUNT] = {
+    /* [AUDIO_CLIP_BOOT]   */ { 0x0000, 10801, 1 },
+    /* [AUDIO_CLIP_LOWBAT] */ { 0x2BAA, 21478, 1 },
+    /* [AUDIO_CLIP_FIRE]   */ { 0x8108, 24324, 1 },
+};
+
+//////////////// End:   Audio playback globals ////////////////
+
+////////////////Start  Debug uart text//////////// 
 uint8_t Dust_MODE[10] = "Dust_MODE:";
 uint8_t Visu_MODE[10] = "Visu_MODE:";
 uint8_t Temp_MODE[10] = "Temp_MODE:";
@@ -141,44 +194,27 @@ uint8_t Dust_Si_Deta[6] = "Si_Da:";
 uint8_t Dust_Du_Off[7] = "Du_Off:";
 uint8_t Dust_Du_On[6] = "Du_On:";
 uint8_t Dust_Du_Deta[6] = "Si_Da:";
-////////////////End  Debug용 uart text//////////// 
 
-////////////////Start  시스템 상태 변수 //////////// 
-uint8_t deviceID[3];
-uint8_t SystemStatus;
+/* Calibration debug labels (see Uart_Out below). */
+uint8_t Cal_Norm[6] = "Norm:";
+uint8_t Cal_Base[6] = "Base:";
+uint8_t Cal_Gain[6] = "Gain:";
+uint8_t Cal_Valid[4] = "Cv:";
+////////////////End  Debug uart text////////////
 
-uint8_t  SYS_mode , ADC_mode , Bat_mode;
+//////////////// Start: ADC globals ////////////////
 
-#define Dust_mode		1
-#define Temp_mode	2
-
-#define Normal_mode	1
-#define UART_mode		2
-#define In_Fire_al_mode		3
-#define Ex_Fire_al_mode		4
-#define Al_Stop_mode		6
-
-
-#define Bat_High_mode		1
-#define Bat_Low_mode		2
-
-uint8_t visual_type = 0;	//시각형 type
-
-
-uint16_t system_count = 0;
-uint16_t adc_time	= 8 * 5;	// adc time	, 0.192초 주기
-uint16_t ck_led_time	= 56 * 5  + 12;	// 8 * 7 초 , , 0.192초 주기 > 0.192 * 5* 56  = 53.7  -> 2.3초 모자름 : 0.192 * 12 더해줌
-uint16_t Bat_al_time	= 280  * 5  + 58 ;	// 280 초 , , 0.192초 주기  -> 0.192 * 5* 280  = 268.8  -> 11.2초 모자름 : 0.192 * 58 더해줌  
-////////////////End  시스템 상태 변수//////////// 
-
-////////////////Start  ADC 변수 //////////// 
-
-#define VBGR_CV        92u      // VBGR voltage × 100 (chip-specific, calibrate!)
+#define VBGR_CV        92u      // VBGR voltage * 100  (chip-specific, calibrate!)
 #define ADC_FS         1024u    // 10-bit
 
 #define	System_Ck_Value	40
 
-#define  ADC_BUFFER_SIZE 8
+#define ADC_BUFFER_SIZE   8u   /* element count of ADC_temp_data[] */
+#define ADC_BUFFER_COUNT  8u   /* element count passed to ADC_GetDataWithPolling/
+                                * Data_Avr/Data_Sorting/Data_TrimmedMean - MUST
+                                * match ADC_BUFFER_SIZE. Use direct constant
+                                * instead of sizeof() to avoid Keil C51
+                                * macro-expansion-context surprises. */
 uint16_t ADC_temp_data[ADC_BUFFER_SIZE];
 
 
@@ -186,20 +222,20 @@ uint16_t ADC_temp_data[ADC_BUFFER_SIZE];
 #define TEMP_IDX(t)  ((t) + TEMP_OFFSET)
 
 code uint16_t Temp_Table[140] = {
-	/* -20°C */ 30, 32, 34, 36, 38, 40, 42, 45, 47, 50, 
-	/* -10°C */ 52, 55, 58, 61, 64, 67, 71, 74, 78, 82, 
-	/*  0°C */ 86, 90, 95, 99, 104, 109, 114, 119, 124, 130, 
-	/*  10°C */ 135, 141, 147, 153, 159, 166, 172, 179, 186, 192, 
-	/*  20°C */ 199, 207, 214, 221, 229, 236, 244, 252, 261, 269, 
-	/*  30°C */ 278, 286, 295, 304, 313, 322, 331, 341, 350, 359, 
-	/*  40°C */ 369, 379, 388, 398, 407, 417, 427, 437, 446, 456, 
-	/*  50°C */ 466, 476, 485, 495, 504, 514, 524, 533, 542, 552, 
-	/*  60°C */ 561, 570, 579, 588, 597, 606, 615, 623, 632, 640, 
-	/*  70°C */ 648, 656, 664, 672, 680, 688, 695, 703, 710, 717, 
-	/*  80°C */ 724, 731, 738, 744, 751, 757, 763, 769, 775, 781, 
-	/*  90°C */ 787, 793, 798, 803, 809, 814, 819, 824, 829, 833, 
-	/* 100°C */ 838, 842,  847,  851,  855,  859,  863,  867,  871,  874,
-	/* 110°C */ 878, 881,  885,  888,  891,  895,  898,  901,  904,  906
+	/* -20C */ 30, 32, 34, 36, 38, 40, 42, 45, 47, 50, 
+	/* -10C */ 52, 55, 58, 61, 64, 67, 71, 74, 78, 82, 
+	/*  0C */ 86, 90, 95, 99, 104, 109, 114, 119, 124, 130, 
+	/*  10C */ 135, 141, 147, 153, 159, 166, 172, 179, 186, 192, 
+	/*  20C */ 199, 207, 214, 221, 229, 236, 244, 252, 261, 269, 
+	/*  30C */ 278, 286, 295, 304, 313, 322, 331, 341, 350, 359, 
+	/*  40C */ 369, 379, 388, 398, 407, 417, 427, 437, 446, 456, 
+	/*  50C */ 466, 476, 485, 495, 504, 514, 524, 533, 542, 552, 
+	/*  60C */ 561, 570, 579, 588, 597, 606, 615, 623, 632, 640, 
+	/*  70C */ 648, 656, 664, 672, 680, 688, 695, 703, 710, 717, 
+	/*  80C */ 724, 731, 738, 744, 751, 757, 763, 769, 775, 781, 
+	/*  90C */ 787, 793, 798, 803, 809, 814, 819, 824, 829, 833, 
+	/* 100C */ 838, 842,  847,  851,  855,  859,  863,  867,  871,  874,
+	/* 110C */ 878, 881,  885,  888,  891,  895,  898,  901,  904,  906
 	};
 
 uint16_t ADC_Bat_Val;
@@ -207,223 +243,419 @@ uint16_t ADC_Bat_Val;
 uint16_t ADC_Temp_Val;
 
 uint16_t ADC1_Bat_Val;
+uint16_t ADC1_Dust_Val;
 uint16_t ADC1_On_Dust_Val;
 uint16_t ADC1_Off_Dust_Val;
+	
+uint16_t ADC2_Bat_Val;
+uint16_t ADC2_Dust_Val;
+uint16_t ADC2_On_Dust_Val;
+uint16_t ADC2_Off_Dust_Val;
+uint16_t ADC2_Dust_Val_Norm;       /* calib_apply(ADC2_Dust_Val) - per-unit normalized */
 
-////////////////End  ADC 변수 //////////// 
+/* Fire-alarm trigger: increments while Si_Da_norm exceeds CALIB_ALARM_THRESHOLD,
+ * decays one step each sample below the threshold so a single noise spike
+ * cannot promote the system to In_Fire_al_mode. */
+#define FIRE_TRIGGER_COUNT     3u
+uint8_t  fire_count = 0;
 
-
-////////////////Start  debug 변수 //////////// 
-//초기 디버그 진입 모드 선택
-
-#define Debug_On	1
-#define Debug_Off	0
-
-uint8_t  uart_debug_mode = Debug_Off ;	// 연기 감지시  uart출력 설정 , 양산시 미적용
-uint8_t  start_uart_debug_mode = Debug_On ;	//전원 인가시 연동 버튼을 누르면 uart 모드로 adc 출력하는 모드 ,  양산시 미적용
-//uint8_t  start_uart_debug = 0 ;
-
-////////////////End  debug 변수 //////////// 
+//////////////// End:   ADC globals ////////////////
+	
 
 /* Public Variable -----------------------------------------------------------*/
 /* Public Function -----------------------------------------------------------*/
 
 /**********************************************************************
- * @brief		Main program
- * @param   	None
- * @return	    None
+ * @brief   main - standard C program entry point.
+ * @param   None
+ * @return  None
  **********************************************************************/
- 
- 
- 
- 
-void Main(void)
+void main(void)
 {
-	
 
-	LDO_OFF;
-	FLASH_OFF;
-	AUDIO_OFF;
+	//LDO_OFF;
+	//CVDD_OFF;
+	//AUDIO_OFF;
 	system_count = 0;
-	
+
 	hw_initial_Wait(10);
-	
-	LED_G_ON;
-	Delay_ms(5);		
-	LED_G_OFF;
-	
-	LED_R_ON;
-	Delay_ms(5);		
-	LED_R_OFF;	
-	
-	//Set_Temp_Table();
-	
-	Port_SetInputpin(PORT1, PIN2, 1);  //key input & mode0  -> button input , 초기 눌려 있으면 UART mode
-	Delay_ms(300);														// system mode를 확인하기전 adc 안정화 시간 필요
-	
+
+ SystemStatus = SPI_Memory_Check();
+
 	ADC_mode = Check_System();
 
-		/* 시작시 uart 출력 모드  */
-	if(start_uart_debug_mode == Debug_On){
-		
-		if(Port_GetInputpinValue(PORT1, PIN2)  == 0){
-				SYS_mode = UART_mode;
-			}
-			else{
-				SYS_mode = Normal_mode;
-			}
-			
-			LED_G_ON;
-			Delay_ms(5);	
-			LED_G_OFF;
-			
-			// 연동 key 풀릴때까지 대기 
-			if(SYS_mode == UART_mode){
-					while(1){
-						LED_G_ON;
-						if(Port_GetInputpinValue(PORT1, PIN2)  == 1){
-							break;
-						}
-					}
-					
-					LED_G_OFF;
-					
-					//UART mode 동작 
-					
-					while(1){
-		
-						LED_R_ON;
-						
-						ADC_Bat_Val = Get_Bat_Voltage_cV();
-						ADC_Temp_Val = TEMP_ADC();
-						/*
-						Port_SetAlterFunctionpin(PORT1, PIN2, 0x1);
-						USART_Initial(9600, USART_DATA_8BIT, USART_STOP_1BIT, USART_PARITY_NO, USART_TX_RX_MODE);
-						
-							for( i=0; i< sizeof(ADC_temp_data); i++){
-								Uart_Out_Int(ADC_temp_data[i]);
-								USART_SendDataWithPolling(&Space, sizeof(Space));
-							}
-							
-							USART_SendDataWithPolling(&End, 4);
-							
-						
-							Port_SetAlterFunctionpin(PORT1, PIN2, 0);
-	
-						*/
-						
-						ADC_Temp_Val = TEMP_ADC();
-						
-						Uart_Out();
-						
-						Delay_ms(250);	
-						LED_R_OFF;
-						Delay_ms(250);	
-					}
+	hw_initial_Wait(10);
+	system_count = 0;
 
-		}
+	SYS_mode =  Normal_mode;
+
+	/* Per-unit calibration: load saved {baseline, gain_Q8} from DataFlash
+	 * into the RAM globals g_calib_*. If no valid record is found the
+	 * defaults (baseline=0, gain=1.0) leave readings uncompensated so
+	 * detection still works for an uncalibrated unit (the operator can
+	 * always force calibration with the SW2-held-at-boot entry below). */
+	calib_load();
+
+	/* SW2 held at boot -> production calibration mode. calib_run_procedure
+	 * never returns; the operator power-cycles to leave it. This takes
+	 * priority over the legacy UART debug entry. */
+	Port_SetInputpin(PORT1, PIN2, 1);
+	Delay_ms(300);
+	if (Port_GetInputpinValue(PORT1, PIN2) == 0) {
+		calib_run_procedure();
+		/* never returns */
+	}
+
+	if(start_uart_debug_mode == Debug_On){
+		Start_Debug_Mode();
 	}
 	
 	while(1)
 	{
+
+		// Arm RESET-mode WDT (~2 s timeout) at the top of every loop
+		// iteration for active-code hang protection. BeforeStop() swaps
+		// it back to INTERRUPT mode before Stop() so the wake timer
+		// still works.
+		WD_Reset();
+
+	// Power LED + battery check every 56 s
+	//////////////////////////////////////////////////////////////////////////////////////////
+
+		if(system_count%ck_led_time == 0){
 		
-		
-		if(system_count%adc_time == 0){
-			
-			hw_initial_Wait(1);
-			
+			hw_initial_Wait(10);
 			LED_G_ON;
-			
 			Delay_ms(5);
-			
 		  LED_G_OFF;
+			hw_initial_Wait(10);
 			
-			hw_initial_Wait(1);
-			
-			system_count = 0;
 		}
-		
-		system_count++;
+	//////////////////////////////////////////////////////////////////////////////////////////
+				
+	//ADC check start 8 
+	//////////////////////////////////////////////////////////////////////////////////////////		
+		if(system_count%adc_time == 0){
 
+			// system
+			hw_initial_Wait(10);
+
+			LED_G_ON;
+			Delay_ms(5);
+			LED_G_OFF;
+
+			if(ADC_mode == Dust_mode){
+
+				/* Dust read + per-unit calibration + fire-detect counter.
+				 *   ADC2_Dust_Val      = raw (Si_On - Si_Off) from Dust_ADC_2AMP
+				 *   ADC2_Dust_Val_Norm = ((raw - baseline) * gain_Q8) >> 8
+				 * fire_count increments while normalized value is above the
+				 * fixed alarm threshold and decays by one each sample below,
+				 * so promotion to In_Fire_al_mode requires sustained smoke. */
+				ADC2_Dust_Val      = Dust_ADC_2AMP();
+				ADC2_Dust_Val_Norm = calib_apply(ADC2_Dust_Val);
+
+				if (ADC2_Dust_Val_Norm > CALIB_ALARM_THRESHOLD) {
+					if (fire_count < 0xFF) {
+						fire_count++;
+					}
+					if (fire_count >= FIRE_TRIGGER_COUNT &&
+					    SYS_mode == Normal_mode) {
+						SYS_mode   = In_Fire_al_mode;
+						fire_count = 0;
+					}
+				}
+				else if (fire_count > 0) {
+					fire_count--;
+				}
+			}
+			else if(ADC_mode == Temp_mode){
+
+		}
+
+		hw_initial_Wait(10);
+	}
+	//ADC check start 8  end
+	//////////////////////////////////////////////////////////////////////////////////////////
+
+	// Internal fire-alarm state - exits when Timer2 ISR detects SW2 held
+	// for ~0.5 s and transitions SYS_mode to Al_Stop_mode.
+	//////////////////////////////////////////////////////////////////////////////////////////
+	if((SYS_mode ==  In_Fire_al_mode)){
 		
-		// 와치독 타이머 
-		BeforeStop();
-		GLOBAL_INTERRUPT_EN();  
-		Stop();
-		AfterStop();
+		char In_charge_wait = 4;
+		
+		// system init / settle before alarm output
+		hw_initial_Wait(10);
+
+		// Drive EMR_IO output high to signal external alarm equipment
+		// (e.g., a relay or annunciator) on CON3.
+		Port_SetOutputpin(PORT1, PIN0, 0);
+		Delay_ms(100);
+		P10 = 1;
 			
+
+		
+	// system  
+	hw_initial_Wait(10);
+	
+}
+	
+	//   end
+	//////////////////////////////////////////////////////////////////////////////////////////
+
+  // Manual test trigger: Normal mode + SW2 held -> forced fire-alarm test.
+	//////////////////////////////////////////////////////////////////////////////////////////
+	if((SYS_mode ==  Normal_mode) && (Port_GetInputpinValue(PORT1, PIN2)  == 0)){
+
+		// system
+		hw_initial_Wait(10);
+
+
+		Port_SetOutputpin(PORT1, PIN0, 0);
+		Delay_ms(100);
+		P10 = 1;
+		
+		T2_init();
+		Fire_Alarm_LED = 1;
+		Bat_Alarm_LED = 0;
+		Timer2_Start();
+		
+		//   1   
+		
+		//Fire_Alarm();
+		
+		Play_Clip(AUDIO_CLIP_FIRE);
+		
+		GLOBAL_INTERRUPT_DIS();     
+
+		Delay_ms(10);
+		GLOBAL_INTERRUPT_EN();  
+		
+		
+		Timer2_Stop();
+
+		Fire_Alarm_LED = 0;
+		Bat_Alarm_LED = 0;
+		Timer2_Stop();
+		LED_R_OFF;
+		LED_G_OFF;
+		
+		Port_SetInputpin(PORT1, PIN0, 0);  // EM IO 
+		P10 = 0;
+		
+		// system  
+			hw_initial_Wait(10); 
+		
+	}
+	
+	//   end
+	//////////////////////////////////////////////////////////////////////////////////////////		
+
+	//Bat_Low_mode check start
+	//////////////////////////////////////////////////////////////////////////////////////////
+	if(Bat_mode == Bat_Low_mode){
+		
+
+	}		
+	//Bat_Low_mode check end
+	//////////////////////////////////////////////////////////////////////////////////////////
+
+	//Stop_mode Start
+	//////////////////////////////////////////////////////////////////////////////////////////
+	
+	if(SYS_mode  == Al_Stop_mode){
+
+	uint8_t  i;
+	uint16_t j;
+	int break_mode = 0;
+	
+	// system  
+	hw_initial_Wait(10);
+	
+	Play_Clip(AUDIO_CLIP_BOOT);	
+	
+	Timer2_Stop();
+	
+	Port_SetInputpin(PORT1, PIN0, 0);  // EM IO 
+	P10 = 0;
+	
+	SYS_mode  = Normal_mode;
+	
+	LED_G_ON;
+	NOP_20us_Delay(25000); // 500ms
+	LED_G_OFF;
+	WD_Reset();
+	NOP_20us_Delay(25000); // 500ms
+
+	/* Refresh active-mode WDT (2s) on every iteration so a long SW2 press
+	 * does not cause a spurious reset. */
+	while(1){
+		WD_Reset();
+		if(Port_GetInputpinValue(PORT1, PIN2)  == 1){
+				break;
+			}
 	}
 
-}
 
-////////////////Start  딜레이 변수 //////////// 
+	for(i=0;i<8;i++){
+		
+		// 100ms
+		LED_G_ON;
+		NOP_20us_Delay(500); // 10ms
+		LED_G_OFF;
+		NOP_20us_Delay(4500); // 90ms
+					
+		//100ms + 400ms = 500ms
+		for(j=0;j<4;j++){
+			WD_Reset();                        /* per-100ms dog kick */
+			NOP_20us_Delay(5000);	// 100ms
+			if(Port_GetInputpinValue(PORT1, PIN2)  == 0){
+				break_mode = 1;
+				break;
+			}
+		}
 
-/**********************************************************************
- * @brief		Delay_ms
- * @param   	None
- * @return	None
- **********************************************************************/
-void Delay_ms(uint16_t msec)
-{
+		// 500ms + 100ms = 600ms
+		LED_G_ON;
+		Delay_ms(10);
+		LED_G_OFF;
+		Delay_ms(90);
 
-	int i;
+		//600ms + (100ms * 394) = 600ms + 39400ms = 40000ms = 40s
+		/* 39.4 s inner wait - refresh active-mode WDT (2 s) on every
+		 * 100 ms iteration so the SW2 acknowledge wait runs to completion. */
+		for(j=0;j<394;j++){
+			WD_Reset();
+			Delay_ms(100);
+			if(Port_GetInputpinValue(PORT1, PIN2)  == 0){
+				break_mode = 1;
+				break;
+			}
+		}
 	
-	for(i=0;i<msec;i++){
-		NOP_20us_Delay(50);
+		if(break_mode == 1){
+			break;
+		}
 	}
 
-}
+	LED_G_ON;
+	Delay_ms(500);
+	LED_G_OFF;
 
-/**********************************************************************
- * @brief		Delay_s
- * @param   	None
- * @return	None
- **********************************************************************/
-void Delay_s(uint16_t sec)
-{
-
-	int i;
-	
-	for(i=0;i<sec;i++){
-		NOP_20us_Delay(50000);
+	/* Second SW2-release polling loop. */
+	while(1){
+		WD_Reset();
+		if(Port_GetInputpinValue(PORT1, PIN2)  == 1){
+				break;
+			}
 	}
 
+		// system
+	hw_initial_Wait(10);
+}
+	
+  //Stop_mode End
+	//////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+  // EMO   
+	//////////////////////////////////////////////////////////////////////////////////////////
+	if((SYS_mode ==  Normal_mode) && (Port_GetInputpinValue(PORT1, PIN0)  == 1)){
+
+		// system
+		hw_initial_Wait(10);
+
+		Play_Clip(AUDIO_CLIP_FIRE);
+		
+		GLOBAL_INTERRUPT_DIS();     
+
+		NOP_20us_Delay(1000);
+		GLOBAL_INTERRUPT_EN();  
+		
+
+		// system  
+		hw_initial_Wait(10);
+		
+	}
+	// EMO   end
+	//////////////////////////////////////////////////////////////////////////////////////////
+	
+	system_count++;
+
+		// Sleep cycle: BeforeStop arms WDT as INTERRUPT-mode wake timer
+		// (WDTDR=2, ~0.192 s) for button-polling resolution.
+		// After wake, the top-of-loop WD_Reset() switches WDT back to
+		// RESET mode for the next iteration's hang protection.
+	BeforeStop();
+	GLOBAL_INTERRUPT_EN();
+	Stop();
+	AfterStop();
+
+	}
 }
 
-////////////////End  딜레이 변수 //////////// 
+void Start_Debug_Mode(void){
+	
+	Port_SetInputpin(PORT1, PIN2, 1);  // key input & mode0 -> button input; held at power-up == enter UART mode
+	Delay_ms(300);														// settle time before ADC mode sampling
 
-	
-////////////////Start  시스템 초기화  변수 //////////// 
+	if(Port_GetInputpinValue(PORT1, PIN2)  == 0){
+		SYS_mode = UART_mode;
+	}
+	else{
+		SYS_mode = Normal_mode;
+	}
 
-/**********************************************************************
- * @brief		hw_initial_Wait
- * @param   	None
- * @return	None
- **********************************************************************/
-// 하드웨어를 초가화 한 후 ms 대기한다. 
-void hw_initial_Wait(int msec){
-	
-	GLOBAL_INTERRUPT_DIS();     
-	hw_initial();
-	
-	CVDD_OFF;
-	Port_SetOutputpin(PORT1, PIN3, 0); // CS 핀
+	LED_G_ON;
+	Delay_ms(5);
+	LED_G_OFF;
 
-	Delay_ms(msec);
-	
-		/* Enable INT */
-	GLOBAL_INTERRUPT_EN();  
-	
+	// Wait until the button is released, then enter UART debug loop
+	if(SYS_mode == UART_mode){
+			while(1){
+				LED_G_ON;
+				if(Port_GetInputpinValue(PORT1, PIN2)  == 1){
+					break;
+				}
+			}
+
+			LED_G_OFF;
+
+			// ===== UART debug mode infinite loop =====
+			
+			while(1){
+
+				LED_R_ON;
+				
+				ADC_Bat_Val = Get_Bat_Voltage_cV();
+				ADC_Temp_Val = TEMP_ADC();
+				ADC1_Dust_Val = Dust_ADC_1AMP();
+				ADC2_Dust_Val = Dust_ADC_2AMP();
+				ADC2_Dust_Val_Norm = calib_apply(ADC2_Dust_Val);
+
+				Uart_Out();
+
+				Delay_ms(250);
+				LED_R_OFF;
+				Delay_ms(250);
+				WD_Reset();
+			}
+
+		}
 }
 
+
+
+//////////////// Start: System initialization helpers ////////////////
 
 void hw_initial(void) {
 	
-	// hw_initial() 호출 전 오디오 완전 정지
 	if(Audio_start == 1) {
-			SLAVEDESELECT;      // CS 닫기
-			AUDIO_OFF;          // 앰프 끄기
-			Timer0_Stop();      // PWM 정지
+			SLAVEDESELECT;  
+			AUDIO_OFF;          
+			Timer0_Stop();     
 			Audio_start = 0;
 			Audio_length = 0;
 	}
@@ -450,13 +682,13 @@ void hw_initial(void) {
 	P0FSRH  = 0
 		| ( 0 << 6)       //P07     // 0 : I/O (EINT3), 1 : ICS1									// LED_R				
 		| ( 0 << 4)       //P06     // 0 : I/O (EINT2), 1 : ICS0									// LED_G
-		| ( 0 << 2)       //P05     // 0 : I/O, 1 : OP0P,    										// SENISNG OP0P
-		| ( 0 << 0);      //P04     // 0 : I/O, 1 : OP0N													// SENSING OP0N
+		| ( 1 << 2)       //P05     // 0 : I/O, 1 : OP0P,    										// SENISNG OP0P
+		| ( 1 << 0);      //P04     // 0 : I/O, 1 : OP0N													// SENSING OP0N
 		
 	P0FSRL  = 0
-		| ( 0 << 6)       //P03     // 0 : I/O, 1 : OP0OUT,   2 : AN3,      3 : Not used					// SENSING IN ADC 
-		| ( 0 << 4)       //P02     // 0 : I/O, 1 : OP1P,   2 : AN2,      3 : Not used					// 
-		| ( 0 << 2)       //P01     // 0 : I/O (EINT1),	1 : OP1N,  2 : AN1,	3 : Not used				// Not use
+		| ( 1 << 6)       //P03     // 0 : I/O, 1 : OP0OUT,   2 : AN3,      3 : Not used					// SENSING IN ADC 
+		| ( 1 << 4)       //P02     // 0 : I/O, 1 : OP1P,   2 : AN2,      3 : Not used					// 
+		| ( 1 << 2)       //P01     // 0 : I/O (EINT1),	1 : OP1N,  2 : AN1,	3 : Not used				// Not use
 		| ( 0 << 0);      //P00     // 0 : I/O (EINT0),	1 : OP1OUT,   2 : AN0,	3 : Not used			// C_VDD
 		
 	P0DB	= 0
@@ -471,7 +703,7 @@ void hw_initial(void) {
 	
 	P1 = 0x00; 											// 0 : Low,	1 : High								// audio off
 	P1OD = 0x00;									// 0 : Disable,	1 : Enable (Open-drain)
-	P1PU = 0x04;               		// 0 : Disable,	1 : Enable (Pull-up) // 테스트 스위치 풀업 필요
+	P1PU = 0x04;               		// 0 : Disable, 1 : Enable (Pull-up) // SW2 test-switch pull-up
 	//P1PU = 0x0;               		// 0 : Disable,	1 : Enable (Pull-up)
 	P1IO = 0x32;                 	// 0 : Input,	1 : Output
 	
@@ -479,9 +711,17 @@ void hw_initial(void) {
 	//P12DB = 0x00;											//P1/P2 Debounce disable
 	//P1FSRH = 0x08;                                                          // P1[5]: AN6, others: normal I/O
 	//P1FSRL = 0x00;                                                          // P1[3:0]: Normal I/O
+	/* P15 = LDO23 alternate function so LDO_ON drives the 2.32 V output
+	 * out to the external AVREF / divider network. Boot sleep current
+	 * was previously verified not to depend on this bit (the 90 uA
+	 * leakage tracked to AMPCR0 "Always" mode, since fixed). LDOCR is
+	 * still cleared below so the LDO is OFF at boot until LDO_ON is
+	 * called. */
 	P1FSRH  = 0
-		| ( 1 << 2)       //P15  // 0 : I/O,	1 : LDO23,   2 : AN6,	3 : (SDA)						// LDO23
+		| ( 1 << 2)       //P15  // 0 : I/O,	1 : LDO23,   2 : AN6,	3 : (SDA)
 		| ( 0 << 0);      //P14  // 0 : I/O (EINT11),	1 : T1O/PWM1O,   2 : SCL,	3 : Not used		// /AUD ON
+
+	LDOCR = 0x00;     /* LDO block OFF at boot until ADC code calls LDO_ON */
 		
 		P1FSRL  = 0
 		| ( 0 << 6)       //P13  // 0 : I/O (EC1),	1 : (RXD/MISO)							// DSDA
@@ -550,13 +790,16 @@ void hw_initial(void) {
 			|(0<<2)                                                         // If 0/1/2/3, Select discharge time during Disable/100us/200us/300us
 			|(AMP_AUTO_DIS<<1)                                              // If 0/1, AMP1 Always/"Auto disable after ADC"
 			|(AMP_AUTO_DIS<<0);                                             // If 0/1, AMP0 Always/"Auto disable after ADC"
-			
+	/* OPAMP block disabled at boot. AMP_AUTO_DIS = 1 in main.h puts the
+	 * OPAMP into "auto-disable" mode so the analog block goes idle when
+	 * ADC is not converting - critical for ~2 uA sleep current.
+	 * If dust sensing is ever re-introduced, set the relevant enable bits
+	 * (AMPCR1 b7=Amp1, b3=Amp0) at the call site, then clear them after. */
 	AMPCR1 = 0x00
 			|(0<<7)                                                       // If 0/1, Disable/Enable Amp1
 			|(0<<4)                                                       // If 0/1/2/3/4/5/6/7, "Disable gain"/x1/x2/x10/x15/x20/x30/x60
 			|(0<<3)                                                       // If 0/1, Disable/Enable Amp0
 			|(0<<0);                                                      // If 0/1/2/3, "Disable gain"/x5/x10/x20
-			
 	CHPCR = (0<<0);                                                         // If 0/1/2/3, 125/167/250/500 [kHz] chopper clock
 	// ADC
 	ADCCRH = 0x00
@@ -646,64 +889,519 @@ void hw_initial(void) {
 }
 
 
-////////////////End  시스템 초기화  함수 //////////// 
-
-////////////////Start  와치독  함수 //////////// 
-
-void BeforeStop(void)
+/**********************************************************************
+ * @brief		Delay_ms
+ * @param   	None
+ * @return	None
+ **********************************************************************/
+void Delay_ms(uint16_t msec)
 {
+
+	uint16_t i;
+
+	for(i=0;i<msec;i++){
+		NOP_20us_Delay(50);
+	}
+
+}
+
+/**********************************************************************
+ * @brief		hw_initial_Wait
+ * @param   	None
+ * @return	None
+ **********************************************************************/
+//     ms . 
+void hw_initial_Wait(int msec){
 	
-	OSCCR = 0x80;
-	WDTCR = 0xA2;
+	GLOBAL_INTERRUPT_DIS();     
+	hw_initial();
 	
-	WDTDR = 2;							// entrance to every 0.192sec
-	//WDTDR = 5;							// entrance to every 0.384sec
-	//WDTDR = 7;							// entrance to every 0.512sec
-	//WDTDR = 124;							// entrance to every 8sec
+	CVDD_OFF;
+	Port_SetOutputpin(PORT1, PIN3, 0); // CS 
+
+	Delay_ms(msec);
 	
-	//WDTCR = 0xA3;			// set WDT enable , clock source LFIRC, WDT interrupt
-	//WDTCR = 0xA4;				// set WDT enable , clock source WDTRC
-	
-	IE3 |= 0x08;							// WDT interrupt enable	
+		/* Enable INT */
+	GLOBAL_INTERRUPT_EN();  
 	
 }
 
+uint8_t SPI_Memory_Check(void){
+	
+	uint8_t SystemStatus_Read;
+	uint8_t deviceID[3];
+	
+	  // SPI Memory Check
+	// CVDD_ON drives P20 = 1, which is the C_VDD signal supplying VCC to
+	// U3 (MX25L1006E). P20 is a regular GPIO output (~50 ohm), so the
+	// flash supply rail (C14 decoupling) charges through that impedance.
+	CVDD_ON;             // P20 = 1 -> C_VDD high -> flash VCC ON
+
+	// Wait for flash VCC to settle after C_VDD goes high (10 uF cap
+	// on the rail charges through the P20 GPIO output impedance).
+	NOP_20us_Delay(500);  // ~10 ms settle time for 10 uF flash VCC
+
+	// SPI Initial
+	USART_SPI_Initial(SPI_MASTER_MODE, 500000, SPI_MSB, SPI_CPOL_LOW, SPI_CPHA_1EDGE, SPI_TX_RX_MODE, SPI_SS_HW_DISABLE);	 // 500000
+
+	Get_Identification(deviceID);
+
+	// Match expected MX25L1006E JEDEC ID + verify no SPI timeout
+	// (so a 0xFF-on-each-byte timeout doesn't look like a partial match).
+	if( (deviceID[0]==0xC2)&&(deviceID[1]==0x20)&&(deviceID[2]==0x11) && (SPI_Timeout == 0) )
+	{
+		SystemStatus_Read=1;
+	}
+	else{
+		SystemStatus_Read=0;
+	}
+
+	CVDD_OFF;
+	
+		if(SystemStatus_Read == 1){
+		
+		LED_G_ON;
+		Delay_ms(50);
+		LED_G_OFF;
+		
+	}
+	else{
+		
+		LED_R_ON;
+		Delay_ms(50);
+		LED_R_OFF;
+	}
+	
+	
+	Delay_ms(100);
+	LED_G_ON;
+	LED_R_ON;
+	Delay_ms(50);
+	LED_G_OFF;
+	LED_R_OFF;
+	
+	return SystemStatus_Read;
+}
+
+
+/**********************************************************************
+ * @brief		T2_init
+ * @param   	None
+ * @return	None
+ **********************************************************************/
+void T2_init(void){
+	/* Timer2 initialize @ 62500Hz */
+	Timer2_Initial(T2_PPG_REPEAT_MODE, TIMER2_DIV64);
+	
+	 /* Timer2 PPG Polarity Start Low */
+	Timer2_SetPPGPolarity(T2_START_LOW);
+	
+	 /* Timer2 PPG Period Counter (31250) 62500/31250 = 2Hz  */
+	Timer2_SetPPGPeriodCounter(62500 / 10);
+	
+    /* Enable timer2 match INT */   
+ 	Timer2_ConfigureInterrupt(TRUE);
+	
+	Timer2_cnt = 0;
+}
+
+/**********************************************************************
+ * @brief		TIMER2_Int(void) interrupt T2_MATCH_VECT
+ * @param   	None
+ * @return	None
+ **********************************************************************/
+
+void TIMER2_Int(void) interrupt T2_MATCH_VECT
+{
+	
+	char Gled_mode, GLED_CNT;
+	
+	if(Timer2_cnt == 0){
+		
+		if(Fire_Alarm_LED == 1){
+			//Port_SetOutputTogglepin(PORT0, PIN7);
+			LED_R_ON;
+		}
+		
+		if(Bat_Alarm_LED == 1){
+			//Port_SetOutputTogglepin(PORT0, PIN6);
+			if (Gled_mode == 0){
+				LED_G_ON;	
+				GLED_CNT++;
+				if(GLED_CNT > 1){
+					Gled_mode = 1;
+					GLED_CNT = 0;
+				}
+			}
+			else{
+				LED_G_OFF;	
+				Gled_mode = 0;
+			}
+		}
+		else{
+			GLED_CNT = 0;
+			LED_G_OFF;	
+			Gled_mode = 0;
+		}
+	
+	}
+	else{
+		LED_R_OFF;
+		//LED_G_OFF;
+		
+		if(Bat_Alarm_LED == 1){
+			//Port_SetOutputTogglepin(PORT0, PIN6);
+			if (Gled_mode == 0){
+				LED_G_ON;	
+				//Gled_mode = 1;
+			}
+			else{
+				LED_G_OFF;	
+			}
+		}
+		
+	
+	}
+
+	Timer2_cnt++;
+	
+	if(Timer2_cnt == 10){
+		Timer2_cnt = 0;
+	}
+	
+	if(SYS_mode == In_Fire_al_mode){
+		
+		if(Port_GetInputpinValue(PORT1, PIN2)  == 0){
+			Al_Stop_key_Count++;
+		}
+		else{
+			Al_Stop_key_Count = 0;
+		}
+		
+		if(Al_Stop_key_Count > 5){
+			SYS_mode  = Al_Stop_mode;
+			LED_G_ON;
+		}
+			
+	}
+	
+}
+
+
+//////////////// End: System initialization helpers ////////////////
+
+
+
+//////////////// Start: Watchdog / sleep helpers ////////////////
+
+//----------------------------------------------------------------------------
+void BeforeStop(void)
+{
+	/* Defensive OPAMP disable before sleep.
+	 * Root cause was AMP_AUTO_DIS=0 in main.h + missing DELAY_TIME macro
+	 * which selected the OPAMP-enable branch in hw_initial. Both are now
+	 * fixed, but keep this write as a safety net in case future code
+	 * enables OPAMP and forgets to clear it before sleep. */
+	AMPCR1 = 0x00;
+	LDOCR  = 0x00;     /* defensive: LDO OFF in case ADC code forgot LDO_OFF */
+
+	/* Defensive: drop audio amp / flash VCC / LEDs in case anything was
+	 * left on by the previous active-code path. */
+	AUDIO_OFF;
+	CVDD_OFF;
+	LED_G_OFF;
+	LED_R_OFF;
+
+	OSCCR = 0x84;       /* LFIRC enable + HIRC disable */
+	WDTCR = 0xA2;       /* WDT enable, INTERRUPT mode, LFIRC clock */
+	WDTDR = 2;          /* ~0.192 s wake period */
+	IE3 |= 0x08;        /* WDT interrupt enable */
+}
+//----------------------------------------------------------------------------
 void AfterStop(void)
 {
 
 	IE3 &= ~(0x08);											// WDT interrupt disable
 	//WDTCR = 0x00;
 	
-	
+	/*
 #ifdef SysClock_1MHZ	
 	OSCCR = 0x08;                                            // System clock: 1MHz
 #else	
 	OSCCR = 0x18;                                            // System clock: 4MHz
 	                                                        // If 0x00/0x08/0x10/0x18, 0.5MHz/1MHz/2MHz/4MHz
 #endif
-	
+	*/
+	OSCCR = 0x18;                                            // System clock: 4MHz
+	                                                        // If 0x00/0x08/0x10/0x18, 0.5MHz/1MHz/2MHz/4MHz
 }
-
-void WD_Reset(void)
-{
-	//WDTDR = 30;												// entrance to every 2sec
-	WDTDR = 2;												// entrance to every 0.192sec
-	//WDTCR = 0xA3;											// set WDT enable , clock source LFIRC, WDT interrupt
-	WDTCR = 0xE5;											// set WDT enable , clock source WDTRC, WDT interrupt
-	IE3 |= 0x08;											// WDT interrupt enable	
-	
-}
-
-////////////////End  와치독  함수 //////////// 
-
-////////////////Start  ADC  함수 //////////// 
 
 /**********************************************************************
- * @brief		Data_Avr
+ * @brief   WD_Reset - configure WDT in RESET mode for hang protection.
+ *
+ *   Purpose: while the MCU is awake and executing code, the WDT must be
+ *   armed in RESET mode so that any hang (stuck SPI poll, infinite loop,
+ *   ISR deadlock, EMI-induced PC corruption, etc.) triggers an automatic
+ *   MCU reset rather than leaving the device silently dead. Safety-
+ *   critical for a fire detector.
+ *
+ *   The complementary wake-from-Stop timer (BeforeStop) keeps WDT in
+ *   INTERRUPT mode with WDTDR=2 (~0.192 s). On every wake we call this
+ *   function to switch WDT into RESET mode with the longer timeout;
+ *   BeforeStop will switch it back before the next Stop.
+ *
+ *   Behaviour:
+ *     - Clock source : WDTRC (~3.072 MHz internal, independent of MCLK)
+ *     - Timeout      : WDTDR = 30  ->  approximately 2 seconds.
+ *                      Long enough to cover normal active code paths
+ *                      (Dust_ADC_Single, Delay_ms(100), hw_initial_Wait,
+ *                      etc.); shorter than the time a real hang would
+ *                      take to be noticeable. Longer blocking calls
+ *                      (Audio_Run audio playback, Fire_Alarm loop) must
+ *                      refresh the counter by calling WD_Reset()
+ *                      themselves - see those functions below.
+ *     - Mode         : RESET (WDTCR bit 6 set) -> MCU reset on overflow.
+ *
+ *   Note: WDTCR also has bit 5 (WDTCL) set, which clears the counter on
+ *   every write, so each WD_Reset() call effectively "kicks the dog".
+ **********************************************************************/
+void WD_Reset(void)
+{
+	WDTDR = 30;												// ~2 sec active-mode timeout
+	//WDTCR = 0xA3;											// set WDT enable , clock source LFIRC, WDT interrupt
+	//WDTCR = 0xE5;											// WDT enable, RESET mode (bit6=1), WDTRC clock, clear counter
+	WDTCR = 0xE3;     /* 11100011: WDTEN=1, RESET mode, WDTCL=1, WDTCK=01 (LFIRC) */
+	IE3 |= 0x08;											// WDT interrupt enable (no effect in reset mode but harmless)
+}
+
+void WDT_Int(void) interrupt WDT_VECT
+{
+	WDTCR &= ~0x01;
+}
+
+//////////////// End:   Watchdog / sleep helpers ////////////////
+
+//////////////// Start: Audio helpers ////////////////
+
+/**********************************************************************
+ * @brief		Variable_Initial
  * @param   	None
  * @return	None
  **********************************************************************/
-// 평균 값 계산 함수 
+void Variable_Initial(uint16_t Audio_st_address)
+{
+
+	Audio_addr= Audio_st_address + ADDR_START;
+	Audio_start=0;
+	Audio_length=0;
+
+}
+
+/**********************************************************************
+ * @brief		Audio_Run
+ * @param   	None
+ * @return	None
+ **********************************************************************/
+void Audio_Run(uint16_t Address , uint16_t Length,  uint8_t Run_time){
+		 
+	CVDD_ON;
+	AUDIO_ON;	
+	
+	Audio_start = 1;
+
+	P2 = 0x01;
+	/* SPI Initial */
+	USART_SPI_Initial(SPI_MASTER_MODE, 500000, SPI_MSB, SPI_CPOL_LOW, SPI_CPHA_1EDGE, SPI_TX_RX_MODE, SPI_SS_HW_DISABLE);	 // 500000
+	
+	NOP_20us_Delay(5000);         // 0.1sec
+	NOP_20us_Delay(5000);         // 0.1sec
+	NOP_20us_Delay(5000);         // 0.1sec
+	
+	Audio_max_length = Length;
+	Variable_Initial(Address);
+	
+		/* Audio Initial */
+	Audio_Initial();	
+	
+	NOP_20us_Delay(1000);         // 0.02sec
+	NOP_20us_Delay(1000);         // 0.02sec
+	NOP_20us_Delay(1000);         // 0.02sec
+	
+	
+	Timer1_Start();
+
+	// Audio clips run ~3 seconds (Audio3_length=24324 samples @ 8 kHz =
+	// 3.04 s) which exceeds the 2-s active-mode WDT timeout. Refresh the
+	// watchdog inside this polling loop so playback is not aborted by a
+	// false WDT reset. The CPU is otherwise idle here while the
+	// TIMER1_Int ISR feeds samples in the background.
+	//
+	// Stall detector.
+	//
+	// The WD_Reset() inside this loop also means the active-mode WDT will
+	// NEVER fire here, even if the audio ISR stops making progress
+	// (Audio_length not incrementing because of e.g. SPI fault, SPI clock
+	// glitch, TIMER1_Int disabled). The loop would then spin forever and
+	// the device would appear hung from the outside.
+	//
+	// We track Audio_length progress and bail out if it does not advance
+	// for ~200 ms. At ~125 us per audio sample the ISR should increment
+	// Audio_length about 1600 times during 200 ms, so 200 ms of zero
+	// progress is unambiguous evidence of a stall.
+	{
+		uint16_t prev_length  = 0xFFFF;   /* sentinel - guaranteed != on first iter */
+		uint16_t stall_count  = 0;
+
+		while (Audio_length < Audio_max_length) {
+			WD_Reset();                   /* kick dog during long playback */
+
+			if (Audio_length == prev_length) {
+				/* No progress this iteration. ~4 us per while iter at 4 MHz,
+				 * so 50000 iterations ~= 200 ms of no progress = stall. */
+				if (++stall_count > 50000) {
+					break;
+				}
+			} else {
+				prev_length = Audio_length;
+				stall_count = 0;
+			}
+		}
+	}
+
+	CVDD_OFF;
+	AUDIO_OFF;
+	
+	//Port_SetOutputpin(PORT1, PIN0, 0);
+	//P10 = 1;
+	
+	Audio_start = 0;
+}
+
+/**********************************************************************
+ * @brief   Play_Clip - play one of the clips in Audio_Clips[].
+ *          Out-of-range clip_id is silently ignored.
+ * @param   clip_id   index into Audio_Clips[] (AUDIO_CLIP_BOOT etc.)
+ **********************************************************************/
+void Play_Clip(uint8_t clip_id)
+{
+    if (clip_id >= AUDIO_CLIP_COUNT) return;
+    Audio_Run(Audio_Clips[clip_id].address,
+              Audio_Clips[clip_id].length,
+              Audio_Clips[clip_id].runtime);
+}
+
+
+
+//////////////// End: Audio helpers ////////////////
+
+
+//////////////// Start: UART helpers ////////////////
+
+
+void Uart_Out(void){
+
+	Port_SetAlterFunctionpin(PORT1, PIN2, 0x1);
+						
+	USART_Initial(9600, USART_DATA_8BIT, USART_STOP_1BIT, USART_PARITY_NO, USART_TX_RX_MODE);
+	
+	if(ADC_mode == Dust_mode){
+		
+		if(visual_type == 1){
+			USART_SendDataWithPolling(&Visu_MODE, sizeof(Visu_MODE));
+		}
+		else{
+			USART_SendDataWithPolling(&Dust_MODE, sizeof(Dust_MODE));
+		}
+		USART_SendDataWithPolling(&Space, sizeof(Space));
+		USART_SendDataWithPolling(&Bat, sizeof(Bat));
+		Uart_Out_Int(ADC_Bat_Val);
+		
+		USART_SendDataWithPolling(&Space, sizeof(Space));
+		USART_SendDataWithPolling(&Dust_Si_Off, sizeof(Dust_Si_Off));
+		Uart_Out_Int(ADC1_Off_Dust_Val);
+		USART_SendDataWithPolling(&Space, sizeof(Space));
+		USART_SendDataWithPolling(&Dust_Si_On, sizeof(Dust_Si_On));
+		Uart_Out_Int(ADC1_On_Dust_Val);
+		USART_SendDataWithPolling(&Space, sizeof(Space));
+		USART_SendDataWithPolling(&Dust_Si_Deta, sizeof(Dust_Si_Deta));
+		Uart_Out_Int(ADC1_Dust_Val);
+		
+		USART_SendDataWithPolling(&Space, sizeof(Space));
+		USART_SendDataWithPolling(&Dust_Du_Off, sizeof(Dust_Du_Off));
+		Uart_Out_Int(ADC2_Off_Dust_Val);
+		USART_SendDataWithPolling(&Space, sizeof(Space));
+		USART_SendDataWithPolling(&Dust_Du_On, sizeof(Dust_Du_On));
+		Uart_Out_Int(ADC2_On_Dust_Val);
+		USART_SendDataWithPolling(&Space, sizeof(Space));
+		USART_SendDataWithPolling(&Dust_Du_Deta, sizeof(Dust_Du_Deta));
+		Uart_Out_Int(ADC2_Dust_Val);
+
+		/* Per-unit calibration trace: normalized Si_Da + the offset/gain
+		 * pair that calib_apply() is using right now, plus a valid flag
+		 * (0 = uncalibrated / running on defaults, 1 = loaded from DataFlash). */
+		USART_SendDataWithPolling(&Space, sizeof(Space));
+		USART_SendDataWithPolling(&Cal_Norm, sizeof(Cal_Norm));
+		Uart_Out_Int(ADC2_Dust_Val_Norm);
+		USART_SendDataWithPolling(&Space, sizeof(Space));
+		USART_SendDataWithPolling(&Cal_Base, sizeof(Cal_Base));
+		Uart_Out_Int(g_calib_baseline);
+		USART_SendDataWithPolling(&Space, sizeof(Space));
+		USART_SendDataWithPolling(&Cal_Gain, sizeof(Cal_Gain));
+		Uart_Out_Int(g_calib_gain_Q8);
+		USART_SendDataWithPolling(&Space, sizeof(Space));
+		USART_SendDataWithPolling(&Cal_Valid, sizeof(Cal_Valid));
+		Uart_Out_Int((uint16_t)g_calib_valid);
+
+	}
+	else if(ADC_mode == Temp_mode){
+		USART_SendDataWithPolling(&Temp_MODE, sizeof(Temp_MODE));
+		USART_SendDataWithPolling(&Space, sizeof(Space));
+		USART_SendDataWithPolling(&Bat, sizeof(Bat));
+		Uart_Out_Int(ADC_Bat_Val);
+		USART_SendDataWithPolling(&Space, sizeof(Space));
+		USART_SendDataWithPolling(&Temp, sizeof(Temp));
+		Uart_Out_Int(ADC_Temp_Val);
+	}
+	
+	USART_SendDataWithPolling(&End, 4);
+	
+	Port_SetAlterFunctionpin(PORT1, PIN2, 0);
+}
+
+void Uart_Out_Int(uint16_t Value){
+
+	uint16_t int_val;
+	uint8_t tmp;
+	
+	if(Value > 9999){
+		Value = 9999;
+	}
+	
+	tmp = Value / 1000 + 48;
+	USART_SendDataWithPolling(&tmp, 1);
+	int_val= Value % 1000 ;
+	tmp = (int_val/ 100 )+ 48;
+	USART_SendDataWithPolling(&tmp, 1);
+	int_val= Value % 100 ;
+	tmp = (int_val/ 10 )+ 48;
+	USART_SendDataWithPolling(&tmp, 1);
+	int_val= Value % 10 ;
+	tmp = (int_val/ 1) + 48;
+	USART_SendDataWithPolling(&tmp, 1);
+}
+
+
+//////////////// End:   UART helpers ////////////////
+
+
+//////////////// Start: ADC helpers ////////////////
+
+/**********************************************************************
+ * @brief       Data_Avr - simple arithmetic mean over `count` ADC samples
+ * @param       adc_data - pointer to array of uint16_t samples
+ * @param       count    - number of elements (NOT bytes!)
+ * @return      average value, or 0 if count==0
+ **********************************************************************/
 uint16_t Data_Avr(uint16_t *adc_data, uint8_t count){
 	
 	uint32_t temp = 0;
@@ -770,43 +1468,41 @@ uint16_t Data_TrimmedMean(uint16_t *adc_data, uint8_t count){
 }
 
 /**********************************************************************
- * @brief		Check_System
- * @param   	None
- * @return	None
+ * @brief       Check_System - autodetect heat-vs-smoke variant.
+ *              Probes AN3 with LDO on vs LDO off. A heat (NTC) variant
+ *              shows a large delta; a smoke (photoelectric) variant does
+ *              not. Returns Temp_mode or Dust_mode accordingly.
  **********************************************************************/
-
-
-
 uint16_t Check_System(void)
 {
 	int V25_On_adc_data= 0 , V25_Off_adc_data= 0;
 	uint16_t System_Mode_Ck;
-	
-	// op amp  -> input 변경 
+
+	// OPAMP outputs disabled; route AN3/AN2/AN1 to ADC pins.
 	P0FSRL  = 0
-		| ( 2 << 6)       //P03     // 0 : I/O, 1 : OP0OUT,   2 : AN3,      3 : Not used					// SENSING IN ADC 
+		| ( 2 << 6)       //P03     // 0 : I/O, 1 : OP0OUT,   2 : AN3,      3 : Not used					// SENSING IN ADC
 		| ( 2 << 4)       //P02     // 0 : I/O, 1 : OP1P,   2 : AN2,      3 : Not used							// Temperature_ADC
-		| ( 2<< 2)        //P01     // 0 : I/O (EINT1),	1 : OP1N,  2 : AN1,	3 : Not used				// 
+		| ( 2<< 2)        //P01     // 0 : I/O (EINT1),	1 : OP1N,  2 : AN1,	3 : Not used				//
 		| ( 0 << 0);      //P00     // 0 : I/O (EINT0),	1 : OP1OUT,   2 : AN0,	3 : Not used			// C_VDD
-	
+
 	OP0_Enable(FALSE);
 	OP1_Enable(FALSE);
 	LDO_ON;
-	ADC_Initial(ADC_CLK_1M, ADC_SW_TRIG, ADC_INTERNAL_REF, ADC_LSB);	 //ADC_INTERNAL_REF 를 사용하고 LDO_ON을 제어했을때 adc 차이를 가지고 system mode 확인
+	ADC_Initial(ADC_CLK_1M, ADC_SW_TRIG, ADC_INTERNAL_REF, ADC_LSB);	 // INTERNAL_REF + LDO_ON sequence isolates heat-variant signal
 	ADC_SelectChannel(ADC_CH3);
 	
 	Delay_ms(1);
 	
-	ADC_GetDataWithPolling(ADC_temp_data, sizeof(ADC_temp_data));
+	ADC_GetDataWithPolling(ADC_temp_data, ADC_BUFFER_COUNT);  // (FIX C1) was sizeof(...) = bytes
 	
 	LDO_OFF;
 
-	V25_On_adc_data = Data_TrimmedMean(ADC_temp_data, sizeof(ADC_temp_data));
+	V25_On_adc_data = Data_TrimmedMean(ADC_temp_data, ADC_BUFFER_COUNT) /* (FIX C1) was sizeof */;
 	
 	Delay_ms(20);
 	
-	ADC_GetDataWithPolling(ADC_temp_data, sizeof(ADC_temp_data));
-	V25_Off_adc_data = Data_TrimmedMean(ADC_temp_data, sizeof(ADC_temp_data));
+	ADC_GetDataWithPolling(ADC_temp_data, ADC_BUFFER_COUNT);  // (FIX C1) was sizeof(...) = bytes
+	V25_Off_adc_data = Data_TrimmedMean(ADC_temp_data, ADC_BUFFER_COUNT) /* (FIX C1) was sizeof */;
 
 	if( abs(V25_On_adc_data - V25_Off_adc_data) > System_Ck_Value){
 		System_Mode_Ck = Temp_mode;
@@ -815,42 +1511,49 @@ uint16_t Check_System(void)
 		System_Mode_Ck = Dust_mode;
 	}
 
+	/* Cleanup: disable ADC + restore P0FSRL to hw_initial baseline so the
+	 * caller does not inherit an active ADC block or AN3/AN2/AN1 pin mode. */
+	ADCCRL = 0x00;
+	P0FSRL = 0
+		| (1 << 6)        /* P03 = OP0OUT (hw_initial baseline) */
+		| (1 << 4)        /* P02 = OP1P                          */
+		| (1 << 2)        /* P01 = OP1N                          */
+		| (0 << 0);       /* P00 = I/O                           */
+
 	return System_Mode_Ck;
-	
 }
 
 
 /**********************************************************************
- * @brief		TEMP_ADC
- * @param   	None
- * @return	None
+ * @brief       TEMP_ADC - read NTC thermistor through AN3 with LDO23 on
+ *              as reference. Looks up the result in Temp_Table[] and
+ *              returns temperature in degrees C (clamped 0..100).
  **********************************************************************/
-
 uint16_t TEMP_ADC(void)
 {
 	int Temp_adc_data= 0 , Temp_Data;
 	int i;
-	
-	// op amp  -> input 변경 
+
+	// Route AN3 (NTC divider) to ADC; OPAMPs disabled.
 	P0FSRL  = 0
-		| ( 2 << 6)       //P03     // 0 : I/O, 1 : OP0OUT,   2 : AN3,      3 : Not used					// SENSING IN ADC 
+		| ( 2 << 6)       //P03     // 0 : I/O, 1 : OP0OUT,   2 : AN3,      3 : Not used					// SENSING IN ADC
 		| ( 2 << 4)       //P02     // 0 : I/O, 1 : OP1P,   2 : AN2,      3 : Not used					    // Temperature_ADC
 		| ( 2<< 2)        //P01     // 0 : I/O (EINT1),	1 : OP1N,  2 : AN1,	3 : Not used				// BAT_ADC
 		| ( 0 << 0);      //P00     // 0 : I/O (EINT0),	1 : OP1OUT,   2 : AN0,	3 : Not used			// C_VDD
-	
+
 	OP0_Enable(FALSE);
 	OP1_Enable(FALSE);
 	LDO_ON;
-	ADC_Initial(ADC_CLK_1M, ADC_SW_TRIG, ADC_LDO_REF, ADC_LSB);	 //ADC_LDO_REF 를 서미스터에 적용해 베터리 값이 떨어져도 온도값 번화없게 설계
+	ADC_Initial(ADC_CLK_1M, ADC_SW_TRIG, ADC_LDO_REF, ADC_LSB);	 // LDO_REF: NTC ratiometric measurement immune to LDO drift
 	ADC_SelectChannel(ADC_CH3);
 	
 	Delay_ms(1);
 	
-	ADC_GetDataWithPolling(ADC_temp_data, sizeof(ADC_temp_data));
+	ADC_GetDataWithPolling(ADC_temp_data, ADC_BUFFER_COUNT);  // (FIX C1) was sizeof(...) = bytes
 	
 	LDO_OFF;
 
-	Temp_adc_data = Data_TrimmedMean(ADC_temp_data, sizeof(ADC_temp_data));
+	Temp_adc_data = Data_TrimmedMean(ADC_temp_data, ADC_BUFFER_COUNT) /* (FIX C1) was sizeof */;
 	
 	for(i=TEMP_OFFSET;i<(TEMP_OFFSET + 100);i++){
 		if(Temp_Table[i] > Temp_adc_data){
@@ -867,273 +1570,251 @@ uint16_t TEMP_ADC(void)
 	else{
 		Temp_Data = i -TEMP_OFFSET - 1 ;
 	}
+
+	/* Cleanup: disable ADC + restore P0FSRL to hw_initial baseline. */
+	ADCCRL = 0x00;
+	P0FSRL = 0
+		| (1 << 6)        /* P03 = OP0OUT (hw_initial baseline) */
+		| (1 << 4)        /* P02 = OP1P                          */
+		| (1 << 2)        /* P01 = OP1N                          */
+		| (0 << 0);       /* P00 = I/O                           */
+
 	return Temp_Data;
-	
 }
 
-/*
-**********************************************************************
- * @brief		BAT_ADC
- * @param   	None
- * @return	None
+/**********************************************************************
+ * @brief       Get_Bat_Voltage_cV - measure battery voltage in units of
+ *              0.01 V (e.g. return value 304 == 3.04 V).
+ *              Reads the internal VBGR reference against VDD as ADC ref
+ *              (ratiometric trick): VBGR_CV is the calibrated bandgap *100,
+ *              ADC_FS = 1024 (10-bit FS), and the formula
+ *                  Vbat_cv = (VBGR_CV * ADC_FS) / adc_reading
+ *              gives Vbat in centivolts.
  **********************************************************************/
-
-uint16_t Get_Bat_Voltage_cV(void)   // 단위: 0.01V
+uint16_t Get_Bat_Voltage_cV(void)   // unit: 0.01 V
 {
     uint32_t adc_avg;
     uint32_t vbat_cv;
-	
 
-    ADC_Initial(ADC_CLK_2M, ADC_SW_TRIG, ADC_INTERNAL_REF, ADC_LSB);   //ADC_INTERNAL_REF 를 읽어 VBGR_CV 값과 비교해 베커리값 계산 
+
+    ADC_Initial(ADC_CLK_2M, ADC_SW_TRIG, ADC_INTERNAL_REF, ADC_LSB);   // INTERNAL_REF reads VBGR against VDD - ratiometric Vbat math
     ADC_SelectChannel(ADC_VBGR);
     Delay_ms(1);
 
-    ADC_GetDataWithPolling(ADC_temp_data, sizeof(ADC_temp_data));
+    ADC_GetDataWithPolling(ADC_temp_data, ADC_BUFFER_COUNT);  // (FIX C1) was sizeof(...) = bytes
 
-	  adc_avg = Data_TrimmedMean(ADC_temp_data, sizeof(ADC_temp_data));
+	  adc_avg = Data_TrimmedMean(ADC_temp_data, ADC_BUFFER_COUNT) /* (FIX C1) was sizeof */;
 
-    if (adc_avg == 0) return 0;   // 방어코드
+    if (adc_avg == 0) {
+        ADCCRL = 0x00;            /* cleanup before early return */
+        return 0;
+    }
 
     vbat_cv = ((uint32_t)VBGR_CV * ADC_FS) / adc_avg;
 
     // sanity clamp (optional)
-    if (vbat_cv > 400) vbat_cv = 400;   // 4.00V 이상은 비정상
+    if (vbat_cv > 400) vbat_cv = 400;   // ignore impossible >4.00 V readings
+
+    /* Cleanup: disable ADC module. (P0FSRL untouched - this function does
+     * not change pin functions.) */
+    ADCCRL = 0x00;
 
     return (uint16_t)vbat_cv;
 }
 
 /**********************************************************************
- * @brief		Dust_ADC
+ * @brief		Dust_1ADC
  * @param   	None
  * @return	None
  **********************************************************************/
 
 uint16_t Dust_ADC_1AMP(void)
 {
-	
-	int Dust_adc_data= 0;
+	uint16_t Dust_adc_data = 0;
+	uint32_t adc_avg;
 	uint32_t op;
-	
-	
+
+	/* Pin function map - same as 2AMP for consistency */
 	P0FSRL  = 0
-		| ( 1 << 6)       //P03     // 0 : I/O, 1 : OP0OUT,   2 : AN3,      3 : Not used					// SENSING IN ADC 
-		| ( 1 << 4)       //P02     // 0 : I/O, 1 : OP1P,   2 : AN2,      3 : Not used					// 
-		| ( 2<< 2)        //P01     // 0 : I/O (EINT1),	1 : OP1N,  2 : AN1,	3 : Not used				// BAT_ADC
-		| ( 1 << 0);      //P00     // 0 : I/O (EINT0),	1 : OP1OUT,   2 : AN0,	3 : Not used			// C_VDD
-	
+		| ( 1 << 6)       /* P03 : OP0OUT (sensing OP-amp output to ADC) */
+		| ( 1 << 4)       /* P02 : OP1P  (unused here)                    */
+		| ( 2 << 2)       /* P01 : AN1   (battery ADC channel)            */
+		| ( 1 << 0);      /* P00 : OP1OUT (test point)                    */
+
 	OPAMP_Initial(GAIN1_DIS, GAIN0_DIS, chp_125KHz);
 	OP0_Enable(TRUE);
 	OP1_Enable(FALSE);
 
-	ADC_Initial(ADC_CLK_1M, ADC_SW_TRIG, ADC_INTERNAL_REF, ADC_LSB);	
-	
+	ADC_Initial(ADC_CLK_2M, ADC_SW_TRIG, ADC_INTERNAL_REF, ADC_LSB);
 	ADC_SelectChannel(ADC_VBGR);
-	
 	Delay_ms(1);
-	
-	ADC_GetDataWithPolling(ADC_temp_data, sizeof(ADC_temp_data));
-	
-	op=92;
-	op*=1024;
-	op/=Data_Avr(ADC_temp_data, sizeof(ADC_temp_data));
-  ADC1_Bat_Val=op;
 
+	/* 1) VBGR measurement -> ratiometric battery compensation factor.
+	 * ADC1_Bat_Val ~= 300 at VBAT=3V; used to scale the OP0OUT readings
+	 * so dust results stay constant across battery voltage drift. */
+	ADC_GetDataWithPolling(ADC_temp_data, ADC_BUFFER_COUNT);
+	adc_avg = Data_TrimmedMean(ADC_temp_data, ADC_BUFFER_COUNT);
+	if (adc_avg == 0) {
+		goto cleanup;          /* divide-by-zero guard */
+	}
+	op  = 92;
+	op *= 1024;
+	op /= adc_avg;
+	ADC1_Bat_Val = op;
+
+	/* 2) LED ON - chamber sensing.
+	 * No divide-by-zero possible here (multiplication only, /1024 is the
+	 * only division). adc_avg=0 is a legitimate dark-chamber reading. */
 	LDO_ON;
 	ADC_SelectChannel(ADC_OP0OUT);
 	Delay_ms(1);
-	
-	ADC_GetDataWithPolling(ADC_temp_data, sizeof(ADC_temp_data));
+
+	ADC_GetDataWithPolling(ADC_temp_data, ADC_BUFFER_COUNT);
+	adc_avg = Data_TrimmedMean(ADC_temp_data, ADC_BUFFER_COUNT);
+
 	LDO_OFF;
-	
-	op=ADC1_Bat_Val;
-	op *=Data_Avr(ADC_temp_data, sizeof(ADC_temp_data));
-	op/=1024;
-  ADC1_On_Dust_Val=op;
-	
-	//led off 시 센서값 읽기;
-	ADC_Initial(ADC_CLK_1M, ADC_SW_TRIG, ADC_INTERNAL_REF, ADC_LSB);	
-	ADC_SelectChannel(ADC_OP0OUT);
 	Delay_ms(1);
-	
-	ADC_GetDataWithPolling(ADC_temp_data, sizeof(ADC_temp_data));
-	
-	op=ADC1_Bat_Val;
-	op *=Data_Avr(ADC_temp_data, sizeof(ADC_temp_data));
-	op/=1024;
-  ADC1_Off_Dust_Val=op;
-	
-	Dust_adc_data = ADC1_On_Dust_Val - ADC1_Off_Dust_Val;
-	
+
+	op  = ADC1_Bat_Val;
+	op *= adc_avg;
+	op /= 1024;
+	ADC1_On_Dust_Val = op;
+
+	/* 3) LED OFF - ambient reference (still on ADC_OP0OUT) */
+	ADC_GetDataWithPolling(ADC_temp_data, ADC_BUFFER_COUNT);
+	adc_avg = Data_TrimmedMean(ADC_temp_data, ADC_BUFFER_COUNT);
+
+	op  = ADC1_Bat_Val;
+	op *= adc_avg;
+	op /= 1024;
+	ADC1_Off_Dust_Val = op;
+
+	/* Underflow guard: if optical noise pushes Off > On the uint16_t
+	 * subtraction would wrap to ~65535 and trigger a false fire alarm.
+	 * Treat that case as zero dust signal. */
+	if (ADC1_On_Dust_Val > ADC1_Off_Dust_Val) {
+		Dust_adc_data = ADC1_On_Dust_Val - ADC1_Off_Dust_Val;
+	} else {
+		Dust_adc_data = 0;
+	}
+
+cleanup:
+	/* Disable ADC + OPAMP + restore P0FSRL to hw_initial baseline so the
+	 * next call (or BeforeStop) inherits a clean state. */
+	ADCCRL = 0x00;
+	OP0_Enable(FALSE);
+	OP1_Enable(FALSE);
+	AMPCR1 = 0x00;
+	P0FSRL = 0
+		| (1 << 6)        /* P03 = OP0OUT (baseline) */
+		| (1 << 4)        /* P02 = OP1P              */
+		| (1 << 2)        /* P01 = OP1N              */
+		| (0 << 0);       /* P00 = I/O               */
+
 	return Dust_adc_data;
-	
 }
-/*
-void Set_Temp_Table(void){
-	
-Temp_Table[0]=86;
-Temp_Table[1]=90;
-Temp_Table[2]=95;
-Temp_Table[3]=99;
-Temp_Table[4]=104;
-Temp_Table[5]=109;
-Temp_Table[6]=114;
-Temp_Table[7]=119;
-Temp_Table[8]=124;
-Temp_Table[9]=130;
-Temp_Table[10]=135;
-Temp_Table[11]=141;
-Temp_Table[12]=147;
-Temp_Table[13]=153;
-Temp_Table[14]=159;
-Temp_Table[15]=166;
-Temp_Table[16]=172;
-Temp_Table[17]=179;
-Temp_Table[18]=186;
-Temp_Table[19]=192;
-Temp_Table[20]=199;
-Temp_Table[21]=207;
-Temp_Table[22]=214;
-Temp_Table[23]=221;
-Temp_Table[24]=229;
-Temp_Table[25]=236;
-Temp_Table[26]=244;
-Temp_Table[27]=252;
-Temp_Table[28]=261;
-Temp_Table[29]=269;
-Temp_Table[30]=278;
-Temp_Table[31]=286;
-Temp_Table[32]=295;
-Temp_Table[33]=304;
-Temp_Table[34]=313;
-Temp_Table[35]=322;
-Temp_Table[36]=331;
-Temp_Table[37]=341;
-Temp_Table[38]=350;
-Temp_Table[39]=359;
-Temp_Table[40]=369;
-Temp_Table[41]=379;
-Temp_Table[42]=388;
-Temp_Table[43]=398;
-Temp_Table[44]=407;
-Temp_Table[45]=417;
-Temp_Table[46]=427;
-Temp_Table[47]=437;
-Temp_Table[48]=446;
-Temp_Table[49]=456;
-Temp_Table[50]=466;
-Temp_Table[51]=476;
-Temp_Table[52]=485;
-Temp_Table[53]=495;
-Temp_Table[54]=504;
-Temp_Table[55]=514;
-Temp_Table[56]=524;
-Temp_Table[57]=533;
-Temp_Table[58]=542;
-Temp_Table[59]=552;
-Temp_Table[60]=561;
-Temp_Table[61]=570;
-Temp_Table[62]=579;
-Temp_Table[63]=588;
-Temp_Table[64]=597;
-Temp_Table[65]=606;
-Temp_Table[66]=615;
-Temp_Table[67]=623;
-Temp_Table[68]=632;
-Temp_Table[69]=640;
-Temp_Table[70]=648;
-Temp_Table[71]=656;
-Temp_Table[72]=664;
-Temp_Table[73]=672;
-Temp_Table[74]=680;
-Temp_Table[75]=688;
-Temp_Table[76]=695;
-Temp_Table[77]=703;
-Temp_Table[78]=710;
-Temp_Table[79]=717;
-Temp_Table[80]=724;
-Temp_Table[81]=731;
-Temp_Table[82]=738;
-Temp_Table[83]=744;
-Temp_Table[84]=751;
-Temp_Table[85]=757;
-Temp_Table[86]=763;
-Temp_Table[87]=769;
-Temp_Table[88]=775;
-Temp_Table[89]=781;
-Temp_Table[90]=787;
-Temp_Table[91]=793;
-Temp_Table[92]=798;
-Temp_Table[93]=803;
-Temp_Table[94]=809;
-Temp_Table[95]=814;
-Temp_Table[96]=819;
-Temp_Table[97]=824;
-Temp_Table[98]=829;
-Temp_Table[99]=833;
-}
-*/
-////////////////End  ADC  함수 //////////// 
-
-////////////////Start  UART  함수 //////////// 
 
 
-void Uart_Out(void){
+/**********************************************************************
+ * @brief		Dust_ADC_2amp
+ * @param   	None
+ * @return	None
+ **********************************************************************/
 
-	Port_SetAlterFunctionpin(PORT1, PIN2, 0x1);
-						
-	USART_Initial(9600, USART_DATA_8BIT, USART_STOP_1BIT, USART_PARITY_NO, USART_TX_RX_MODE);
-	
-	if(ADC_mode == Dust_mode){
-		
-		if(visual_type == 1){
-			USART_SendDataWithPolling(&Visu_MODE, sizeof(Visu_MODE));
-			USART_SendDataWithPolling(&Space, sizeof(Space));
-			USART_SendDataWithPolling(&Bat, sizeof(Bat));
-			Uart_Out_Int(ADC_Bat_Val);
-		}
-		else{
-			USART_SendDataWithPolling(&Dust_MODE, sizeof(Dust_MODE));
-			USART_SendDataWithPolling(&Space, sizeof(Space));
-			USART_SendDataWithPolling(&Bat, sizeof(Bat));
-			Uart_Out_Int(ADC_Bat_Val);
-		}
+uint16_t Dust_ADC_2AMP(void)
+{
+	uint16_t Dust_adc_data = 0;
+	uint32_t adc_avg;
+	uint32_t op;
+
+	/* Pin function map - same as 1AMP; OP-amp chain OP0 -> OP1 -> ADC */
+	P0FSRL  = 0
+		| ( 1 << 6)       /* P03 : OP0OUT (first stage out)             */
+		| ( 1 << 4)       /* P02 : OP1P   (second stage non-inv input)  */
+		| ( 2 << 2)       /* P01 : AN1    (battery ADC channel)         */
+		| ( 1 << 0);      /* P00 : OP1OUT (final amp output, test pt)   */
+
+	if (visual_type == 1) {
+		OPAMP_Initial(GAIN1_X30, GAIN0_DIS, chp_125KHz);
+	} else {
+		OPAMP_Initial(GAIN1_X15, GAIN0_DIS, chp_125KHz);
 	}
-	else if(ADC_mode == Temp_mode){
-		USART_SendDataWithPolling(&Temp_MODE, sizeof(Temp_MODE));
-		USART_SendDataWithPolling(&Space, sizeof(Space));
-		USART_SendDataWithPolling(&Bat, sizeof(Bat));
-		Uart_Out_Int(ADC_Bat_Val);
-		USART_SendDataWithPolling(&Space, sizeof(Space));
-		USART_SendDataWithPolling(&Temp, sizeof(Temp));
-		Uart_Out_Int(ADC_Temp_Val);
+
+	/* Two-stage amp sequence: enable OP0 first, wait 200 us per User
+	 * Manual Figure 43 NOTE 2 ("turn on the first OP-AMP and provide a
+	 * delay of at least 200 us before turn on the second OP-AMP"), then
+	 * enable OP1. Without this delay the first sample is unreliable. */
+	OP0_Enable(TRUE);
+	NOP_20us_Delay(10);          /* ~200 us OP0 stabilization */
+	OP1_Enable(TRUE);
+
+	ADC_Initial(ADC_CLK_2M, ADC_SW_TRIG, ADC_INTERNAL_REF, ADC_LSB);
+	ADC_SelectChannel(ADC_VBGR);
+	Delay_ms(1);
+
+	/* 1) VBGR measurement -> ratiometric battery compensation */
+	ADC_GetDataWithPolling(ADC_temp_data, ADC_BUFFER_COUNT);
+	adc_avg = Data_TrimmedMean(ADC_temp_data, ADC_BUFFER_COUNT);
+	if (adc_avg == 0) {
+		goto cleanup;            /* divide-by-zero guard */
 	}
-	
-	USART_SendDataWithPolling(&End, 4);
-	
-	Port_SetAlterFunctionpin(PORT1, PIN2, 0);
+	op  = 92;
+	op *= 1024;
+	op /= adc_avg;
+	ADC2_Bat_Val = op;
+
+	/* 2) LED ON - chamber sensing through 2-stage amp.
+	 * No divide-by-zero possible (multiplication only, /1024 is the only
+	 * division). adc_avg=0 is a legitimate dark-chamber reading. */
+	LDO_ON;
+	ADC_SelectChannel(ADC_OP1OUT);
+	Delay_ms(1);
+
+	ADC_GetDataWithPolling(ADC_temp_data, ADC_BUFFER_COUNT);
+	adc_avg = Data_TrimmedMean(ADC_temp_data, ADC_BUFFER_COUNT);
+
+	LDO_OFF;
+	Delay_ms(1);
+
+	op  = ADC2_Bat_Val;
+	op *= adc_avg;
+	op /= 1024;
+	ADC2_On_Dust_Val = op;
+
+	/* 3) LED OFF - ambient reference (still on ADC_OP1OUT) */
+	ADC_GetDataWithPolling(ADC_temp_data, ADC_BUFFER_COUNT);
+	adc_avg = Data_TrimmedMean(ADC_temp_data, ADC_BUFFER_COUNT);
+
+	op  = ADC2_Bat_Val;
+	op *= adc_avg;
+	op /= 1024;
+	ADC2_Off_Dust_Val = op;
+
+	/* Underflow guard - same rationale as Dust_ADC_1AMP */
+	if (ADC2_On_Dust_Val > ADC2_Off_Dust_Val) {
+		Dust_adc_data = ADC2_On_Dust_Val - ADC2_Off_Dust_Val;
+	} else {
+		Dust_adc_data = 0;
+	}
+
+cleanup:
+	ADCCRL = 0x00;
+	OP0_Enable(FALSE);
+	OP1_Enable(FALSE);
+	AMPCR1 = 0x00;
+	P0FSRL = 0
+		| (1 << 6)        /* P03 = OP0OUT (baseline) */
+		| (1 << 4)        /* P02 = OP1P              */
+		| (1 << 2)        /* P01 = OP1N              */
+		| (0 << 0);       /* P00 = I/O               */
+
+	return Dust_adc_data;
 }
 
-void Uart_Out_Int(uint16_t Value){
-
-	uint16_t int_val;
-	uint8_t tmp;
-	
-	if(Value > 9999){
-		Value = 9999;
-	}
-	
-	tmp = Value / 1000 + 48;
-	USART_SendDataWithPolling(&tmp, 1);
-	int_val= Value % 1000 ;
-	tmp = (int_val/ 100 )+ 48;
-	USART_SendDataWithPolling(&tmp, 1);
-	int_val= Value % 100 ;
-	tmp = (int_val/ 10 )+ 48;
-	USART_SendDataWithPolling(&tmp, 1);
-	int_val= Value % 10 ;
-	tmp = (int_val/ 1) + 48;
-	USART_SendDataWithPolling(&tmp, 1);
-}
+//////////////// End:   ADC helpers ////////////////
 
 
-////////////////End  UART  함수 //////////// 
+
+
+
+

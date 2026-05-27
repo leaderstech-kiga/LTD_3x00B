@@ -5,130 +5,154 @@
 /* Private Variable ----------------------------------------------------------*/
 
 
-#define LED_G_ON			P06 = 0
-#define LED_G_OFF		P06 = 1
+//////////////// Start: System state and mode constants ////////////////
 
-#define LED_R_ON			P07 = 0
-#define LED_R_OFF		P07 = 1
+/* Side-effect macros wrapped in ((void)(...)) so 'LED_G_ON;' is a valid
+ * statement but 'if (LED_G_ON)' produces a compile error instead of
+ * silently writing to the port and evaluating to the assigned value. */
+#define LED_G_ON         ((void)(P06 = 0))
+#define LED_G_OFF        ((void)(P06 = 1))
 
-#define AUDIO_ON		P14 = 1
-#define AUDIO_OFF 	P14 = 0
+#define LED_R_ON         ((void)(P07 = 0))
+#define LED_R_OFF        ((void)(P07 = 1))
 
+#define AUDIO_ON         ((void)(P14 = 1))
+#define AUDIO_OFF        ((void)(P14 = 0))
+
+#define CVDD_ON          ((void)(P20 = 1))
+#define CVDD_OFF         ((void)(P20 = 0))
+
+#define SLAVESELECT      ((void)(P13 = 0))
+#define SLAVEDESELECT    ((void)(P13 = 1))
+	
 #define LDO_ON				LDOCR = 0x01
-#define LDO_OFF			LDOCR = 0x00
-
-#define CVDD_ON		P20 = 1
-#define CVDD_OFF 	P20 = 0
-
+#define LDO_OFF				LDOCR = 0x00
 
 //--------------------- Macro Definition --------------------------------------
 #define Stop()          {PCON = 0x03; _nop_( ); _nop_( ); _nop_( );}
-#define Idle()          {PCON = 0x01; _nop_( ); _nop_( ); _nop_( );}
 
-//------------------- AMP/ADC Control Constants Definition -------------------
-//#define CC_USE					// if constant current use disable comment line
-	
-#define AMP_AUTO_DIS         0
+/* ADC operating mode flag (variable ADC_mode). */
+#define Dust_mode           1
+#define Temp_mode           2
 
-#define SysClock_4MHZ         1
+/* SYS_mode flag - main-loop state machine. */
+#define Normal_mode         1
+#define In_Fire_al_mode     3
+#define Al_Stop_mode        6
 
+/* Bat_mode flag set by Bat_Ck based on battery ADC reading. */
+#define Bat_High_mode       1
+#define Bat_Low_mode        2
 
-#ifdef SysClock_1MHZ		
-	#define T_USEC               (unsigned short)(500)                        // n[usec] at 1MHz
-	#define TIME_4S              (unsigned short)(1000000/512*4)                 // 4sec
-	#define TIME_2S              (unsigned short)(1000000/512*2)                 // 2sec
-	#define TIME_1S              (unsigned short)(1000000/512)                 // 1sec
-	#define TIME_500mS           (unsigned short)(1000000/512/2)                  // 0.5sec
+extern volatile uint8_t  Timer2_cnt;
+
+/* T_USEC and TIME_2S are used by hw_initial / hw_audio_initial to program
+ * Timer0 (PWM) and Timer1 (audio sample tick). */
+#ifdef SysClock_1MHZ
+	#define T_USEC               (unsigned short)(500)                          // n[usec] at 1MHz
+	#define TIME_2S              (unsigned short)(1000000/512*2)                // 2sec
 #else
 	#define T_USEC               (unsigned short)(500*4)                        // n[usec] at 4MHz
-	#define TIME_4S              (unsigned short)(1000000/512*4*4)                 // 4sec
-	#define TIME_2S              (unsigned short)(1000000/512*4*2)                 // 2sec
-	#define TIME_1S              (unsigned short)(1000000/512*4)                 // 1sec
-	#define TIME_500mS           (unsigned short)(1000000/512*2)                  // 0.5sec	
+	#define TIME_2S              (unsigned short)(1000000/512*4*2)              // 2sec
 #endif
+
 	
-		
-	
-#define CHK_T1IFR()          (T1CRL&(1<<4))
-#define CLR_T1IFR()          T1CRL = (T1CRL&(~(1<<4)))
-#define	CLR_T1CNT()			     (T1CRH=T1CRH|(1<<0))					                 //Clear Timer 1 Counter
 
-#define START_DLY()          T0CRH = 0x81
-#define STOP_DLY()           T0CRH = 0x01
-#define CHK_T0IFR()          (T0CRL&(1<<4))
-#define CLR_T0IFR()          T0CRL = (T0CRL&(~(1<<4)))
-
-#define START_ADC()          ADCCRL = (ADCCRL|(1<<6))
-#define ADC_ON()             ADCCRL = ADCCRL|(1<<7)
-#define ADC_OFF()            ADCCRL = ADCCRL&(~(1<<7))
-#define CHK_ADC()            (ADCCRL&(1<<4))	
+//////////////// End:   System state and mode constants ////////////////
 
 
-////////////////Start  오디오 변수//////////// 
-	
-// Audio Data : 8000bps , 8bit 
+//////////////// Start: Audio playback globals ////////////////
 
-extern uint16_t Audio_length;
-extern uint16_t Audio_addr;
-extern uint8_t Audio_start;
-extern uint8_t Audio_start_address;
-extern uint16_t Audio_max_length;
+/* OPAMP auto-disable mode for AMPCR0.
+ *   0 = "Always" mode: OPAMP enable bits (AMPCR1) stay set across ADC
+ *       conversions. Required for multi-sample OPAMP+ADC measurements
+ *       like Dust_ADC_1AMP that read OP0OUT multiple times.
+ *   1 = "Auto disable after ADC" mode: AMPCR1 enable bits are
+ *       auto-cleared by hardware after every ADC conversion. Breaks
+ *       multi-shot OPAMP measurements (second read returns 0).
+ *
+ * Sleep current is kept low by BeforeStop() writing AMPCR1=0 explicitly
+ * just before Stop entry, plus each ADC function cleans AMPCR1 at exit.
+ * This makes AMP_AUTO_DIS=0 safe to use here. */
+#define AMP_AUTO_DIS         0
 
-////////////////End  오디오 변수//////////// 
+/* Audio clip table descriptor.
+ * Use Play_Clip(AUDIO_CLIP_xxx) to play; see Audio_Clips[] in main.c
+ * for the actual address/length values. */
+typedef struct {
+	uint16_t address;     /* SPI flash byte offset where ADPCM data starts */
+	uint16_t length;      /* sample count (8 kHz, 8-bit ADPCM)             */
+	uint8_t  runtime;     /* repeat count                                  */
+} AudioClip_t;
 
+#define AUDIO_CLIP_BOOT      0    /* startup beep   (~1.35 s) */
+#define AUDIO_CLIP_LOWBAT    1    /* low-battery    (~2.68 s) */
+#define AUDIO_CLIP_FIRE      2    /* fire alarm     (~3.04 s) */
+#define AUDIO_CLIP_COUNT     3
 
-////////////////Start  시스템 상태 변수//////////// 
+extern code AudioClip_t Audio_Clips[AUDIO_CLIP_COUNT];
 
-extern uint8_t SystemStatus;
+// Audio Data : 8000bps , 8bit
+// volatile - shared between TIMER1_Int / TIMER2_Int (audio.c, main.c) and
+// main-thread code. Prevents Keil C51 from caching the values in registers.
+extern volatile uint16_t Audio_length;
+extern volatile uint16_t Audio_addr;
+extern volatile uint8_t  Audio_start;
+extern volatile uint16_t Audio_max_length;
+extern volatile uint8_t  SystemStatus;
 
+//////////////// End:   Audio playback globals ////////////////
 
-////////////////End  시스템 상태 변수//////////// 
 
 
 /* Private Function Prototype ------------------------------------------------*/
 
-
-////////////////Start  딜레이 함수 //////////// 
-
-void Delay_ms(uint16_t msec);
-void Delay_s(uint16_t sec);
-
-////////////////End  딜레이 함수 //////////// 
-
-
-////////////////Start  시스템 초기화  함수 //////////// 
-
+//////////////// Start: System initialization helpers ////////////////
 void hw_initial(void);
+void Delay_ms(uint16_t msec);
 void hw_initial_Wait(int msec);
+uint8_t SPI_Memory_Check(void);
+void T2_init(void);
+void TIMER2_Int(void);
+void Start_Debug_Mode(void);
+//////////////// End: System initialization helpers ////////////////
 
-////////////////End  시스템 초기화  함수 //////////// 
-
-////////////////Start  와치독  함수 //////////// 
-
+//////////////// Start: Watchdog / sleep helpers ////////////////
 void BeforeStop(void);
 void AfterStop(void);
 void WD_Reset(void);
+void WDT_Int(void);
+//////////////// End:   Watchdog / sleep helpers ////////////////
 
-////////////////End  와치독  함수 //////////// 
+//////////////// Start: Audio helpers ////////////////
+void Variable_Initial(uint16_t Audio_st_address);
+void Audio_Run(uint16_t Address , uint16_t Length,  uint8_t Run_time);
+void Play_Clip(uint8_t clip_id);
+//////////////// End: Audio helpers ////////////////
 
-////////////////Start  ADC  함수 //////////// 
 
-uint16_t Data_Avr(uint16_t *adc_data, uint8_t count);
-uint16_t Data_TrimmedMean(uint16_t *adc_data, uint8_t count);
-void Data_Sorting(uint16_t *adc_data, uint8_t count);
-uint16_t Check_System(void);
-uint16_t TEMP_ADC(void);
-uint16_t BAT_ADC(void);
-uint16_t Get_Bat_Voltage_cV(void);   // 단위: 0.01V
-uint16_t Dust_ADC_1AMP(void);
-void Set_Temp_Table(void);
-
-////////////////End  ADC  함수 //////////// 
-
-////////////////Start  UART  함수 //////////// 
-
+//////////////// Start: UART helpers ////////////////
 
 void Uart_Out(void);
 void Uart_Out_Int(uint16_t Value);
 
-////////////////End  UART  함수 //////////// 
+//////////////// End:   UART helpers ////////////////
+
+//////////////// Start: ADC helpers ////////////////
+
+uint16_t Data_Avr(uint16_t *adc_data, uint8_t count);
+uint16_t Check_System(void);
+uint16_t TEMP_ADC(void);
+uint16_t Get_Bat_Voltage_cV(void);
+uint16_t Dust_ADC_1AMP(void);
+void Set_Temp_Table(void);
+
+/**********************************************************************
+ * @brief		Dust_1ADC
+ * @param   	None
+ * @return	None
+ **********************************************************************/
+
+uint16_t Dust_ADC_1AMP(void);
+uint16_t Dust_ADC_2AMP(void);
+//////////////// End:   ADC helpers ////////////////

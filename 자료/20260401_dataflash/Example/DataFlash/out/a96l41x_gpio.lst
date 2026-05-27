@@ -1,0 +1,658 @@
+C51 COMPILER V9.54   A96L41X_GPIO                                                          04/01/2026 22:05:16 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE A96L41X_GPIO
+OBJECT MODULE PLACED IN .\out\a96l41x_gpio.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE src\a96l41x_gpio.c LARGE OPTIMIZE(8,SPEED) REGFILE(.\out\A96L41x_DataFla
+                    -sh.ORC) BROWSE DEBUG OBJECTEXTEND PRINT(.\out\a96l41x_gpio.lst) TABS(2) OBJECT(.\out\a96l41x_gpio.obj)
+
+line level    source
+
+   1          /**
+   2          *   @file       a96l41x_gpio.c
+   3          *   @brief      A96l41x gpio peripheral function 
+   4          *   @author     Application Team, ABOV Semiconductor Co., Ltd.
+   5          *   @version    V1.00
+   6          *   @date       29. MAY. 2020
+   7          *
+   8          * Copyright(C) 2020, ABOV Semiconductor
+   9          * All rights reserved.
+  10          *
+  11          ********************************************************************************
+  12          * ABOV Disclaimer
+  13          *
+  14          *IMPORTANT NOTICE - PLEASE READ CAREFULLY
+  15          *ABOV Semiconductor ("ABOV") reserves the right to make changes, correction2s, enhancements, 
+  16          *modifications, and improvements to ABOV products and/or to this document at any time without notice. 
+  17          *ABOV does not give warranties as to the accuracy or completeness of the information included herein.
+  18          *Purchasers should obtain the latest relevant information of ABOV products before placing orders. 
+  19          *Purchasers are entirely responsible for the choice, selection, and use of ABOV products and 
+  20          *ABOV assumes no liability for application assistance or the design of purchasers' products. No license, 
+  21          *express or implied, to any intellectual property rights is granted by ABOV herein. 
+  22          *ABOV disclaims all express and implied warranties and shall not be responsible or
+  23          *liable for any injuries or damages related to use of ABOV products in such unauthorized applications. 
+  24          *ABOV and the ABOV logo are trademarks of ABOV.
+  25          *All other product or service names are the property of their respective owners. 
+  26          *Information in this document supersedes and replaces the information previously
+  27          *supplied in any former versions of this document.
+  28          *2020 ABOV Semiconductor  All rights reserved
+  29          *
+  30          */
+  31          
+  32          /*******************************************************************************
+  33          * Included File
+  34          *******************************************************************************/
+  35          #include "a96l41x_gpio.h"
+  36          
+  37          /*******************************************************************************
+  38          * Private Pre-processor Definition & Macro
+  39          *******************************************************************************/
+  40          
+  41          /*******************************************************************************
+  42          * Private Typedef
+  43          *******************************************************************************/
+  44          
+  45          /*******************************************************************************
+  46          * Private Variable
+  47          *******************************************************************************/
+  48          
+  49          /*******************************************************************************
+  50          * Private Function Prototype
+  51          *******************************************************************************/
+  52          
+  53          /*******************************************************************************
+  54          * Public Function
+C51 COMPILER V9.54   A96L41X_GPIO                                                          04/01/2026 22:05:16 PAGE 2   
+
+  55          *******************************************************************************/
+  56          
+  57          /**
+  58          * @brief  Initialize GPIO(PCU) peripheral
+  59          * @param      None
+  60          * @return   None
+  61          */
+  62          void Port_Initial(void)
+  63          {
+  64   1          // P0 setting
+  65   1          P0    = _0000_0000;   // 0 : Low, 1 : High
+  66   1          P0OD  = _0000_0000;   // 0 : Disable, 1 : Enable (Open-drain)
+  67   1          P0PU  = _0000_0000;   // 0 : Disable, 1 : Enable (Pull-up)
+  68   1          P0IO  = _1111_1111;   // 0 : Input, 1 : Output
+  69   1          P0FSRH  = 0
+  70   1          | ( 0 << 6)       //P07     // 0 : I/O (EINT3), 1 : ICS1
+  71   1          | ( 0 << 4)       //P06     // 0 : I/O (EINT2), 1 : ICS0
+  72   1          | ( 0 << 2)       //P05     // 0 : I/O, 1 : OP0P,    
+  73   1          | ( 0 << 0);      //P04     // 0 : I/O, 1 : OP0N
+  74   1          
+  75   1          P0FSRL  = 0
+  76   1          | ( 0 << 6)       //P03     // 0 : I/O, 1 : OP0OUT,   2 : AN3,      3 : Not used
+  77   1          | ( 0 << 4)       //P02     // 0 : I/O, 1 : OP1P,   2 : AN2,      3 : Not used
+  78   1          | ( 0 << 2)       //P01     // 0 : I/O (EINT1), 1 : OP1N,  2 : AN1, 3 : Not used
+  79   1          | ( 0 << 0);      //P00     // 0 : I/O (EINT0), 1 : OP1OUT,   2 : AN0,  3 : Not used
+  80   1          
+  81   1          P0DB  = 0
+  82   1          | ( 0 << 6)     //DBCLK[1:0]  // 00 : fx (SCLK),  01 : fx/4,  10 : fx/16, 11 : fx/64
+  83   1          | ( 0 << 3)     //P07DB   // 0 : Disable, 1 : Enable
+  84   1          | ( 0 << 2)     //P06DB   // 0 : Disable, 1 : Enable
+  85   1          | ( 0 << 1)     //P01DB   // 0 : Disable, 1 : Enable
+  86   1          | ( 0 << 0);    //P00DB   // 0 : Disable, 1 : Enable
+  87   1          
+  88   1          // P1 setting    
+  89   1          P1    = _0000_0000;   // 0 : Low, 1 : High
+  90   1          P1OD  = _0000_0000;   // 0 : Disable, 1 : Enable (Open-drain)
+  91   1          P1PU  = _0000_0000;   // 0 : Disable, 1 : Enable (Pull-up)
+  92   1          P1IO  = _0011_1111;   // 0 : Input, 1 : Output
+  93   1          
+  94   1          P1FSRH  = 0
+  95   1          | ( 0 << 2)       //P15  // 0 : I/O,  1 : LDO23,   2 : AN6, 3 : (SDA)
+  96   1          | ( 0 << 0);      //P14  // 0 : I/O (EINT11), 1 : T1O/PWM1O,   2 : SCL, 3 : Not used
+  97   1          
+  98   1          P1FSRL  = 0
+  99   1          | ( 0 << 6)       //P13  // 0 : I/O (EC1),  1 : (RXD/MISO)
+ 100   1          | ( 0 << 4)       //P12  // 0 : I/O (EC0),  1 : (TXD/MOSI)
+ 101   1          | ( 0 << 2)       //P11  // 0 : I/O (EINT10), 1 : T0O/PWM0O
+ 102   1          | ( 0 << 0);      //P10  // 0 : I/O,  1 : (SCK)
+ 103   1      
+ 104   1          P12DB = 0
+ 105   1          | ( 0 << 5)     //P21DB   // 0 : Disable, 1 : Enable
+ 106   1          | ( 0 << 4)     //P20DB   // 0 : Disable, 1 : Enable
+ 107   1          | ( 0 << 2)     //P14DB   // 0 : Disable, 1 : Enable
+ 108   1          | ( 0 << 1)     //P11DB   // 0 : Disable, 1 : Enable
+ 109   1          | ( 0 << 0);      //P10DB   // 0 : Disable, 1 : Enable
+ 110   1      
+ 111   1          // P2 setting    
+ 112   1          P2  = _0000_0000;   // 0 : Low, 1 : High
+ 113   1          P2OD  = _0000_0000;   // 0 : Disable, 1 : Enable (Open-drain)
+ 114   1          P2PU  = _0000_0000;   // 0 : Disable, 1 : Enable (Pull-up)
+ 115   1          P2IO  = _0000_1111;   // 0 : Input, 1 : Output
+ 116   1          
+C51 COMPILER V9.54   A96L41X_GPIO                                                          04/01/2026 22:05:16 PAGE 3   
+
+ 117   1          P2FSR   = 0
+ 118   1          | ( 0 << 6)     // 0 : P23,  1 : TXD/MOSI,  2 : AN5,     3 : Not used
+ 119   1          | ( 0 << 4)     // 0 : P22,  1 : RXD/MISO,  2 : AN4,     3 : Not used
+ 120   1          | ( 0 << 2)         // 0 : P21 (EC2),  1 : SCK,   2 : (SCL),     3 : Not used
+ 121   1          | ( 0 << 0);        // 0 : P20 (EINT12),  1 : T2O/PWM2O,   2 : SDA,     3 : Not used
+ 122   1      
+ 123   1      }
+ 124          
+ 125          /**
+ 126          * @brief  Configures the selected port(x) pins as output pin.
+ 127          * @param    port  This parameter contains the pin port
+ 128          * @param    pin   This parameter contains the pin number
+ 129          * @param    mode  This parameter contains the pin mode(Push-Pull : 0, Open-Drain :1)
+ 130          * @return   None
+ 131          */
+ 132          void Port_SetOutputpin(uint8_t port, uint8_t pin, uint8_t mode)
+ 133          {
+ 134   1      
+ 135   1          switch(port)
+ 136   1          {
+ 137   2            case 0:
+ 138   2              P0IO |= (1<<pin);
+ 139   2              P0OD |= (mode<<pin);
+ 140   2            break;
+ 141   2            case 1:
+ 142   2              P1IO |= (1<<pin);
+ 143   2              P1OD |= (mode<<pin);
+ 144   2            break;
+ 145   2            case 2:
+ 146   2              P2IO |= (1<<pin);
+ 147   2              P2OD |= (mode<<pin);
+ 148   2            break;
+ 149   2            default:
+ 150   2            break;
+ 151   2          }
+ 152   1      }
+ 153          
+ 154          /**
+ 155          * @brief  Configures the selected port(x) pins as input pin.
+ 156          * @param    port  This parameter contains the pin port
+ 157          * @param    pin   This parameter contains the pin number
+ 158          * @param    mode  This parameter contains the pin mode(Disable : 0, Pull-UP : 1)
+ 159          * @return None
+ 160          */
+ 161          void Port_SetInputpin(uint8_t port, uint8_t pin, uint8_t mode)
+ 162          {
+ 163   1          switch(port)
+ 164   1          {
+ 165   2            case 0:
+ 166   2              P0IO &= ~(1<<pin);
+ 167   2              P0PU |= (mode<<pin);
+ 168   2            break;
+ 169   2            case 1:
+ 170   2              P1IO &= ~(1<<pin);
+ 171   2              P1PU |= (mode<<pin);
+ 172   2            break;
+ 173   2            case 2:
+ 174   2              P2IO &= ~(1<<pin);
+ 175   2              P2PU |= (mode<<pin);
+ 176   2            break;
+ 177   2            default:
+ 178   2            break;      
+C51 COMPILER V9.54   A96L41X_GPIO                                                          04/01/2026 22:05:16 PAGE 4   
+
+ 179   2          }
+ 180   1      }
+ 181          
+ 182          /**
+ 183          * @brief  Configures the selected port(x) pins as several kinds alternative function pin.
+ 184          * @param    port  This parameter contains the pin port
+ 185          * @param    pin   This parameter contains the pin number
+ 186          * @param    val   This parameter contains the value of alternative function bit
+ 187          * @return None
+ 188          */
+ 189          void Port_SetAlterFunctionpin(uint8_t port, uint8_t pin, uint8_t val)
+ 190          {
+ 191   1        uint8_t temp_reg;
+ 192   1        
+ 193   1          switch(port)
+ 194   1          {
+ 195   2            case 0:
+ 196   2              if(pin > 0x3)
+ 197   2              {
+ 198   3                temp_reg = P0FSRH;
+ 199   3                temp_reg &= ~(0x3<<((pin-4)<<1));
+ 200   3                temp_reg |= (val<<((pin-4)<<1));
+ 201   3                
+ 202   3                P0FSRH = temp_reg;
+ 203   3              }
+ 204   2              else
+ 205   2              {
+ 206   3                temp_reg = P0FSRL;
+ 207   3                temp_reg &= ~(0x3<<(pin<<1));
+ 208   3                temp_reg |= (val<<(pin<<1));
+ 209   3                
+ 210   3                P0FSRL = temp_reg;
+ 211   3              }
+ 212   2            break;
+ 213   2            case 1:
+ 214   2              if(pin > 0x3)
+ 215   2              {
+ 216   3                temp_reg = P1FSRH;
+ 217   3                temp_reg &= ~(0x3<<((pin-4)<<1));
+ 218   3                temp_reg |= (val<<((pin-4)<<1));
+ 219   3                
+ 220   3                P1FSRH = temp_reg;
+ 221   3              }
+ 222   2              else
+ 223   2              {
+ 224   3                temp_reg = P1FSRL;
+ 225   3                temp_reg &= ~(0x3<<(pin<<1));
+ 226   3                temp_reg |= (val<<(pin<<1));  
+ 227   3      
+ 228   3                P1FSRL = temp_reg;
+ 229   3              } 
+ 230   2            break;
+ 231   2            case 2:
+ 232   2              if(pin > 0x1)
+ 233   2              {
+ 234   3                temp_reg = P2FSR;
+ 235   3                temp_reg  &= ~(1<<pin);
+ 236   3                temp_reg  |= (val<<pin);
+ 237   3                
+ 238   3                P2FSR = temp_reg;
+ 239   3              }
+ 240   2              else
+C51 COMPILER V9.54   A96L41X_GPIO                                                          04/01/2026 22:05:16 PAGE 5   
+
+ 241   2              {
+ 242   3                temp_reg = P2FSR;
+ 243   3                temp_reg  &= ~(0x3<<(pin<<1));
+ 244   3                temp_reg  |= (val<<(pin<<1)); 
+ 245   3      
+ 246   3                P2FSR = temp_reg;
+ 247   3              }
+ 248   2            break;
+ 249   2            default:
+ 250   2            break;      
+ 251   2          }
+ 252   1      }
+ 253          
+ 254          
+ 255          /**
+ 256          * @brief  Configures the selected port(x) pins as output high.
+ 257          * @param    port  This parameter contains the pin port
+ 258          * @param    pin   This parameter contains the pin number
+ 259          * @return None
+ 260          */
+ 261          void Port_SetOutputHighpin(uint8_t port, uint8_t pin)
+ 262          {
+ 263   1      
+ 264   1          switch(port)
+ 265   1          {
+ 266   2            case 0:
+ 267   2              P0 |= (1<<pin);
+ 268   2            break;
+ 269   2            case 1:
+ 270   2              P1 |= (1<<pin);
+ 271   2            break;
+ 272   2            case 2:
+ 273   2              P2 |= (1<<pin);
+ 274   2            break;
+ 275   2            default:
+ 276   2            break;      
+ 277   2          }
+ 278   1      }
+ 279          
+ 280          
+ 281          /**
+ 282          * @brief  Configures the selected port(x) pins as output low.
+ 283          * @param    port  This parameter contains the pin port
+ 284          * @param    pin   This parameter contains the pin number
+ 285          * @return None
+ 286          */
+ 287          void Port_SetOutputLowpin(uint8_t port, uint8_t pin)
+ 288          {
+ 289   1          
+ 290   1          switch(port)
+ 291   1          {
+ 292   2            case 0:
+ 293   2              P0 &= ~(1<<pin);
+ 294   2            break;
+ 295   2            case 1:
+ 296   2              P1 &= ~(1<<pin);
+ 297   2            break;
+ 298   2            case 2:
+ 299   2              P2 &= ~(1<<pin);
+ 300   2            break;
+ 301   2            default:
+ 302   2            break;      
+C51 COMPILER V9.54   A96L41X_GPIO                                                          04/01/2026 22:05:16 PAGE 6   
+
+ 303   2          }
+ 304   1      }
+ 305          
+ 306          
+ 307          /**
+ 308          * @brief  Configures the selected port(x) pins as output toggle.
+ 309          * @param    port  This parameter contains the pin port
+ 310          * @param    pin   This parameter contains the pin number
+ 311          * @return None
+ 312          */
+ 313          void Port_SetOutputTogglepin(uint8_t port, uint8_t pin)
+ 314          {
+ 315   1          
+ 316   1          switch(port)
+ 317   1          {
+ 318   2            case 0:
+ 319   2              P0 ^= (1<<pin);
+ 320   2            break;
+ 321   2            case 1:
+ 322   2              P1 ^= (1<<pin);
+ 323   2            break;
+ 324   2            case 2:
+ 325   2              P2 ^= (1<<pin);
+ 326   2            break;
+ 327   2            default:
+ 328   2            break;      
+ 329   2          }
+ 330   1      }
+ 331          
+ 332          
+ 333          /**
+ 334          * @brief  Get the value of selected port(x) pins as input pin.
+ 335          * @param    port  This parameter contains the pin port
+ 336          * @param    pin   This parameter contains the pin number
+ 337          * @return Value of Input pin(High : 1, Low :0)
+ 338          */
+ 339          uint8_t Port_GetInputpinValue(uint8_t port, uint8_t pin)
+ 340          {
+ 341   1         uint8_t result;
+ 342   1          
+ 343   1          switch(port)
+ 344   1          {
+ 345   2            case 0:
+ 346   2              result = (P0 & (1<<pin)) ? 1 : 0;
+ 347   2            break;
+ 348   2            case 1:
+ 349   2              result = (P1 & (1<<pin)) ? 1 : 0;
+ 350   2            break;
+ 351   2            case 2:
+ 352   2              result = (P2 & (1<<pin)) ? 1 : 0;
+ 353   2            break;
+ 354   2            default:
+ 355   2            break;      
+ 356   2          }
+ 357   1          
+ 358   1          return result;
+ 359   1      }
+ 360          
+ 361          /**
+ 362          * @brief  Enable the channel of external interrupt pin as input.
+ 363          * @param    channel This parameter contains the channel of external interrupt.
+ 364          * @return None
+C51 COMPILER V9.54   A96L41X_GPIO                                                          04/01/2026 22:05:16 PAGE 7   
+
+ 365          */
+ 366          void Port_EnableInterrupt(uint8_t channel)
+ 367          { 
+ 368   1          switch(channel)
+ 369   1          {
+ 370   2            case 0:
+ 371   2              IE |= (1<<0);
+ 372   2            break;
+ 373   2            case 1:
+ 374   2              IE |= (1<<1);
+ 375   2            break;
+ 376   2            case 2:
+ 377   2              IE |= (1<<2);
+ 378   2            break;
+ 379   2            case 3:
+ 380   2              IE |= (1<<3);
+ 381   2            break;
+ 382   2            case 4:
+ 383   2            case 5:
+ 384   2            case 6:
+ 385   2            case 7:       
+ 386   2            case 8:
+ 387   2            case 10:
+ 388   2              IE |= (1<<4);
+ 389   2            break;
+ 390   2            case 11:
+ 391   2              IE |= (1<<5);
+ 392   2            break;
+ 393   2            case 12:
+ 394   2              IE1 |= (1<<5);
+ 395   2            break;
+ 396   2            default:
+ 397   2            break;      
+ 398   2          }
+ 399   1      }
+ 400          
+ 401          /**
+ 402          * @brief  Disable the channel of external interrupt pin as input.
+ 403          * @param    channel   This parameter contains the channel of external interrupt.
+ 404          * @return None
+ 405          */
+ 406          void Port_DisableInterrupt(uint8_t channel)
+ 407          {
+ 408   1          switch(channel)
+ 409   1          {
+ 410   2            case 0:
+ 411   2              IE &= ~(1<<0);
+ 412   2            break;
+ 413   2            case 1:
+ 414   2              IE &= ~(1<<1);
+ 415   2            break;
+ 416   2            case 2:
+ 417   2              IE &= ~(1<<2);
+ 418   2            break;
+ 419   2            case 3:
+ 420   2              IE &= ~(1<<3);
+ 421   2            break;
+ 422   2            case 4:
+ 423   2            case 5:
+ 424   2            case 6:
+ 425   2            case 7:       
+ 426   2            case 8:
+C51 COMPILER V9.54   A96L41X_GPIO                                                          04/01/2026 22:05:16 PAGE 8   
+
+ 427   2            case 10:
+ 428   2              IE &= ~(1<<4);
+ 429   2            break;
+ 430   2            case 11:
+ 431   2              IE &= ~(1<<5);
+ 432   2            break;
+ 433   2            case 12:
+ 434   2              IE1 &= ~(1<<5);
+ 435   2            break;
+ 436   2            default:
+ 437   2            break;      
+ 438   2          }
+ 439   1      }
+ 440          
+ 441          
+ 442          /**
+ 443          * @brief  Configure the channel of external interrupt pin as input.
+ 444          * @param    channel   This parameter contains the channel of external interrupt.
+ 445          * @param    edge    This parameter contains the edge of external interrupt,
+ 446          *
+ 447          *       - NONE          = 0
+ 448          *       - RISING_EDGE   = 1
+ 449          *       - FALLING_EDGE  = 2
+ 450          *       - BOTH_EDGE     = 3
+ 451          * @return None
+ 452          */
+ 453          void Port_ConfigureInterrupt(uint8_t channel, uint8_t edge)
+ 454          {
+ 455   1        uint8_t temp_reg;
+ 456   1        
+ 457   1          switch(channel)
+ 458   1          {
+ 459   2            case 0:
+ 460   2              temp_reg = EIPOL0;
+ 461   2              temp_reg &= ~(0x3<<(channel<<0));
+ 462   2              temp_reg |= (edge<<(channel<<0));
+ 463   2              
+ 464   2              EIPOL0 = temp_reg;
+ 465   2            case 1:
+ 466   2              temp_reg = EIPOL0;
+ 467   2              temp_reg &= ~(0x3<<(channel<<2));
+ 468   2              temp_reg |= (edge<<(channel<<2));
+ 469   2              
+ 470   2              EIPOL0 = temp_reg;
+ 471   2            case 2:
+ 472   2              temp_reg = EIPOL0;
+ 473   2              temp_reg &= ~(0x3<<(channel<<4));
+ 474   2              temp_reg |= (edge<<(channel<<4));
+ 475   2              
+ 476   2              EIPOL0 = temp_reg;
+ 477   2            case 3:
+ 478   2              temp_reg = EIPOL0;
+ 479   2              temp_reg &= ~(0x3<<(channel<<6));
+ 480   2              temp_reg |= (edge<<(channel<<6));
+ 481   2              
+ 482   2              EIPOL0 = temp_reg;
+ 483   2            break;
+ 484   2            case 4:
+ 485   2            case 5:
+ 486   2            case 6:
+ 487   2            case 7: 
+ 488   2            case 8:
+C51 COMPILER V9.54   A96L41X_GPIO                                                          04/01/2026 22:05:16 PAGE 9   
+
+ 489   2            break;
+ 490   2            case 10:
+ 491   2              temp_reg = EIPOL1;      
+ 492   2              temp_reg &= ~(0x3<<0);
+ 493   2              temp_reg |= (edge<<0);
+ 494   2              
+ 495   2              EIPOL1 = temp_reg;
+ 496   2            break;
+ 497   2            case 11:
+ 498   2              temp_reg = EIPOL1;
+ 499   2              temp_reg &= ~(0x3<<2);
+ 500   2              temp_reg |= (edge<<2);
+ 501   2              
+ 502   2              EIPOL1 = temp_reg;
+ 503   2            break;
+ 504   2            case 12:
+ 505   2              temp_reg = EIPOL1;
+ 506   2              temp_reg &= ~(0x3<<4);
+ 507   2              temp_reg |= (edge<<4);
+ 508   2              
+ 509   2              EIPOL1 = temp_reg;
+ 510   2            break;
+ 511   2            default:
+ 512   2            break;      
+ 513   2          }
+ 514   1      }
+ 515          
+ 516          /**
+ 517          * @brief  Get the external interrupt status.
+ 518          * @param    channel   This parameter contains the channel of external interrupt.
+ 519          * @return Value of status(interrupt occur : 1, not occur : 0)
+ 520          */
+ 521          uint8_t Port_GetInterruptStatus(uint8_t channel)
+ 522          {
+ 523   1          uint8_t result;
+ 524   1        
+ 525   1          switch(channel)
+ 526   1          {
+ 527   2            case 0:
+ 528   2              result = (EIFLAG & (1<<0)) ? 1 : 0;
+ 529   2            break;
+ 530   2            case 1:
+ 531   2              result = (EIFLAG & (1<<1)) ? 1 : 0;
+ 532   2            break;
+ 533   2            case 2:
+ 534   2              result = (EIFLAG & (1<<2)) ? 1 : 0;
+ 535   2            break;
+ 536   2            case 3:
+ 537   2              result = (EIFLAG & (1<<3)) ? 1 : 0;
+ 538   2            break;
+ 539   2            case 4:
+ 540   2            case 5:
+ 541   2            case 6:
+ 542   2            case 7:       
+ 543   2            case 8:
+ 544   2            case 10:
+ 545   2              result = (EIFLAG & (1<<4)) ? 1 : 0;
+ 546   2            break;
+ 547   2            case 11:
+ 548   2              result = (EIFLAG & (1<<5)) ? 1 : 0;
+ 549   2            break;
+ 550   2            case 12:
+C51 COMPILER V9.54   A96L41X_GPIO                                                          04/01/2026 22:05:16 PAGE 10  
+
+ 551   2              result = (EIFLAG & (1<<6)) ? 1 : 0;
+ 552   2            break;
+ 553   2            default:
+ 554   2            break;      
+ 555   2          }
+ 556   1          
+ 557   1          return result;
+ 558   1      }
+ 559          
+ 560          /**
+ 561          * @brief  Clear the external interrupt status.
+ 562          * @param    channel     This parameter contains the channel of external interrupt.
+ 563          *
+ 564          *         -  EXTINT_CH0 = 0       
+ 565          *         -  EXTINT_CH1 = 1       
+ 566          *         -  EXTINT_CH2 = 2       
+ 567          *         -  EXTINT_CH3 = 3       
+ 568          *         -  EXTINT_CH4 = 4       
+ 569          *         -  EXTINT_CH5 = 5       
+ 570          *         -  EXTINT_CH6 = 6       
+ 571          *         -  EXTINT_CH7 = 7       
+ 572          *         -  EXTINT_CH8 = 8       
+ 573          *         -  EXTINT_CH9 = 9       
+ 574          *         -  EXTINT_CH10 = 10       
+ 575          *         -  EXTINT_CH11 = 11       
+ 576          *         -  EXTINT_CH12 = 12       
+ 577          * @return None
+ 578          */
+ 579          void Port_ClearInterruptStatus(uint8_t channel)
+ 580          {
+ 581   1          switch(channel)
+ 582   1          {
+ 583   2            case 0:
+ 584   2              EIFLAG = ~(1<<0);
+ 585   2            break;
+ 586   2            case 1:
+ 587   2              EIFLAG = ~(1<<1);
+ 588   2            break;
+ 589   2            case 2:
+ 590   2              EIFLAG = ~(1<<2);
+ 591   2            break;
+ 592   2            case 3:
+ 593   2              EIFLAG = ~(1<<3);
+ 594   2            break;
+ 595   2            case 4:
+ 596   2            case 5:
+ 597   2            case 6:
+ 598   2            case 7:     
+ 599   2            case 8:
+ 600   2            case 10:
+ 601   2              EIFLAG  = ~(1<<4);
+ 602   2            break;
+ 603   2            case 11:
+ 604   2              EIFLAG  = ~(1<<5);
+ 605   2            break;
+ 606   2            case 12:
+ 607   2              EIFLAG  = ~(1<<6);
+ 608   2            break;
+ 609   2            default:
+ 610   2            break;      
+ 611   2          }
+ 612   1      }
+C51 COMPILER V9.54   A96L41X_GPIO                                                          04/01/2026 22:05:16 PAGE 11  
+
+ 613          
+ 614          /* --------------------------------- End Of File ------------------------------ */
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1385    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

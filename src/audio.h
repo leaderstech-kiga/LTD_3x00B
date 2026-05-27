@@ -58,7 +58,6 @@
 * Exported Public Function
 *******************************************************************************/
 void Audio_Initial(void);
-void Read_Audio_Length(uint16_t Audio_st_address);
 
 
 #endif

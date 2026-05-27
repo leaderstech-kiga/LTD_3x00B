@@ -1,0 +1,397 @@
+C51 COMPILER V9.54   TYPEDEF                                                               04/10/2026 14:02:20 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE TYPEDEF
+OBJECT MODULE PLACED IN .\Objects\typedef.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE src\typedef.h LARGE OPTIMIZE(9,SPEED) BROWSE NOAREGS DEBUG OBJECTEXTEND 
+                    -PRINT(.\Listings\typedef.lst) TABS(2) OBJECT(.\Objects\typedef.obj)
+
+line level    source
+
+   1          /**
+   2          * @file     typedef.h
+   3          * @brief    Data and Constant Types Definitions.
+   4          * @author   Application Team, ABOV Semiconductor Co., Ltd.
+   5          * @version  V1.00
+   6          * @date     08. APL. 2020
+   7          *
+   8          * Copyright(C) 2020, ABOV Semiconductor
+   9          * All rights reserved.
+  10          *
+  11          ********************************************************************************
+  12          * ABOV Disclaimer
+  13          *
+  14          *IMPORTANT NOTICE - PLEASE READ CAREFULLY
+  15          *ABOV Semiconductor ("ABOV") reserves the right to make changes, corrections, enhancements, 
+  16          *modifications, and improvements to ABOV products and/or to this document at any time without notice. 
+  17          *ABOV does not give warranties as to the accuracy or completeness of the information included herein.
+  18          *Purchasers should obtain the latest relevant information of ABOV products before placing orders. 
+  19          *Purchasers are entirely responsible for the choice, selection, and use of ABOV products and 
+  20          *ABOV assumes no liability for application assistance or the design of purchasers' products. No license, 
+  21          *express or implied, to any intellectual property rights is granted by ABOV herein. 
+  22          *ABOV disclaims all express and implied warranties and shall not be responsible or
+  23          *liable for any injuries or damages related to use of ABOV products in such unauthorized applications. 
+  24          *ABOV and the ABOV logo are trademarks of ABOV.
+  25          *All other product or service names are the property of their respective owners. 
+  26          *Information in this document supersedes and replaces the information previously
+  27          *supplied in any former versions of this document.
+  28          *2020 ABOV Semiconductor  All rights reserved
+  29          *
+  30          */
+  31          /* Define to prevent recursive inclusion -------------------------------------*/
+  32          #ifndef __TYPEDEF_H_
+  33          #define __TYPEDEF_H_
+  34          /* Data Type Definitions -----------------------------------------------------*/
+  35          /**
+  36           * IO definitions
+  37           *
+  38           * define access restrictions to peripheral registers
+  39           */
+  40          #define     __I     volatile const   /*!< defines 'read only' permissions     */
+  41          #define     __O     volatile         /*!< defines 'write only' permissions    */
+  42          #define     __IO    volatile         /*!< defines 'read / write' permissions  */
+  43           
+  44          /*!< Signed integer types  */
+  45          typedef signed  char  s8;
+  46          typedef signed  short   s16;
+  47          typedef signed  long    s32;
+  48          
+  49          typedef signed  char    int8_t;
+  50          typedef signed  short   int16_t;
+  51          typedef signed  long    int32_t;
+  52          
+  53          typedef signed  char    INT8S;
+  54          typedef signed  short   INT16S;
+C51 COMPILER V9.54   TYPEDEF                                                               04/10/2026 14:02:20 PAGE 2   
+
+  55          typedef signed  long    INT32S;
+  56          
+  57          typedef float           FP32;
+  58          typedef double          FP64;
+  59          
+  60          /*!< Unsigned integer types  */
+  61          typedef unsigned char   u8;
+  62          typedef unsigned short  u16;
+  63          typedef unsigned long   u32;
+  64          
+  65          typedef unsigned char   uint8_t;
+  66          typedef unsigned short  uint16_t;
+  67          typedef unsigned long   uint32_t;
+  68          
+  69          typedef unsigned char   INT8U;
+  70          typedef unsigned short  INT16U;
+  71          typedef unsigned long   INT32U;
+  72          
+  73          typedef unsigned char   BYTE;
+  74          typedef unsigned short  WORD;
+  75          typedef unsigned long   DWORD;
+  76              
+  77          #define U8_MAX      (255)
+  78          #define S8_MAX      (127)
+  79          #define S8_MIN      (-128)
+  80          #define U16_MAX     (65535u)
+  81          #define S16_MAX     (32767)
+  82          #define S16_MIN     (-32768)
+  83          #define U32_MAX     (4294967295uL)
+  84          #define S32_MAX     (2147483647)
+  85          #define S32_MIN     (-2147483648uL)
+  86          
+  87          typedef enum { FALSE = 0, TRUE = !FALSE } bool, BOOL;
+  88          typedef enum { LOW = 0, HIGH = !LOW } PortStatus;
+  89          typedef enum { ERROR = 0, SUCCESS = !ERROR } ErrorStatus;
+  90          typedef enum { RESET = 0, SET = !RESET } FlagStatus, ITStatus, BitStatus, BitAction;
+  91          typedef enum { BIT0 = 0, BIT1, BIT2, BIT3, BIT4, BIT5, BIT6, BIT7 } BitPosition;
+  92          
+  93          //  Macro Functions Definitions
+  94          #define REG_SET(reg, byte)      (reg |= byte)
+  95          #define REG_CLR(reg, byte)      (reg &= byte)
+  96          #define SET_BIT(Variable,Place)  ((Variable) |= (INT8U)((INT8U)1<<(INT8U)(Place)))
+  97          #define CLR_BIT(Variable,Place)  ((Variable) &= (INT8U)((INT8U)((INT8U)1<<(INT8U)(Place))^(INT8U)0xFF))
+  98          #define TOGGLE_BIT(Variable,Place)  ((Variable) ^= (INT8U)((INT8U)1<<(INT8U)(Place)))
+  99          
+ 100          #define NOP        _nop_()
+ 101          
+ 102          //  Bit Constants Definitions
+ 103          #define _0000_0000    0x00
+ 104          #define _0000_0001    0x01
+ 105          #define _0000_0010    0x02
+ 106          #define _0000_0011    0x03
+ 107          #define _0000_0100    0x04
+ 108          #define _0000_0101    0x05
+ 109          #define _0000_0110    0x06
+ 110          #define _0000_0111    0x07
+ 111          #define _0000_1000    0x08
+ 112          #define _0000_1001    0x09
+ 113          #define _0000_1010    0x0A
+ 114          #define _0000_1011    0x0B
+ 115          #define _0000_1100    0x0C
+ 116          #define _0000_1101    0x0D
+C51 COMPILER V9.54   TYPEDEF                                                               04/10/2026 14:02:20 PAGE 3   
+
+ 117          #define _0000_1110    0x0E
+ 118          #define _0000_1111    0x0F
+ 119          #define _0001_0000    0x10
+ 120          #define _0001_0001    0x11
+ 121          #define _0001_0010    0x12
+ 122          #define _0001_0011    0x13
+ 123          #define _0001_0100    0x14
+ 124          #define _0001_0101    0x15
+ 125          #define _0001_0110    0x16
+ 126          #define _0001_0111    0x17
+ 127          #define _0001_1000    0x18
+ 128          #define _0001_1001    0x19
+ 129          #define _0001_1010    0x1A
+ 130          #define _0001_1011    0x1B
+ 131          #define _0001_1100    0x1C
+ 132          #define _0001_1101    0x1D
+ 133          #define _0001_1110    0x1E
+ 134          #define _0001_1111    0x1F
+ 135          #define _0010_0000    0x20
+ 136          #define _0010_0001    0x21
+ 137          #define _0010_0010    0x22
+ 138          #define _0010_0011    0x23
+ 139          #define _0010_0100    0x24
+ 140          #define _0010_0101    0x25
+ 141          #define _0010_0110    0x26
+ 142          #define _0010_0111    0x27
+ 143          #define _0010_1000    0x28
+ 144          #define _0010_1001    0x29
+ 145          #define _0010_1010    0x2A
+ 146          #define _0010_1011    0x2B
+ 147          #define _0010_1100    0x2C
+ 148          #define _0010_1101    0x2D
+ 149          #define _0010_1110    0x2E
+ 150          #define _0010_1111    0x2F
+ 151          #define _0011_0000    0x30
+ 152          #define _0011_0001    0x31
+ 153          #define _0011_0010    0x32
+ 154          #define _0011_0011    0x33
+ 155          #define _0011_0100    0x34
+ 156          #define _0011_0101    0x35
+ 157          #define _0011_0110    0x36
+ 158          #define _0011_0111    0x37
+ 159          #define _0011_1000    0x38
+ 160          #define _0011_1001    0x39
+ 161          #define _0011_1010    0x3A
+ 162          #define _0011_1011    0x3B
+ 163          #define _0011_1100    0x3C
+ 164          #define _0011_1101    0x3D
+ 165          #define _0011_1110    0x3E
+ 166          #define _0011_1111    0x3F
+ 167          #define _0100_0000    0x40
+ 168          #define _0100_0001    0x41
+ 169          #define _0100_0010    0x42
+ 170          #define _0100_0011    0x43
+ 171          #define _0100_0100    0x44
+ 172          #define _0100_0101    0x45
+ 173          #define _0100_0110    0x46
+ 174          #define _0100_0111    0x47
+ 175          #define _0100_1000    0x48
+ 176          #define _0100_1001    0x49
+ 177          #define _0100_1010    0x4A
+ 178          #define _0100_1011    0x4B
+C51 COMPILER V9.54   TYPEDEF                                                               04/10/2026 14:02:20 PAGE 4   
+
+ 179          #define _0100_1100    0x4C
+ 180          #define _0100_1101    0x4D
+ 181          #define _0100_1110    0x4E
+ 182          #define _0100_1111    0x4F
+ 183          #define _0101_0000    0x50
+ 184          #define _0101_0001    0x51
+ 185          #define _0101_0010    0x52
+ 186          #define _0101_0011    0x53
+ 187          #define _0101_0100    0x54
+ 188          #define _0101_0101    0x55
+ 189          #define _0101_0110    0x56
+ 190          #define _0101_0111    0x57
+ 191          #define _0101_1000    0x58
+ 192          #define _0101_1001    0x59
+ 193          #define _0101_1010    0x5A
+ 194          #define _0101_1011    0x5B
+ 195          #define _0101_1100    0x5C
+ 196          #define _0101_1101    0x5D
+ 197          #define _0101_1110    0x5E
+ 198          #define _0101_1111    0x5F
+ 199          #define _0110_0000    0x60
+ 200          #define _0110_0001    0x61
+ 201          #define _0110_0010    0x62
+ 202          #define _0110_0011    0x63
+ 203          #define _0110_0100    0x64
+ 204          #define _0110_0101    0x65
+ 205          #define _0110_0110    0x66
+ 206          #define _0110_0111    0x67
+ 207          #define _0110_1000    0x68
+ 208          #define _0110_1001    0x69
+ 209          #define _0110_1010    0x6A
+ 210          #define _0110_1011    0x6B
+ 211          #define _0110_1100    0x6C
+ 212          #define _0110_1101    0x6D
+ 213          #define _0110_1110    0x6E
+ 214          #define _0110_1111    0x6F
+ 215          #define _0111_0000    0x70
+ 216          #define _0111_0001    0x71
+ 217          #define _0111_0010    0x72
+ 218          #define _0111_0011    0x73
+ 219          #define _0111_0100    0x74
+ 220          #define _0111_0101    0x75
+ 221          #define _0111_0110    0x76
+ 222          #define _0111_0111    0x77
+ 223          #define _0111_1000    0x78
+ 224          #define _0111_1001    0x79
+ 225          #define _0111_1010    0x7A
+ 226          #define _0111_1011    0x7B
+ 227          #define _0111_1100    0x7C
+ 228          #define _0111_1101    0x7D
+ 229          #define _0111_1110    0x7E
+ 230          #define _0111_1111    0x7F
+ 231          #define _1000_0000    0x80
+ 232          #define _1000_0001    0x81
+ 233          #define _1000_0010    0x82
+ 234          #define _1000_0011    0x83
+ 235          #define _1000_0100    0x84
+ 236          #define _1000_0101    0x85
+ 237          #define _1000_0110    0x86
+ 238          #define _1000_0111    0x87
+ 239          #define _1000_1000    0x88
+ 240          #define _1000_1001    0x89
+C51 COMPILER V9.54   TYPEDEF                                                               04/10/2026 14:02:20 PAGE 5   
+
+ 241          #define _1000_1010    0x8A
+ 242          #define _1000_1011    0x8B
+ 243          #define _1000_1100    0x8C
+ 244          #define _1000_1101    0x8D
+ 245          #define _1000_1110    0x8E
+ 246          #define _1000_1111    0x8F
+ 247          #define _1001_0000    0x90
+ 248          #define _1001_0001    0x91
+ 249          #define _1001_0010    0x92
+ 250          #define _1001_0011    0x93
+ 251          #define _1001_0100    0x94
+ 252          #define _1001_0101    0x95
+ 253          #define _1001_0110    0x96
+ 254          #define _1001_0111    0x97
+ 255          #define _1001_1000    0x98
+ 256          #define _1001_1001    0x99
+ 257          #define _1001_1010    0x9A
+ 258          #define _1001_1011    0x9B
+ 259          #define _1001_1100    0x9C
+ 260          #define _1001_1101    0x9D
+ 261          #define _1001_1110    0x9E
+ 262          #define _1001_1111    0x9F
+ 263          #define _1010_0000    0xA0
+ 264          #define _1010_0001    0xA1
+ 265          #define _1010_0010    0xA2
+ 266          #define _1010_0011    0xA3
+ 267          #define _1010_0100    0xA4
+ 268          #define _1010_0101    0xA5
+ 269          #define _1010_0110    0xA6
+ 270          #define _1010_0111    0xA7
+ 271          #define _1010_1000    0xA8
+ 272          #define _1010_1001    0xA9
+ 273          #define _1010_1010    0xAA
+ 274          #define _1010_1011    0xAB
+ 275          #define _1010_1100    0xAC
+ 276          #define _1010_1101    0xAD
+ 277          #define _1010_1110    0xAE
+ 278          #define _1010_1111    0xAF
+ 279          #define _1011_0000    0xB0
+ 280          #define _1011_0001    0xB1
+ 281          #define _1011_0010    0xB2
+ 282          #define _1011_0011    0xB3
+ 283          #define _1011_0100    0xB4
+ 284          #define _1011_0101    0xB5
+ 285          #define _1011_0110    0xB6
+ 286          #define _1011_0111    0xB7
+ 287          #define _1011_1000    0xB8
+ 288          #define _1011_1001    0xB9
+ 289          #define _1011_1010    0xBA
+ 290          #define _1011_1011    0xBB
+ 291          #define _1011_1100    0xBC
+ 292          #define _1011_1101    0xBD
+ 293          #define _1011_1110    0xBE
+ 294          #define _1011_1111    0xBF
+ 295          #define _1100_0000    0xC0
+ 296          #define _1100_0001    0xC1
+ 297          #define _1100_0010    0xC2
+ 298          #define _1100_0011    0xC3
+ 299          #define _1100_0100    0xC4
+ 300          #define _1100_0101    0xC5
+ 301          #define _1100_0110    0xC6
+ 302          #define _1100_0111    0xC7
+C51 COMPILER V9.54   TYPEDEF                                                               04/10/2026 14:02:20 PAGE 6   
+
+ 303          #define _1100_1000    0xC8
+ 304          #define _1100_1001    0xC9
+ 305          #define _1100_1010    0xCA
+ 306          #define _1100_1011    0xCB
+ 307          #define _1100_1100    0xCC
+ 308          #define _1100_1101    0xCD
+ 309          #define _1100_1110    0xCE
+ 310          #define _1100_1111    0xCF
+ 311          #define _1101_0000    0xD0
+ 312          #define _1101_0001    0xD1
+ 313          #define _1101_0010    0xD2
+ 314          #define _1101_0011    0xD3
+ 315          #define _1101_0100    0xD4
+ 316          #define _1101_0101    0xD5
+ 317          #define _1101_0110    0xD6
+ 318          #define _1101_0111    0xD7
+ 319          #define _1101_1000    0xD8
+ 320          #define _1101_1001    0xD9
+ 321          #define _1101_1010    0xDA
+ 322          #define _1101_1011    0xDB
+ 323          #define _1101_1100    0xDC
+ 324          #define _1101_1101    0xDD
+ 325          #define _1101_1110    0xDE
+ 326          #define _1101_1111    0xDF
+ 327          #define _1110_0000    0xE0
+ 328          #define _1110_0001    0xE1
+ 329          #define _1110_0010    0xE2
+ 330          #define _1110_0011    0xE3
+ 331          #define _1110_0100    0xE4
+ 332          #define _1110_0101    0xE5
+ 333          #define _1110_0110    0xE6
+ 334          #define _1110_0111    0xE7
+ 335          #define _1110_1000    0xE8
+ 336          #define _1110_1001    0xE9
+ 337          #define _1110_1010    0xEA
+ 338          #define _1110_1011    0xEB
+ 339          #define _1110_1100    0xEC
+ 340          #define _1110_1101    0xED
+ 341          #define _1110_1110    0xEE
+ 342          #define _1110_1111    0xEF
+ 343          #define _1111_0000    0xF0
+ 344          #define _1111_0001    0xF1
+ 345          #define _1111_0010    0xF2
+ 346          #define _1111_0011    0xF3
+ 347          #define _1111_0100    0xF4
+ 348          #define _1111_0101    0xF5
+ 349          #define _1111_0110    0xF6
+ 350          #define _1111_0111    0xF7
+ 351          #define _1111_1000    0xF8
+ 352          #define _1111_1001    0xF9
+ 353          #define _1111_1010    0xFA
+ 354          #define _1111_1011    0xFB
+ 355          #define _1111_1100    0xFC
+ 356          #define _1111_1101    0xFD
+ 357          #define _1111_1110    0xFE
+ 358          #define _1111_1111    0xFF
+ 359          
+ 360          #endif  /* End of __TYPEDEF_H_ */
+ 361          /* --------------------------------- End Of File ------------------------------ */
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+C51 COMPILER V9.54   TYPEDEF                                                               04/10/2026 14:02:20 PAGE 7   
+
+   CODE SIZE        =   ----    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

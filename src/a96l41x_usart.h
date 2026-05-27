@@ -78,23 +78,7 @@ enum usart_interrupt_flag{
 * Exported Public Function
 *******************************************************************************/
 void USART_Initial(uint32_t speed, uint8_t data_length, uint8_t stop_bits, uint8_t parity, uint8_t mode);
-void USART_Clock_Initial(uint32_t clock_en, uint8_t master_en);
-void USART_Enable(uint8_t enable);
-
 void USART_SendDataWithPolling(uint8_t *send_data, uint8_t count);
-void USART_SendDataWithInterrupt(uint8_t send_data);
-void USART_ReceiveDataWithPolling(uint8_t *receive_data, uint8_t count);
-uint8_t USART_ReceiveDataWithInterrupt(void);
-
-void USART_ConfigureInterrupt(uint8_t flag, uint8_t enable);
-uint8_t USART_GetInterruptStatus(void);
-
-void USART_ConfigureWakeUp(uint8_t enable);
-void USART_ClearWakeUpFlag(void);
-void USART_ConfigureRTO(uint8_t enable);
-uint8_t USART_GetRTOStatus(void);
-
-void USART_CompensationBaudrate(uint16_t fpcg_val, uint8_t enable);
 
 #endif  /* End of __USART_H_ */
 /* --------------------------------- End Of File ------------------------------ */

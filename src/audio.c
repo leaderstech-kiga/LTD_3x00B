@@ -71,6 +71,8 @@
 unsigned char write_data[10];
 unsigned char read_data[10];
 
+
+
 /**********************************************************************
  * @brief		Audio_Initial
  * @param   	None
@@ -99,6 +101,7 @@ void Audio_Initial(void)
 	//Timer0_Start();	
 
 
+	
     	/* Timer1 initialize @ 4MHz */
 	Timer1_Initial(T1_PPG_REPEAT_MODE, TIMER1_DIV1);	
 	 /* Timer1 PPG Polarity Start Low */
@@ -116,6 +119,8 @@ void Audio_Initial(void)
 }
 
 
+
+
 void TIMER1_Int(void) interrupt T1_MATCH_VECT
 {
 	uint8_t duty;
@@ -126,20 +131,19 @@ void TIMER1_Int(void) interrupt T1_MATCH_VECT
 	if(Audio_start==0)
 	{	
 		AUDIO_ON;
-		Read(Audio_addr);		// SPI 읽기 명령만 시작
+		Read(Audio_addr);		
 	
 		Timer0_SetPPGDutyCounter(0);
 		Timer0_Start();
 		Audio_start=1;
-		// ← 이 시점엔 아직 데이터가 PWM에 반영 안 됨
 	}
 	else
 	{
 
 		if(Audio_length < Audio_max_length)
 		{
-			Read_c(read_data);	// 다음 인터럽트에서 데이터 수신
-			duty = read_data[0];	// 8bit → 0~127 변환
+			Read_c(read_data);
+			duty = read_data[0];
 			duty =duty>>1;
 			if(duty >= 124)
 				duty= 124;
@@ -147,13 +151,11 @@ void TIMER1_Int(void) interrupt T1_MATCH_VECT
 			 Audio_length++;
 			 Audio_addr++;
 		}
-		else	// Audio_length >= Audio_max_length 도달 시
+		else
 		{
 			SLAVEDESELECT;
 			AUDIO_OFF;
 			Timer0_Stop();
-			Audio_start = 0;
-			Audio_length = 0;
 		}
 		
 	}
@@ -161,23 +163,6 @@ void TIMER1_Int(void) interrupt T1_MATCH_VECT
 	
 }
 
-
-
-void Read_Audio_Length(uint16_t Audio_st_address)
-{
-	unsigned long temp;
-
-	Audio_addr=Audio_st_address + 40;
-	Read_v(Audio_addr, read_data);
-	Audio_max_length = read_data[0];          // Low byte
-
-	Audio_addr=Audio_st_address + 41;
-	Read_v(Audio_addr, read_data);	
-	temp= read_data[0];
-	temp = (temp << 8)&0xff00;     // High byte
-	Audio_max_length |=temp;
-
-}
 
 
 /* --------------------------------- End Of File ------------------------------ */
