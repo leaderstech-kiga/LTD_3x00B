@@ -188,6 +188,8 @@ uint8_t Dust_Du_Off[7] = "Du_Off:";
 uint8_t Dust_Du_On[6] = "Du_On:";
 uint8_t Dust_Du_Deta[6] = "Si_Da:";
 
+uint8_t Dust_val[9] = "Dust val:";
+
 /* Calibration debug labels (see Uart_Out below). */
 uint8_t Cal_Norm[6] = "Norm:";
 uint8_t Cal_Base[6] = "Base:";
@@ -197,6 +199,8 @@ uint8_t Cal_Valid[4] = "Cv:";
 uint8_t Boot_OK[11] = "Boot_OK\n\r";
 uint8_t Flash_Read_OK[17] = "Flash_Read_OK\n\r";
 uint8_t Flash_Read_Fail[19] = "Flash_Read_Fail\n\r";
+
+uint8_t Cal_OK[10] = "Cal_OK\n\r";
 ////////////////End  Debug uart text////////////
 
 //////////////// Start: ADC globals ////////////////
@@ -271,6 +275,7 @@ uint8_t  fire_count = 0;
 #define FIRE_GAP_TOGGLES      10u    /* pre-alarm blinks per gap (10*0.1=1 s, 4=4 s)*/
 #define FIRE_VOICE_REPEAT     3u     /* fire clip plays per alarm burst            */
 #define FIRE_VOICE_GAP_MS     300u   /* gap between fire-clip plays (0.3 s)        */
+#define FIRE_AMP_WARMUP_MS    150u   /* amp/CVDD pre-warm before 1st clip (cold)   */
 #define FIRE_RECHECK_HALF_MS  250u   /* fire-loop re-confirm blink half (0.25 s)   */
 #define FIRE_RECHECK_TOGGLES  2u     /* re-confirm toggles/sample (2*0.25=0.5 s, 4=2 s)*/
 #define BAT_LOW_CV            265u   /* enter low-battery at <= 2.65 V             */
@@ -332,6 +337,17 @@ static void play_fire_burst(uint8_t with_led)
 {
 	uint8_t i;
 	if (with_led) { fire_led_blink_start(); }
+
+	/* Pre-warm the audio amp / CVDD rail before the first clip. Audio_Run
+	 * power-gates CVDD/AUDIO per clip, so from a cold start (first alarm
+	 * after a long idle) the rail has not settled within Audio_Run's own
+	 * 0.3 s delay and the first clip is often inaudible. Powering the rail
+	 * here and letting it settle removes that cold-start penalty; clips 2/3
+	 * already start from a warm rail. Tune FIRE_AMP_WARMUP_MS on hardware. */
+	CVDD_ON;
+	AUDIO_ON;
+	loop_wait_ms(FIRE_AMP_WARMUP_MS);
+
 	for (i = 0; i < FIRE_VOICE_REPEAT; i++) {
 		Play_Clip(AUDIO_CLIP_FIRE);   /* ~3 s, self-kicks WDT */
 		loop_wait_ms(FIRE_VOICE_GAP_MS);
@@ -357,8 +373,48 @@ static void battery_check(void)
 	}
 }
 
+/* STEP1 helper: one fire-monitoring pass - sample dust, normalize, and on a
+ * confirmed over-threshold reading drive the alarm (voice + EMR_IO + LED_R)
+ * until the smoke clears. Called both from the periodic STEP1 schedule and,
+ * on the production line, right after a successful smoke calibration so the
+ * same 12% smoke injection doubles as a functional alarm test. */
+static void fire_monitor_step(void)
+{
+	ADC2_Dust_Val      = Dust_ADC_2AMP();
+	ADC2_Dust_Val_Norm = calib_apply(ADC2_Dust_Val);
 
-	
+	if (uart_debug_mode == uart_debug_On) {
+		ADC_Bat_Val = Get_Bat_Voltage_cV();
+		Uart_Out();
+	}
+
+	if (ADC2_Dust_Val_Norm >= CALIB_ALARM_THRESHOLD) {
+		/* Pre-alarm: confirm with a 4-sample average (0.2 s blink, ~4 s). */
+		uint16_t smoke_avg = fire_confirm_avg(FIRE_BLINK_MS, FIRE_GAP_TOGGLES);
+
+		if (smoke_avg >= CALIB_ALARM_THRESHOLD) {
+			/* Confirmed fire: drive EMR_IO high, alarm until cleared. */
+			Port_SetOutputpin(PORT1, PIN0, 0);
+			P10 = 1;
+
+			do {
+				/* voice: FIRE x3, 0.3 s apart, LED_R 0.2 s blink (Timer2) */
+				play_fire_burst(1);
+				/* re-check: 4 samples, 0.25 s blink, 0.5 s/sample, ~2 s */
+				smoke_avg = fire_confirm_avg(FIRE_RECHECK_HALF_MS, FIRE_RECHECK_TOGGLES);
+				if (uart_debug_mode == uart_debug_On) {
+					Uart_Out_Fire(smoke_avg);
+				}
+			} while (smoke_avg >= CALIB_ALARM_THRESHOLD);
+
+			/* Cleared: stop alarm, release the interlock line. */
+			LED_R_OFF;
+			P10 = 0;
+			Port_SetInputpin(PORT1, PIN0, 0);
+		}
+	}
+}
+
 
 /* Public Variable -----------------------------------------------------------*/
 /* Public Function -----------------------------------------------------------*/
@@ -375,7 +431,8 @@ void main(void)
 	//CVDD_OFF;
 	//AUDIO_OFF;
 	system_count = 0;
-	uart_debug_mode = uart_debug_On;
+//	uart_debug_mode = uart_debug_On;
+	uart_debug_mode = uart_debug_Off;
 
 	hw_initial_Wait(10);
 
@@ -434,71 +491,6 @@ void main(void)
 	system_count = 1;   /* avoid count==0 immediately re-triggering STEP1/2 */
 
 	hw_initial_Wait(10);
-		while(1)
-	{
-
-		// Arm RESET-mode WDT (~2 s timeout) at the top of every loop
-		// iteration for active-code hang protection. BeforeStop() swaps
-		// it back to INTERRUPT mode before Stop() so the wake timer
-		// still works.
-		WD_Reset();
-
-
-	// =====================================================================
-	// Main-loop procedure (STEP 1..5) - see docs/main_loop_design.md
-	// Base wake/sleep behaviour: docs/wdt_periodic_v3.md
-	// =====================================================================
-
-		
-	// STEP 1 - Fire monitoring (every FIRE_CHECK_CNT wakes, ~8.06 s)
-	//////////////////////////////////////////////////////////////////////////////////////////
-		if (system_count % FIRE_CHECK_CNT == 0) {
-
-			ADC2_Dust_Val      = Dust_ADC_2AMP();
-			ADC2_Dust_Val_Norm = calib_apply(ADC2_Dust_Val);
-
-			if (uart_debug_mode == uart_debug_On) {
-				ADC_Bat_Val = Get_Bat_Voltage_cV();
-				Uart_Out();
-			}
-
-			if (ADC2_Dust_Val_Norm >= CALIB_ALARM_THRESHOLD) {
-				/* Pre-alarm: confirm with a 4-sample average (0.2 s blink, ~4 s). */
-				uint16_t smoke_avg = fire_confirm_avg(FIRE_BLINK_MS, FIRE_GAP_TOGGLES);
-
-				if (smoke_avg >= CALIB_ALARM_THRESHOLD) {
-					/* Confirmed fire: drive EMR_IO high, alarm until cleared. */
-					Port_SetOutputpin(PORT1, PIN0, 0);
-					P10 = 1;
-
-					do {
-						/* voice: FIRE x3, 0.3 s apart, LED_R 0.2 s blink (Timer2) */
-						play_fire_burst(1);
-						/* re-check: 4 samples, 0.25 s blink, 0.5 s/sample, ~2 s */
-						smoke_avg = fire_confirm_avg(FIRE_RECHECK_HALF_MS, FIRE_RECHECK_TOGGLES);
-					} while (smoke_avg >= CALIB_ALARM_THRESHOLD);
-
-					/* Cleared: stop alarm, release the interlock line. */
-					LED_R_OFF;
-					P10 = 0;
-					Port_SetInputpin(PORT1, PIN0, 0);
-				}
-			}
-		}
-		
-		system_count++;
-
-			// Sleep cycle: BeforeStop arms WDT as INTERRUPT-mode wake timer
-			// (WDTDR=2, ~0.192 s) for button-polling resolution.
-			// After wake, the top-of-loop WD_Reset() switches WDT back to
-			// RESET mode for the next iteration's hang protection.
-		BeforeStop();
-		GLOBAL_INTERRUPT_EN();
-		Stop();
-		AfterStop();
-
-	}
-
 
 	while(1)
 	{
@@ -518,37 +510,7 @@ void main(void)
 	// STEP 1 - Fire monitoring (every FIRE_CHECK_CNT wakes, ~8.06 s)
 	//////////////////////////////////////////////////////////////////////////////////////////
 		if (system_count % FIRE_CHECK_CNT == 0) {
-
-			ADC2_Dust_Val      = Dust_ADC_2AMP();
-			ADC2_Dust_Val_Norm = calib_apply(ADC2_Dust_Val);
-
-			if (uart_debug_mode == uart_debug_On) {
-				ADC_Bat_Val = Get_Bat_Voltage_cV();
-				Uart_Out();
-			}
-
-			if (ADC2_Dust_Val_Norm >= CALIB_ALARM_THRESHOLD) {
-				/* Pre-alarm: confirm with a 4-sample average (0.2 s blink, ~4 s). */
-				uint16_t smoke_avg = fire_confirm_avg(FIRE_BLINK_MS, FIRE_GAP_TOGGLES);
-
-				if (smoke_avg >= CALIB_ALARM_THRESHOLD) {
-					/* Confirmed fire: drive EMR_IO high, alarm until cleared. */
-					Port_SetOutputpin(PORT1, PIN0, 0);
-					P10 = 1;
-
-					do {
-						/* voice: FIRE x3, 0.3 s apart, LED_R 0.2 s blink (Timer2) */
-						play_fire_burst(1);
-						/* re-check: 4 samples, 0.25 s blink, 0.5 s/sample, ~2 s */
-						smoke_avg = fire_confirm_avg(FIRE_RECHECK_HALF_MS, FIRE_RECHECK_TOGGLES);
-					} while (smoke_avg >= CALIB_ALARM_THRESHOLD);
-
-					/* Cleared: stop alarm, release the interlock line. */
-					LED_R_OFF;
-					P10 = 0;
-					Port_SetInputpin(PORT1, PIN0, 0);
-				}
-			}
+			fire_monitor_step();
 		}
 
 	// STEP 2 - Power LED + battery check (every LED_BAT_CNT wakes, ~56 s)
@@ -582,12 +544,32 @@ void main(void)
 
 			if (g_calib_needs_smoke == 1) {
 				calib_run_smoke();
+				/* Production: the 12% smoke used for gain calibration is
+				 * still present, so run one fire-monitoring pass right away
+				 * to validate the alarm (voice + EMR_IO + LED) within the
+				 * same smoke injection. Only after a successful save - on a
+				 * reject g_calib_needs_smoke stays 1 and there is too little
+				 * smoke to confirm anyway. The alarm self-clears once the
+				 * smoke is removed. */
+				if (g_calib_needs_smoke == 0) {
+					
+						if(uart_debug_mode == uart_debug_On){
+							Uart_Out_Text( Cal_OK,10);
+							Uart_Out();
+						}
+						
+					fire_monitor_step();
+				}
 			} else {
 				/* Calibrated: manual fire test - LED_R blinks at 0.5 s
 				 * (Timer2) during the voice playback. */
+				Port_SetOutputpin(PORT1, PIN0, 0);
+				P10 = 1;
 				fire_led_blink_start();
 				Play_Clip(AUDIO_CLIP_FIRE);   /* 1x */
 				fire_led_blink_stop();
+				P10 = 0;
+				Port_SetInputpin(PORT1, PIN0, 0);
 			}
 		}
 
@@ -1286,12 +1268,23 @@ void Audio_Run(uint16_t Address , uint16_t Length,  uint8_t Run_time){
 		}
 	}
 
+	/* Deterministic teardown. Previously only Timer0 was stopped (inside the
+	 * TIMER1_Int done-branch), and Timer1 was left running. Because Audio_run
+	 * sets Audio_start = 0 below, leftover Timer1 ticks kept re-entering the
+	 * ISR prime branch every 125 us (re-asserting Read/Timer0) until the next
+	 * clip - harmless only because CVDD is off, but wasteful and fragile, and
+	 * the stall-break path left the flash CS asserted. Stop everything here so
+	 * teardown does not depend on a post-loop interrupt firing. */
+	Timer1_Stop();     /* stop the 8 kHz sample interrupt */
+	Timer0_Stop();     /* stop PWM output                 */
+	SLAVEDESELECT;     /* release the audio-flash CS      */
+
 	CVDD_OFF;
 	AUDIO_OFF;
-	
+
 	//Port_SetOutputpin(PORT1, PIN0, 0);
 	//P10 = 1;
-	
+
 	Audio_start = 0;
 }
 
@@ -1399,6 +1392,47 @@ void Uart_Out_Text(uint8_t *send_data, uint8_t count){
 	
 	
 }
+
+
+void Uart_Out_Fire(uint16_t Value){
+
+	Port_SetAlterFunctionpin(PORT1, PIN2, 0x1);
+
+	/* This runs right after fire-voice playback (play_fire_burst -> Audio_Run),
+	 * which left the USART block in SPI (synchronous) mode. USART_Initial()
+	 * skips its block reset when coming from synchronous mode - its reset is
+	 * gated on (USTCR1 bit6 == 0) - so force SOFTRST here to cleanly switch the
+	 * block back to UART. Without this the first UART output after audio is
+	 * garbled / dropped. */
+	USTST |= SOFTRST;
+
+	USART_Initial(9600, USART_DATA_8BIT, USART_STOP_1BIT, USART_PARITY_NO, USART_TX_RX_MODE);
+	
+	if(ADC_mode == Dust_mode){
+		
+		if(visual_type == 1){
+			USART_SendDataWithPolling(&Visu_MODE, sizeof(Visu_MODE));
+		}
+		else{
+			USART_SendDataWithPolling(&Dust_MODE, sizeof(Dust_MODE));
+		}
+		USART_SendDataWithPolling(&Space, sizeof(Space));
+		USART_SendDataWithPolling(&Dust_val, sizeof(Dust_val));
+		USART_SendDataWithPolling(&Space, sizeof(Space));
+		Uart_Out_Int(Value);
+
+	}
+	else if(ADC_mode == Temp_mode){
+		USART_SendDataWithPolling(&Temp_MODE, sizeof(Temp_MODE));
+		USART_SendDataWithPolling(&Space, sizeof(Space));
+		Uart_Out_Int(Value);
+	}
+	
+	USART_SendDataWithPolling(&End, 4);
+	
+	Port_SetAlterFunctionpin(PORT1, PIN2, 0);
+}
+
 
 void Uart_Out_Int(uint16_t Value){
 

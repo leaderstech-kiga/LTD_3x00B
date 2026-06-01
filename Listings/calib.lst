@@ -1,4 +1,4 @@
-C51 COMPILER V9.54   CALIB                                                                 06/01/2026 10:22:13 PAGE 1   
+C51 COMPILER V9.54   CALIB                                                                 06/01/2026 16:26:20 PAGE 1   
 
 
 C51 COMPILER V9.54, COMPILATION OF MODULE CALIB
@@ -62,7 +62,7 @@ line level    source
   52           * relation with RAM nor program FLASH and "can be read by using DPTR",
   53           * i.e. with an XDATA (MOVX @DPTR) access - NOT MOVC. Reading it with a
   54           * 'code' pointer returns program-code space at 0x3000 (empty -> 0x00),
-C51 COMPILER V9.54   CALIB                                                                 06/01/2026 10:22:13 PAGE 2   
+C51 COMPILER V9.54   CALIB                                                                 06/01/2026 16:26:20 PAGE 2   
 
   55           * which is why earlier read-backs always came back 0. Use an 'xdata'
   56           * pointer so the DataFlash array is addressed correctly. */
@@ -126,7 +126,7 @@ line level    source
  114   2        }
  115   1      }
  116          
-C51 COMPILER V9.54   CALIB                                                                 06/01/2026 10:22:13 PAGE 3   
+C51 COMPILER V9.54   CALIB                                                                 06/01/2026 16:26:20 PAGE 3   
 
  117          /*----------------------------------------------------------------------------*
  118           * calib_save - erase + page-write the 32-byte calibration page, then verify *
@@ -190,7 +190,7 @@ line level    source
  176   1        scaled >>= 8;
  177   1        if (scaled > 0xFFFFu) {
  178   2          return 0xFFFFu;
-C51 COMPILER V9.54   CALIB                                                                 06/01/2026 10:22:13 PAGE 4   
+C51 COMPILER V9.54   CALIB                                                                 06/01/2026 16:26:20 PAGE 4   
 
  179   2        }
  180   1        return (uint16_t)scaled;
@@ -254,7 +254,7 @@ line level    source
  238          {
  239   1        LED_G_ON;
  240   1        LED_R_ON;
-C51 COMPILER V9.54   CALIB                                                                 06/01/2026 10:22:13 PAGE 5   
+C51 COMPILER V9.54   CALIB                                                                 06/01/2026 16:26:20 PAGE 5   
 
  241   1        Delay_ms(CALIB_BOOT_LED_MS);
  242   1        LED_G_OFF;
@@ -318,7 +318,7 @@ line level    source
  300          
  301          /*----------------------------------------------------------------------------*
  302           * calib_boot_init - STEP 2-2 (SW2 NOT held at power-up).                     *
-C51 COMPILER V9.54   CALIB                                                                 06/01/2026 10:22:13 PAGE 6   
+C51 COMPILER V9.54   CALIB                                                                 06/01/2026 16:26:20 PAGE 6   
 
  303           *                                                                            *
  304           *   Load the saved record from DataFlash and update the RAM globals          *
@@ -366,91 +366,93 @@ line level    source
  346           *                                         failure -> LED_G fast blink 1 s,   *
  347           *                                                    g_calib_needs_smoke = 1 *
  348           *                                                                            *
- 349           *   Returns to main() in either case (does NOT halt the loop). Fire          *
- 350           *   monitoring after calibration is handled by the main loop (TODO there).   *
- 351           *----------------------------------------------------------------------------*/
- 352          void calib_run_smoke(void)
- 353          {
- 354   1        uint32_t sum;
- 355   1        uint16_t smoke_avg;
- 356   1        uint16_t delta;
- 357   1        uint32_t gain32;
- 358   1        uint16_t gain_Q8;
- 359   1        uint16_t elapsed;
- 360   1        uint8_t  i;
- 361   1      
- 362   1        /* Step a: LED_R on, wait for SW2 release. */
- 363   1        LED_R_ON;
- 364   1        while (sw2_is_pressed()) {
-C51 COMPILER V9.54   CALIB                                                                 06/01/2026 10:22:13 PAGE 7   
+ 349           *   Returns to main() in either case (does NOT halt the loop). On success    *
+ 350           *   the main loop (STEP5) runs fire_monitor_step() immediately so the same   *
+ 351           *   12% smoke injection also validates the alarm on the production line.     *
+ 352           *----------------------------------------------------------------------------*/
+ 353          void calib_run_smoke(void)
+ 354          {
+ 355   1        uint32_t sum;
+ 356   1        uint16_t smoke_avg;
+ 357   1        uint16_t delta;
+ 358   1        uint32_t gain32;
+ 359   1        uint16_t gain_Q8;
+ 360   1        uint16_t elapsed;
+ 361   1        uint8_t  i;
+ 362   1      
+ 363   1        /* Step a: LED_R on, wait for SW2 release. */
+ 364   1        LED_R_ON;
+C51 COMPILER V9.54   CALIB                                                                 06/01/2026 16:26:20 PAGE 7   
 
- 365   2          WD_Reset();
- 366   2          Delay_ms(20);
- 367   2        }
- 368   1      
- 369   1        /* Step b: "place the sample" - LED_R blinks at 0.2 s for 5 s. */
- 370   1        elapsed = 0;
- 371   1        while (elapsed < CALIB_SMOKE_PLACE_MS) {
- 372   2          LED_R_ON;
- 373   2          wait_ms_kicked(CALIB_SMOKE_PLACE_BLINK_MS);
- 374   2          LED_R_OFF;
- 375   2          wait_ms_kicked(CALIB_SMOKE_PLACE_BLINK_MS);
- 376   2          elapsed += (uint16_t)(2u * CALIB_SMOKE_PLACE_BLINK_MS);
- 377   2        }
- 378   1      
- 379   1        /* Step c: CALIB_SMOKE_SAMPLES readings, LED_R toggling at 0.5 s. */
- 380   1        sum = 0;
- 381   1        for (i = 0; i < CALIB_SMOKE_SAMPLES; i++) {
- 382   2          LED_R_ON;
- 383   2          sum += Dust_ADC_2AMP();
- 384   2          wait_ms_kicked(CALIB_SMOKE_BLINK_MS);
- 385   2          LED_R_OFF;
- 386   2          wait_ms_kicked(CALIB_SMOKE_BLINK_MS);
- 387   2        }
- 388   1        LED_R_OFF;
- 389   1        smoke_avg = (uint16_t)(sum / CALIB_SMOKE_SAMPLES);
- 390   1      
- 391   1        /* Step d: validate delta against the baseline captured in step 2-1. */
- 392   1        if (smoke_avg <= g_calib_baseline) {
- 393   2          delta = 0;
- 394   2        } else {
- 395   2          delta = smoke_avg - g_calib_baseline;
- 396   2        }
- 397   1      
- 398   1        if (delta < CALIB_MIN_DELTA) {
- 399   2          /* Not enough smoke - reject. Keep the flag so the operator can
- 400   2           * retry by holding SW2 again. */
- 401   2          blink_r((uint8_t)(CALIB_FAIL_BLINK_MS / (2u * CALIB_BLINK_FAST_MS)),
- 402   2                  CALIB_BLINK_FAST_MS);
- 403   2          g_calib_needs_smoke = 1;
- 404   2          return;
- 405   2        }
- 406   1      
- 407   1        /* gain_Q8 = (REF << 8) / delta. */
- 408   1        gain32  = ((uint32_t)CALIB_REF_DELTA) << 8;
- 409   1        gain32 /= delta;
- 410   1        if (gain32 > 0xFFFFu) {
- 411   2          gain32 = 0xFFFFu;
- 412   2        }
- 413   1        gain_Q8 = (uint16_t)gain32;
- 414   1      
- 415   1        if (calib_save(g_calib_baseline, gain_Q8)) {
- 416   2          blink_g((uint8_t)(CALIB_OK_BLINK_MS / (2u * CALIB_BLINK_FAST_MS)),
- 417   2                  CALIB_BLINK_FAST_MS);
- 418   2          g_calib_needs_smoke = 0;
- 419   2        } else {
- 420   2          /* Save / verify failed - keep the flag so the operator can retry. */
- 421   2          blink_g((uint8_t)(CALIB_OK_BLINK_MS / (2u * CALIB_BLINK_FAST_MS)),
- 422   2                  CALIB_BLINK_FAST_MS);
- 423   2          g_calib_needs_smoke = 1;
- 424   2        }
- 425   1      
- 426   1        /* TODO: perform fire monitoring here before returning to the main loop. */
-C51 COMPILER V9.54   CALIB                                                                 06/01/2026 10:22:13 PAGE 8   
+ 365   1        while (sw2_is_pressed()) {
+ 366   2          WD_Reset();
+ 367   2          Delay_ms(20);
+ 368   2        }
+ 369   1      
+ 370   1        /* Step b: "place the sample" - LED_R blinks at 0.2 s for 5 s. */
+ 371   1        elapsed = 0;
+ 372   1        while (elapsed < CALIB_SMOKE_PLACE_MS) {
+ 373   2          LED_R_ON;
+ 374   2          wait_ms_kicked(CALIB_SMOKE_PLACE_BLINK_MS);
+ 375   2          LED_R_OFF;
+ 376   2          wait_ms_kicked(CALIB_SMOKE_PLACE_BLINK_MS);
+ 377   2          elapsed += (uint16_t)(2u * CALIB_SMOKE_PLACE_BLINK_MS);
+ 378   2        }
+ 379   1      
+ 380   1        /* Step c: CALIB_SMOKE_SAMPLES readings, LED_R toggling at 0.5 s. */
+ 381   1        sum = 0;
+ 382   1        for (i = 0; i < CALIB_SMOKE_SAMPLES; i++) {
+ 383   2          LED_R_ON;
+ 384   2          sum += Dust_ADC_2AMP();
+ 385   2          wait_ms_kicked(CALIB_SMOKE_BLINK_MS);
+ 386   2          LED_R_OFF;
+ 387   2          wait_ms_kicked(CALIB_SMOKE_BLINK_MS);
+ 388   2        }
+ 389   1        LED_R_OFF;
+ 390   1        smoke_avg = (uint16_t)(sum / CALIB_SMOKE_SAMPLES);
+ 391   1      
+ 392   1        /* Step d: validate delta against the baseline captured in step 2-1. */
+ 393   1        if (smoke_avg <= g_calib_baseline) {
+ 394   2          delta = 0;
+ 395   2        } else {
+ 396   2          delta = smoke_avg - g_calib_baseline;
+ 397   2        }
+ 398   1      
+ 399   1        if (delta < CALIB_MIN_DELTA) {
+ 400   2          /* Not enough smoke - reject. Keep the flag so the operator can
+ 401   2           * retry by holding SW2 again. */
+ 402   2          blink_r((uint8_t)(CALIB_FAIL_BLINK_MS / (2u * CALIB_BLINK_FAST_MS)),
+ 403   2                  CALIB_BLINK_FAST_MS);
+ 404   2          g_calib_needs_smoke = 1;
+ 405   2          return;
+ 406   2        }
+ 407   1      
+ 408   1        /* gain_Q8 = (REF << 8) / delta. */
+ 409   1        gain32  = ((uint32_t)CALIB_REF_DELTA) << 8;
+ 410   1        gain32 /= delta;
+ 411   1        if (gain32 > 0xFFFFu) {
+ 412   2          gain32 = 0xFFFFu;
+ 413   2        }
+ 414   1        gain_Q8 = (uint16_t)gain32;
+ 415   1      
+ 416   1        if (calib_save(g_calib_baseline, gain_Q8)) {
+ 417   2          blink_g((uint8_t)(CALIB_OK_BLINK_MS / (2u * CALIB_BLINK_FAST_MS)),
+ 418   2                  CALIB_BLINK_FAST_MS);
+ 419   2          g_calib_needs_smoke = 0;
+ 420   2        } else {
+ 421   2          /* Save / verify failed - keep the flag so the operator can retry. */
+ 422   2          blink_g((uint8_t)(CALIB_OK_BLINK_MS / (2u * CALIB_BLINK_FAST_MS)),
+ 423   2                  CALIB_BLINK_FAST_MS);
+ 424   2          g_calib_needs_smoke = 1;
+ 425   2        }
+ 426   1      
+C51 COMPILER V9.54   CALIB                                                                 06/01/2026 16:26:20 PAGE 8   
 
- 427   1      }
- 428          
- 429          /* --------------------------------- End Of File ------------------------------ */
+ 427   1        /* Fire monitoring after a successful calibration is done by the main
+ 428   1         * loop (STEP5 calls fire_monitor_step() right after this returns). */
+ 429   1      }
+ 430          
+ 431          /* --------------------------------- End Of File ------------------------------ */
 
 
 MODULE INFORMATION:   STATIC OVERLAYABLE

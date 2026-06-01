@@ -142,6 +142,7 @@ extern uint8_t Flash_Read_OK[17];
 extern uint8_t Flash_Read_Fail[19];
 
 void Uart_Out(void);
+void Uart_Out_Fire(uint16_t Value);
 void Uart_Out_Int(uint16_t Value);
 void Uart_Out_Text(uint8_t *send_data, uint8_t count);
 

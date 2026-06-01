@@ -346,8 +346,9 @@ void calib_boot_init(void)
  *                                         failure -> LED_G fast blink 1 s,   *
  *                                                    g_calib_needs_smoke = 1 *
  *                                                                            *
- *   Returns to main() in either case (does NOT halt the loop). Fire          *
- *   monitoring after calibration is handled by the main loop (TODO there).   *
+ *   Returns to main() in either case (does NOT halt the loop). On success    *
+ *   the main loop (STEP5) runs fire_monitor_step() immediately so the same   *
+ *   12% smoke injection also validates the alarm on the production line.     *
  *----------------------------------------------------------------------------*/
 void calib_run_smoke(void)
 {
@@ -423,7 +424,8 @@ void calib_run_smoke(void)
 		g_calib_needs_smoke = 1;
 	}
 
-	/* TODO: perform fire monitoring here before returning to the main loop. */
+	/* Fire monitoring after a successful calibration is done by the main
+	 * loop (STEP5 calls fire_monitor_step() right after this returns). */
 }
 
 /* --------------------------------- End Of File ------------------------------ */
