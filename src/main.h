@@ -44,6 +44,11 @@
 #define Bat_High_mode       1
 #define Bat_Low_mode        2
 
+#define uart_debug_On      1           
+#define uart_debug_Off      0
+extern uint8_t  uart_debug_mode;
+	
+
 extern volatile uint8_t  Timer2_cnt;
 
 /* T_USEC and TIME_2S are used by hw_initial / hw_audio_initial to program
@@ -133,8 +138,12 @@ void Play_Clip(uint8_t clip_id);
 
 //////////////// Start: UART helpers ////////////////
 
+extern uint8_t Flash_Read_OK[17];
+extern uint8_t Flash_Read_Fail[19];
+
 void Uart_Out(void);
 void Uart_Out_Int(uint16_t Value);
+void Uart_Out_Text(uint8_t *send_data, uint8_t count);
 
 //////////////// End:   UART helpers ////////////////
 

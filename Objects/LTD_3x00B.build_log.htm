@@ -16,10 +16,13 @@ Linker/Locator:  BL51.exe V6.22
 Library Manager: LIB51.exe V4.30.1.0
 Hex Converter:   OH51.exe V2.7.0.0
 CPU DLL:         S8051.DLL V3.100.0.0
-Dialog DLL:      DCore51.DLL V2.81.4.0 
+Dialog DLL:      DCore51.DLL V2.81.4.0
+    Target DLL: C:\Program Files (x86)\ABOV Semiconductor\Setup_KEIL_8051_DLL\ABOV_OCD.DLL
+Dialog DLL:      TCore51.DLL V2.66.2.1
+ 
 <h2>Project:</h2>
-X:\InH.Co.Ltd\Project\Ext_Project\Leaders-tech\Git_Kraken_Project\Git_Kraken_Project_Macbook\LTD_3x00B\LTD_3x00B.uvproj
-Project File Date:  05/18/2026
+\\Mac\Dropbox\InH.Co.Ltd\Project\Ext_Project\Leaders-tech\Git_Kraken_Project\Git_Kraken_Project_Macbook\LTD_3x00B\LTD_3x00B.uvproj
+Project File Date:  05/31/2026
 
 <h2>Output:</h2>
 Rebuild target 'LTD_3x00B'
@@ -37,7 +40,9 @@ compiling delay.c...
 assembling .\Objects\delay.src...
 compiling flash.c...
 compiling main.c...
-src\main.c(1151): warning C280: 'Run_time': unreferenced local variable
+src\main.c(1223): warning C280: 'Run_time': unreferenced local variable
+compiling calib.c...
+compiling a96l41x_dataflash.c...
 assembling startup.a51...
 linking...
 *** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
@@ -105,10 +110,16 @@ linking...
 *** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
     SEGMENT: ?PR?USART_SPI_GETINTERRUPTSTATUS?A96L41X_USART_SPI
 *** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?START_DEBUG_MODE?MAIN
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
     SEGMENT: ?PR?_DATA_AVR?MAIN
-Program Size: data=9.0 xdata=327 code=9858
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?CALIB_RUN_SMOKE?CALIB
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?_DATAFLASH_BYTEWT?A96L41X_DATAFLASH
+Program Size: data=9.0 xdata=472 code=12324
 creating hex file from ".\Objects\LTD_3x00B"...
-".\Objects\LTD_3x00B" - 0 Error(s), 34 Warning(s).
+".\Objects\LTD_3x00B" - 0 Error(s), 37 Warning(s).
 </pre>
 </body>
 </html>

@@ -1,4 +1,4 @@
-C51 COMPILER V9.54   FLASH                                                                 05/27/2026 12:19:58 PAGE 1   
+C51 COMPILER V9.54   FLASH                                                                 06/01/2026 10:22:12 PAGE 1   
 
 
 C51 COMPILER V9.54, COMPILATION OF MODULE FLASH
@@ -62,7 +62,7 @@ line level    source
   52          *Information in this document supersedes and replaces the information previously
   53          *supplied in any former versions of this document.
   54          *2020 ABOV Semiconductor  All rights reserved
-C51 COMPILER V9.54   FLASH                                                                 05/27/2026 12:19:58 PAGE 2   
+C51 COMPILER V9.54   FLASH                                                                 06/01/2026 10:22:12 PAGE 2   
 
   55          *
   56          */
@@ -126,7 +126,7 @@ line level    source
  114           * @param   value - byte to send
  115           * @return  received byte, or 0xFF if timeout (check SPI_Timeout flag).
  116           **********************************************************************/
-C51 COMPILER V9.54   FLASH                                                                 05/27/2026 12:19:58 PAGE 3   
+C51 COMPILER V9.54   FLASH                                                                 06/01/2026 10:22:12 PAGE 3   
 
  117          uint8_t SPI_Transfer(uint8_t value)
  118          {
@@ -190,7 +190,7 @@ line level    source
  176          
  177          void Read_c( char * value)
  178          {
-C51 COMPILER V9.54   FLASH                                                                 05/27/2026 12:19:58 PAGE 4   
+C51 COMPILER V9.54   FLASH                                                                 06/01/2026 10:22:12 PAGE 4   
 
  179   1        *(value) = SPI_Receive();
  180   1      }

@@ -11,6 +11,8 @@
 ".\Objects\delay.obj",
 ".\Objects\flash.obj",
 ".\Objects\main.obj",
+".\Objects\calib.obj",
+".\Objects\a96l41x_dataflash.obj",
 ".\Objects\startup.obj" 
 TO ".\Objects\LTD_3x00B" 
 PRINT(".\Listings\LTD_3x00B.m51") RAMSIZE(256) 

@@ -1,0 +1,191 @@
+# LTD-3x00B 메인 루프 절차 설계 (main loop)
+
+> 작성일: 2026-05-30
+> 대상: A96L416 펌웨어 (Keil C51) / `src/main.c` `main()` 의 `while(1)` 본문
+> 기준 동작(WDT wake/sleep, system_count 모듈로): **`docs/wdt_periodic_v3.md` 참조**
+> 보정·부팅 절차: `docs/calibration_design.md` 참조
+
+## 0. 개요
+
+평소에는 Stop(저전력)으로 자고, INTERRUPT-모드 WDT가 **0.192초마다** 깨운다. 깨어 있는 동안 RESET-모드 WDT(~2초)가 hang을 감시한다. 매 wake마다 `system_count`가 1씩 증가하고, 이 값의 **모듈로 연산**으로 주기 작업을 분기한다.
+
+```
+while(1){
+    WD_Reset();                 // RESET 모드 2초 무장
+    STEP 1  화재 감시      (system_count % 42   == 0, ~8.06 s)
+    STEP 2  LED + 배터리   (system_count % 292  == 0, ~56.06 s)
+    STEP 3  Low-bat 알람   (Bat_Low && system_count % 1458 == 0, ~279.9 s)
+    STEP 4  외부 연동 화재 (매 wake)
+    STEP 5  상태 확인(SW2) (매 wake)
+    system_count++;
+    BeforeStop(); Stop(); AfterStop();   // 0.192 s sleep
+}
+```
+
+> STEP 2는 **메인 루프 진입 직전에 1회** 실행한 뒤(부팅 직후 배터리 상태 확정), 루프에 들어가 `system_count = 1`부터 시작한다(count==0에서 STEP1/2 동시 트리거 방지).
+
+## 1. 상수 (`src/main.c`)
+
+| 매크로 | 값 | 주기 | 의미 |
+|------|---:|---|------|
+| `FIRE_CHECK_CNT`       | 42   | 42×0.192 ≈ **8.064 s** | STEP1 화재 감시 |
+| `LED_BAT_CNT`          | 292  | 292×0.192 ≈ **56.064 s** | STEP2 LED+배터리 |
+| `LOWBAT_ALARM_CNT`     | 1458 | 1458×0.192 ≈ **279.936 s** | STEP3 Low-bat 음성 반복 |
+| `FIRE_CONFIRM_SAMPLES` | 4 | — | 확인 측정 횟수 (예비/재확인 공통) |
+| `FIRE_BLINK_MS`        | 100 | — | 예비화재 깜박 half-period (0.1 s → 0.2 s 주기) |
+| `FIRE_GAP_TOGGLES`     | 10 | — | 예비화재 샘플 간 깜박 수 (10×0.1=1 s/회, 4회=**4 s**) |
+| `FIRE_RECHECK_HALF_MS` | 250 | — | 화재루프 재확인 깜박 half-period (0.25 s 단위) |
+| `FIRE_RECHECK_TOGGLES` | 2 | — | 재확인 샘플당 깜박 수 (2×0.25=0.5 s/회, 4회=**2 s**) |
+| `FIRE_VOICE_REPEAT`    | 3 | — | 화재 음성 1버스트당 재생 횟수 |
+| `FIRE_VOICE_GAP_MS`    | 300 | — | 화재 음성 재생 간격 (**0.3 s**, STEP1·4 공통) |
+| `BAT_LOW_CV`           | 265 | — | Low 진입 임계 (≤ 2.65 V) |
+| `BAT_RECOVER_CV`       | 275 | — | Low 해제 임계 (≥ 2.75 V, 히스테리시스) |
+| `CALIB_ALARM_THRESHOLD`| 160 | — | 보정치(norm) 화재 임계 (calib.h) |
+
+공용 신호: `EMR_IO = P10 (PORT1/PIN0)` — 본 기기 화재 시 **출력 high**(외부 장비/연동 신호), 평소 **입력**(연동 라인 감시). 보정치 화재값 = `calib_apply(Dust_ADC_2AMP())`.
+
+## 2. STEP 1 — 화재 감시 (every 42 wakes, ~8.06 s)
+
+```
+보정치 화재값(norm) = calib_apply(Dust_ADC_2AMP())
+   ├─ norm < 160 → 메인 루프 복귀
+   └─ norm ≥ 160 → 예비 화재: LED_R 0.2초 깜박 + 4회 측정(총 4초)
+                    smoke_avg = 4회 평균
+        ├─ smoke_avg < 160 → 메인 루프 복귀
+        └─ smoke_avg ≥ 160 → 화재 발생:
+                EMR_IO 출력 high
+                ┌───────── 화재발생 루프 ─────────┐
+                │  Play_Clip(AUDIO_CLIP_FIRE) ×3   │   (0.3초 간격)
+                │  0.25초 단위 4회 측정(총 2초)     │
+                │     smoke_avg ≥ 160 → 루프 유지   │
+                │     smoke_avg < 160 → 루프 탈출   │
+                └──────────────────────────────────┘
+                해제: LED_R OFF, EMR_IO 입력 복귀 → 메인 루프 복귀
+```
+
+구현: 예비화재 확인 `fire_confirm_avg(100, 10)`(0.2초 깜박, 4회/4초), 화재발생 루프 재확인 `fire_confirm_avg(250, 2)`(0.25초 단위, 4회/2초), `play_fire_burst()`(FIRE ×3, 0.3초 간격). 화재 발생 루프는 연기가 임계 미만이 될 때까지 **블로킹**으로 알람 유지(화재 감지기 정상 동작). 루프 내 `Play_Clip`/`Delay`는 모두 WDT를 kick한다.
+
+> 단일 노이즈 스파이크가 곧바로 알람되지 않도록 "1회 검출 → 4회 평균 확인" 2단 게이트를 둔다. 기존 `fire_count`(3회 연속) 방식을 대체.
+
+## 3. STEP 2 — LED 및 배터리 체크 (메인 진입 전 1회 + every 292 wakes, ~56 s)
+
+```
+LED_R 0.2초 1회 점멸
+ADC_Bat_Val = Get_Bat_Voltage_cV()      // 단위 0.01 V
+   ├─ (정상 상태) ADC ≤ 265(2.65V) → Bat_Low_mode 진입 + STEP3 즉시 음성 1회
+   └─ (Low 상태)  ADC ≥ 275(2.75V) → Bat_High_mode 복귀
+```
+
+구현: `battery_check()`. 히스테리시스(265/275)로 경계 채터링 방지. High→Low 전이 순간 `Play_Clip(AUDIO_CLIP_LOWBAT)` 1회(STEP 3의 "즉시" 항목).
+
+## 4. STEP 3 — Low 배터리 알람 음성
+
+- **즉시 1회**: Low 상태로 전이되는 순간(STEP 2 내부)에 `Play_Clip(AUDIO_CLIP_LOWBAT)` 1회.
+- **주기 반복**: Low 상태가 유지되는 동안 `system_count % 1458 == 0`(~279.9 s)마다 Low 여부 재확인 후 `Play_Clip(AUDIO_CLIP_LOWBAT)` 1회.
+
+```
+if (Bat_mode == Bat_Low_mode && system_count % 1458 == 0)
+    Play_Clip(AUDIO_CLIP_LOWBAT);
+```
+
+## 5. STEP 4 — 외부 연동 화재 알람 (every wake)
+
+```
+EMR_IO(P10) 입력 설정
+if (EMR_IO == high)            // 다른 기기가 연동 라인을 high로 구동
+    LED_R OFF
+    Play_Clip(AUDIO_CLIP_FIRE) ×3 (1초 간격)
+    2초 대기 → 메인 루프 복귀
+```
+
+구현: 매 wake `Port_SetInputpin(PORT1, PIN0, 0)` 후 읽기. STEP 1의 자체 화재(출력 high)와 충돌하지 않도록, 화재 발생 루프 종료 시 EMR_IO를 입력으로 되돌린다.
+
+## 6. STEP 5 — 상태 확인 (SW2, every wake)
+
+```
+if (SYS_mode == Normal_mode && SW2 눌림)
+   ├─ g_calib_needs_smoke == 1 → Smoke Gain 보정(calib_run_smoke()) 진입
+   └─ g_calib_needs_smoke == 0 → Play_Clip(AUDIO_CLIP_FIRE) 1회
+                                  (재생 중 LED_R 0.5초 깜박) → 복귀
+```
+
+보정 절차(calib_run_smoke) 상세는 `docs/calibration_design.md` STEP 3 참조.
+
+## 7. LED / 음성 요약표
+
+| STEP | 트리거 | LED_R | 음성 | EMR_IO |
+|------|--------|-------|------|--------|
+| 1 예비화재 | norm ≥ 160 | 0.2초 깜박, 4회 측정(총 4초) | — | 입력 |
+| 1 화재발생 | smoke_avg ≥ 160 | 0.2초 깜박(음성·측정 모두) | FIRE ×3 / 1초 간격 (해제까지 반복) | **출력 high** |
+| 1 화재해제 | smoke_avg < 160 | OFF | — | 입력 복귀 |
+| 2 | 292 wake | 0.2초 1회 점멸 | — | — |
+| 3 즉시 | High→Low 전이 | — | LOWBAT ×1 | — |
+| 3 반복 | Low & 1458 wake | — | LOWBAT ×1 | — |
+| 4 | EMR_IO 입력 high | OFF | FIRE ×3 / 1초 간격 | 입력 |
+| 5 (보정필요) | SW2 hold & needs_smoke=1 | (보정 절차) | — | — |
+| 5 (보정완료) | SW2 hold & needs_smoke=0 | 0.2초 깜박(재생 중) | FIRE ×1 | — |
+
+## 8. 배터리 상태 머신
+
+```
+        ADC ≤ 265 (2.65V)
+  High ───────────────────▶ Low   (전이 시 LOWBAT 음성 1회)
+   ▲                         │
+   └─────────────────────────┘
+        ADC ≥ 275 (2.75V)
+```
+
+`Bat_mode`는 부팅 시 `Bat_High_mode`로 초기화. (`Bat_High_mode=1`, `Bat_Low_mode=2`)
+
+## 9. 기존 구조 대비 변경 (레거시 완전 대체)
+
+| 제거된 레거시 | 대체 |
+|------|------|
+| `SYS_mode == In_Fire_al_mode` 상태 + `fire_count` 3연속 승격 | STEP 1 (1회 검출 + 4회 평균 확인, 인라인 블로킹 알람) |
+| 수동 화재 테스트(Normal + SW2 hold → Timer2 알람) | STEP 5 (needs_smoke=0 → FIRE ×1) |
+| `Al_Stop_mode`(Timer2 long-press 알람 정지) | 제거 — 화재 루프가 연기 해제 시 자체 종료 |
+| `EMO` 블록(`PIN0==1` → FIRE) | STEP 4 (외부 연동, 매 wake) |
+| 빈 `Bat_Low_mode` 블록 | STEP 2/3 (배터리 히스테리시스 + LOWBAT 음성) |
+| `adc_time`/`ck_led_time` 모듈로 | `FIRE_CHECK_CNT`/`LED_BAT_CNT` (미사용 전역은 잔존) |
+
+> `TIMER2_Int` ISR의 `In_Fire_al_mode`/`Al_Stop_mode` 참조는 더 이상 진입 경로가 없어 비활성(dead). 새 화재 경로는 Timer2를 사용하지 않는다.
+
+## 10. 헬퍼 함수 (`src/main.c`)
+
+| 함수 | 역할 |
+|------|------|
+| `loop_wait_ms(ms)` | 100 ms 단위로 WD_Reset하며 블로킹 대기 (RESET-WDT 2초 안전) |
+| `fire_confirm_avg()` | LED_R 0.5초 깜박 + 4회 norm 측정 → 평균 반환 |
+| `play_fire_burst(with_led)` | `Play_Clip(AUDIO_CLIP_FIRE)` 3회, 1초 간격. `with_led=1`이면 음성 재생 중 LED_R 0.5초 깜박(Timer2), `=0`이면 LED_R OFF(STEP 4용) |
+| `fire_led_blink_start()` / `_stop()` | Timer2 시작/정지 + `Fire_Alarm_LED` 플래그. 음성(`Play_Clip`)은 블로킹이라, LED_R 깜박은 **Timer2 ISR**이 담당 |
+| `battery_check()` | 배터리 ADC 읽기 + Bat_mode 히스테리시스 갱신 + 전이 시 LOWBAT 즉시 음성 |
+
+> **음성 재생 중 LED_R 동작**: `Play_Clip`은 ~3초 블로킹이지만 오디오는 Timer1 ISR로 백그라운드 재생되어 그동안 전역 인터럽트(EA)가 켜져 있다. 따라서 Timer2 ISR을 함께 돌리면 음성 재생 중에도 LED_R이 **0.2초 주기**(0.1초 on/0.1초 off)로 깜박인다(`TIMER2_Int`: Timer2 틱 0.1초마다 토글, 짝수 cnt ON·홀수 cnt OFF). STEP 1 화재·STEP 5(보정완료) 음성에 적용. 단, 먼지 ADC 측정 구간(`fire_confirm_avg`)은 인터럽트 간섭을 피하려 Timer2를 끄고 LED_R을 직접 깜박인다(이 구간도 동일하게 0.2초; 샘플 간 1초 gap을 0.1초 단위로 토글, 4회=4초 유지).
+
+## 11. 검증 체크리스트
+
+### STEP 1 화재
+- [ ] 보정된 기기를 12% 연기에 노출 → ~8초 내 LED_R 0.5초 깜박(예비) 후 FIRE 음성 발생
+- [ ] EMR_IO(P10) 출력 high로 전환되는지 확인
+- [ ] 연기 제거 → 4회 평균이 160 미만이면 LED_R OFF, EMR_IO 입력 복귀
+- [ ] 노이즈성 단발 스파이크로는 알람 안 됨(예비→평균 게이트)
+
+### STEP 2/3 배터리
+- [ ] 전원 2.65V 이하 → 즉시 LOWBAT 음성 1회, 이후 ~280초마다 반복
+- [ ] 전원 2.75V 이상 회복 → Low 해제, 음성 중단
+- [ ] 56초마다 LED_R 0.2초 점멸
+
+### STEP 4 외부 연동
+- [ ] 다른 기기가 EMR_IO 라인 high → FIRE ×3, LED_R OFF, 2초 후 복귀
+
+### STEP 5 SW2
+- [ ] needs_smoke=1에서 SW2 hold → 보정 절차 진입
+- [ ] needs_smoke=0에서 SW2 hold → FIRE ×1 + LED_R 0.5초 깜박 2초
+
+## 12. 알려진 제약
+
+1. **화재 발생 루프는 블로킹** — 연기 해제까지 배터리/SW2/외부연동 미서비스(화재 우선, 정상).
+2. **STEP 4 매 wake PIN0 입력 전환** — STEP 1 자체 화재(출력) 종료 시 입력 복귀로 충돌 방지. 연동 라인이 계속 high면 다음 wake에 재알람.
+3. **`AUDIO_CLIP_FIRE`(~3 s) 블로킹** — 재생 중 WDT는 Audio_Run 내부 WD_Reset로 유지.
+4. **미사용 전역** `adc_time`/`ck_led_time` 잔존(컴파일 무해). 필요 시 제거 가능.
+5. **화재 음성 간격** "1초 간격 3회"는 클립(~3 s) + 1초 대기 ≈ 4초/회로 해석. 정확한 간격 정의가 필요하면 조정.

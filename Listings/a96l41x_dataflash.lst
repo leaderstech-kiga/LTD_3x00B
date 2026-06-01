@@ -1,0 +1,191 @@
+C51 COMPILER V9.54   A96L41X_DATAFLASH                                                     06/01/2026 10:22:13 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE A96L41X_DATAFLASH
+OBJECT MODULE PLACED IN .\Objects\a96l41x_dataflash.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE src\a96l41x_dataflash.c LARGE OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEN
+                    -D PRINT(.\Listings\a96l41x_dataflash.lst) TABS(2) OBJECT(.\Objects\a96l41x_dataflash.obj)
+
+line level    source
+
+   1          /**
+   2          *   @file       a96l41x_dataflash.c
+   3          *   @brief      A96L41x DataFlash low-level access (page erase / page write /
+   4          *               byte write). Copied verbatim from vendor sample with only
+   5          *               formatting/comments cleaned up.
+   6          *
+   7          *   Usage notes
+   8          *   -----------
+   9          *   - 256-byte DataFlash region: 0x3000 .. 0x30FF (page size = 32 bytes).
+  10          *   - PageBuf scratch (XDATA): 0x7000 .. 0x701F.
+  11          *   - Every operation requires a magic user ID parameter (different for
+  12          *     erase / page-write / byte-write). These are documented inline.
+  13          */
+  14          
+  15          #include "a96l41x_dataflash.h"
+  16          
+  17          /* Internal state used to satisfy the dual-write safety sequence. */
+  18          unsigned char  DATAFLASH_id_reg;
+  19          unsigned short DATAFLASH_OPR_FLAG;
+  20          unsigned long  dataflash_id;
+  21          unsigned short dataflash_addr = 0;
+  22          
+  23          /**
+  24          * @brief  Prepare DataFlash access (load XOR'd ID register).
+  25          */
+  26          void DATAFLASH_Entry(void) {
+  27   1        DATAFLASH_id_reg = DATAFLASH_ID ^ DATAFLASH_IDXOR;
+  28   1      }
+  29          
+  30          /**
+  31          * @brief  Tear down DataFlash access (clear ID, clear DFSADRH/DFIDR).
+  32          */
+  33          void DATAFLASH_Exit(void) {
+  34   1        DATAFLASH_id_reg = 0;
+  35   1        DATAFLASH_OPR_FLAG = 0;
+  36   1        dataflash_id = 0;
+  37   1        dataflash_addr &= 0x00ff;
+  38   1        DFSADRH = 0;
+  39   1        DFIDR = 0;
+  40   1      }
+  41          
+  42          /**
+  43          * @brief  Erase one DataFlash page.
+  44          * @param  u32UserId : magic 0xA901358F.
+  45          * @param  u16Addr   : page-aligned address in 0x3000..0x30E0.
+  46          */
+  47          void DATAFLASH_PageEr(unsigned long u32UserId, unsigned short u16Addr) {
+  48   1        unsigned char result;
+  49   1      
+  50   1        DATAFLASH_Entry();
+  51   1        result = Buffer_clear(DATAFLASH_ERASE, 0);
+  52   1        DFIDR = DATAFLASH_id_reg ^ DATAFLASH_IDXOR;
+  53   1        if ((u16Addr < 0x3000) || (u16Addr > 0x30E0)) {
+  54   2          DATAFLASH_Exit();
+C51 COMPILER V9.54   A96L41X_DATAFLASH                                                     06/01/2026 10:22:13 PAGE 2   
+
+  55   2        }
+  56   1        else if ((u32UserId == 0xA901358F) && (result != DATAFLASH_PGM_FAIL)) {
+  57   2          DFSADRH = (unsigned char)(u16Addr >> 8);
+  58   2          DFSADRL = (unsigned char)(u16Addr >> 0);
+  59   2          DFMCR   = DF_SEC_ER;
+  60   2          _nop_();
+  61   2          _nop_();
+  62   2          _nop_();
+  63   2          DATAFLASH_Exit();
+  64   2          DATAFLASH_OPR_FLAG = DATAFLASH_PGM_ONGOING;
+  65   2        }
+  66   1        else {
+  67   2          DATAFLASH_Exit();
+  68   2        }
+  69   1      }
+  70          
+  71          /**
+  72          * @brief  Page write (32 bytes from caller buffer).
+  73          * @param  u32UserId : magic 0x4F17DC86.
+  74          * @param  u16Addr   : page-aligned address in 0x3000..0x30E0.
+  75          * @param  u8Buf     : pointer to 32-byte payload.
+  76          */
+  77          void DATAFLASH_PageWt(unsigned long u32UserId, unsigned short u16Addr, unsigned char *u8Buf) {
+  78   1        unsigned char result;
+  79   1      
+  80   1        DATAFLASH_Entry();
+  81   1        result = Buffer_clear(DATAFLASH_SECTOR_WRITE, u8Buf);
+  82   1        DFIDR = DATAFLASH_id_reg ^ DATAFLASH_IDXOR;
+  83   1        if ((u16Addr < 0x3000) || (u16Addr > 0x30E0)) {
+  84   2          DATAFLASH_Exit();
+  85   2        }
+  86   1        else if ((u32UserId == 0x4F17DC86) && (result != DATAFLASH_PGM_FAIL)) {
+  87   2          DFSADRH = (unsigned char)(u16Addr >> 8);
+  88   2          DFSADRL = (unsigned char)(u16Addr >> 0);
+  89   2          DFMCR   = DF_SEC_WT;
+  90   2          _nop_();
+  91   2          _nop_();
+  92   2          _nop_();
+  93   2          DATAFLASH_Exit();
+  94   2          DATAFLASH_OPR_FLAG = DATAFLASH_PGM_ONGOING;
+  95   2        }
+  96   1        else {
+  97   2          DATAFLASH_Exit();
+  98   2        }
+  99   1      }
+ 100          
+ 101          /**
+ 102          * @brief  Single-byte write (used for sparse updates).
+ 103          * @param  u32UserId : magic 0xA39B71D6.
+ 104          */
+ 105          void DATAFLASH_ByteWt(unsigned long u32UserId, unsigned short u16Addr, unsigned char u8Byte) {
+ 106   1        unsigned char xdata *pagebuffer = (unsigned char xdata *)0x7000;
+ 107   1      
+ 108   1        DATAFLASH_Entry();
+ 109   1      
+ 110   1        DFMCR = DATAFLASH_CLR_PAGEBUF;
+ 111   1        _nop_();
+ 112   1        _nop_();
+ 113   1        _nop_();
+ 114   1      
+ 115   1        DFIDR = DATAFLASH_id_reg ^ DATAFLASH_IDXOR;
+ 116   1        if ((u16Addr < 0x3000) || (u16Addr > 0x30FF)) {
+C51 COMPILER V9.54   A96L41X_DATAFLASH                                                     06/01/2026 10:22:13 PAGE 3   
+
+ 117   2          DATAFLASH_Exit();
+ 118   2        }
+ 119   1        else if (u32UserId == 0xA39B71D6) {
+ 120   2          pagebuffer[(unsigned char)(u16Addr & 0x0f)] = u8Byte;
+ 121   2          DFSADRH = (unsigned char)(u16Addr >> 8);
+ 122   2          DFSADRL = (unsigned char)(u16Addr >> 0);
+ 123   2          DFMCR   = DF_SEC_WT;
+ 124   2          _nop_();
+ 125   2          _nop_();
+ 126   2          _nop_();
+ 127   2          DATAFLASH_Exit();
+ 128   2          DATAFLASH_OPR_FLAG = DATAFLASH_PGM_ONGOING;
+ 129   2        }
+ 130   1        else {
+ 131   2          DATAFLASH_Exit();
+ 132   2        }
+ 133   1      }
+ 134          
+ 135          /**
+ 136          * @brief  Clear the 32-byte page buffer, then fill it according to mode.
+ 137          *           - DATAFLASH_SECTOR_WRITE : copy 32 bytes from u8Buf.
+ 138          *           - DATAFLASH_ERASE        : fill with 0x00.
+ 139          * @return DATAFLASH_PGM_GOOD on success, DATAFLASH_PGM_FAIL on bad mode.
+ 140          */
+ 141          unsigned char Buffer_clear(unsigned char u8FncSel, unsigned char *u8Buf) {
+ 142   1        unsigned char i;
+ 143   1        unsigned char xdata *pagebuffer = (unsigned char xdata *)0x7000;
+ 144   1      
+ 145   1        DFMCR = DATAFLASH_CLR_PAGEBUF;
+ 146   1        _nop_();
+ 147   1        _nop_();
+ 148   1        _nop_();
+ 149   1        for (i = 0; i < SECTOR_SIZE_BYTE; i++) {
+ 150   2          if (u8FncSel == DATAFLASH_SECTOR_WRITE) {
+ 151   3            pagebuffer[i] = *u8Buf++;
+ 152   3          }
+ 153   2          else if (u8FncSel == DATAFLASH_ERASE) {
+ 154   3            pagebuffer[i] = 0x00;
+ 155   3          }
+ 156   2          else {
+ 157   3            return DATAFLASH_PGM_FAIL;
+ 158   3          }
+ 159   2        }
+ 160   1        return DATAFLASH_PGM_GOOD;
+ 161   1      }
+ 162          
+ 163          /* --------------------------------- End Of File ------------------------------ */
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    560    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =      9      31
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
