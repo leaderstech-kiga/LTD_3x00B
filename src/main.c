@@ -95,10 +95,16 @@ uint16_t ck_led_time = 56 * 5 + 12;    /* power LED + Bat_Ck cadence (~56 s)    
 
 /* ---------- Run-time state ---------- */
 uint16_t Al_Stop_key_Count;            /* TIMER2_Int: SW2 long-press counter */
-uint16_t system_count   = 0;           /* main-loop sleep tick counter        */
+uint32_t system_count   = 0;           /* main-loop tick counter; widened uint16->uint32 so the %42/%292/%1458 cadence never hiccups at a 16-bit wrap (~3.5h) */
 uint16_t Fire_Alarm_LED = 0;           /* TIMER2_Int: alarm LED state         */
 uint16_t Bat_Alarm_LED  = 0;           /* TIMER2_Int: low-bat LED state       */
 uint8_t  SYS_mode, ADC_mode, Bat_mode;
+
+/* STEP5 SW2 edge-detect state: only a fresh press (released->pressed) triggers
+ * the manual fire-test / smoke-cal entry, so holding SW2 does not repeat it
+ * on every wake (long-press now = one shot). */
+static uint8_t sw2_prev_pressed = 0;
+static uint8_t sw2_cur_pressed  = 0;
 
 
 /* ---------- TIMER2_Int internal counter ---------- */
@@ -329,13 +335,26 @@ static void fire_led_blink_stop(void)
 	Fire_Alarm_LED = 0;
 	LED_R_OFF;
 }
+static void lowbat_led_blink_start(void)
+{
+	T2_init();
+	Bat_Alarm_LED = 1;
+	Timer2_Start();
+}
+static void lowbat_led_blink_stop(void)
+{
+	Timer2_Stop();
+	Bat_Alarm_LED = 0;
+	LED_G_OFF;
+}
 
 /* Play the fire-alarm clip FIRE_VOICE_REPEAT times, FIRE_VOICE_GAP_MS (0.3 s)
  * apart. When with_led is set, LED_R blinks at 0.2 s (Timer2) for the whole
  * burst; otherwise LED_R is kept off (STEP 4 external-interlock case). */
-static void play_fire_burst(uint8_t with_led)
+static uint8_t play_fire_burst(uint8_t with_led)
 {
-	uint8_t i;
+	uint8_t i, j;
+	uint8_t aborted = 0;
 	if (with_led) { fire_led_blink_start(); }
 
 	/* Pre-warm the audio amp / CVDD rail before the first clip. Audio_Run
@@ -350,10 +369,22 @@ static void play_fire_burst(uint8_t with_led)
 
 	for (i = 0; i < FIRE_VOICE_REPEAT; i++) {
 		Play_Clip(AUDIO_CLIP_FIRE);   /* ~3 s, self-kicks WDT */
-		loop_wait_ms(FIRE_VOICE_GAP_MS);
+		if (with_led) {
+			/* poll SW2 across the 0.3 s inter-clip gap so a press is caught
+			 * mid-burst; on press abort the remaining clips (caller plays BOOT) */
+			for (j = 0; j < (uint8_t)(FIRE_VOICE_GAP_MS / 20u); j++) {
+				if (Port_GetInputpinValue(PORT1, PIN2) == 0) { aborted = 1; break; }
+				WD_Reset();
+				Delay_ms(20);
+			}
+			if (aborted) { break; }
+		} else {
+			loop_wait_ms(FIRE_VOICE_GAP_MS);
+		}
 	}
 	if (with_led) { fire_led_blink_stop(); }
 	else          { LED_R_OFF;            }
+	return aborted;
 }
 
 /* STEP2/3 helper: read battery, update Bat_mode with hysteresis, and fire
@@ -364,7 +395,9 @@ static void battery_check(void)
 	if (Bat_mode != Bat_Low_mode) {
 		if (ADC_Bat_Val <= BAT_LOW_CV) {
 			Bat_mode = Bat_Low_mode;
+			lowbat_led_blink_start();
 			Play_Clip(AUDIO_CLIP_LOWBAT);   /* STEP3: immediate 1x on entry */
+			lowbat_led_blink_stop();
 		}
 	} else {
 		if (ADC_Bat_Val >= BAT_RECOVER_CV) {
@@ -391,25 +424,42 @@ static void fire_monitor_step(void)
 	if (ADC2_Dust_Val_Norm >= CALIB_ALARM_THRESHOLD) {
 		/* Pre-alarm: confirm with a 4-sample average (0.2 s blink, ~4 s). */
 		uint16_t smoke_avg = fire_confirm_avg(FIRE_BLINK_MS, FIRE_GAP_TOGGLES);
+		uint8_t  ack;
 
 		if (smoke_avg >= CALIB_ALARM_THRESHOLD) {
-			/* Confirmed fire: drive EMR_IO high, alarm until cleared. */
-			Port_SetOutputpin(PORT1, PIN0, 0);
-			P10 = 1;
-
+			/* Confirmed fire: sound the alarm until the smoke clears OR the user
+			 * acknowledges with SW2. Each cycle drives EMR_IO (P10) high while the
+			 * fire voice plays, then releases P10 to input and polls SW2:
+			 *   SW2 pressed     -> BOOT beep, then break out to the main loop
+			 *   SW2 not pressed -> re-monitor smoke (as before); loop if still fire */
 			do {
+				/* drive EMR_IO high to signal the interlock while sounding */
+				Port_SetOutputpin(PORT1, PIN0, 0);
+				P10 = 1;
+
 				/* voice: FIRE x3, 0.3 s apart, LED_R 0.2 s blink (Timer2) */
-				play_fire_burst(1);
-				/* re-check: 4 samples, 0.25 s blink, 0.5 s/sample, ~2 s */
+				ack = play_fire_burst(1);   /* 1 = SW2 pressed mid-burst (abort) */
+
+				/* after the fire voice: release EMR_IO to input (Hi-Z; the external
+				 * 220K pull-down sets the line low) */
+				Port_SetInputpin(PORT1, PIN0, 0);
+
+				/* SW2 pressed (mid-burst or now) -> acknowledge: BOOT beep, exit to main loop */
+				if (ack || Port_GetInputpinValue(PORT1, PIN2) == 0) {
+					Play_Clip(AUDIO_CLIP_BOOT);
+					break;
+				}
+
+				/* not pressed -> re-monitor fire (as before): 4 samples,
+				 * 0.25 s blink, 0.5 s/sample, ~2 s */
 				smoke_avg = fire_confirm_avg(FIRE_RECHECK_HALF_MS, FIRE_RECHECK_TOGGLES);
 				if (uart_debug_mode == uart_debug_On) {
 					Uart_Out_Fire(smoke_avg);
 				}
 			} while (smoke_avg >= CALIB_ALARM_THRESHOLD);
 
-			/* Cleared: stop alarm, release the interlock line. */
+			/* Cleared or acknowledged: stop alarm, ensure interlock released. */
 			LED_R_OFF;
-			P10 = 0;
 			Port_SetInputpin(PORT1, PIN0, 0);
 		}
 	}
@@ -525,7 +575,9 @@ void main(void)
 	// STEP 3 - Low-battery alarm repeat (every LOWBAT_ALARM_CNT wakes, ~280 s)
 	//////////////////////////////////////////////////////////////////////////////////////////
 		if (Bat_mode == Bat_Low_mode && (system_count % LOWBAT_ALARM_CNT == 0)) {
+			lowbat_led_blink_start();
 			Play_Clip(AUDIO_CLIP_LOWBAT);
+			lowbat_led_blink_stop();
 		}
 
 	// STEP 4 - External interlock fire alarm (every wake)
@@ -539,8 +591,10 @@ void main(void)
 
 	// STEP 5 - Status check : SW2 held in Normal mode (every wake)
 	//////////////////////////////////////////////////////////////////////////////////////////
-		if (SYS_mode == Normal_mode &&
-		    Port_GetInputpinValue(PORT1, PIN2) == 0) {
+		/* sample SW2 once; act only on a fresh press (released->pressed) so a held
+		 * button does not repeat the test/calibration each wake (long-press = one shot) */
+		sw2_cur_pressed = (Port_GetInputpinValue(PORT1, PIN2) == 0) ? 1 : 0;
+		if (SYS_mode == Normal_mode && sw2_cur_pressed && !sw2_prev_pressed) {
 
 			if (g_calib_needs_smoke == 1) {
 				calib_run_smoke();
@@ -568,11 +622,13 @@ void main(void)
 				fire_led_blink_start();
 				Play_Clip(AUDIO_CLIP_FIRE);   /* 1x */
 				fire_led_blink_stop();
-				P10 = 0;
+				//P10 = 0;  /* release: do NOT drive low; switch straight to input (Hi-Z) and let the external 220K pull-down set EMR_IO low -> avoids a brief low-drive against another unit holding the shared interlock line high */
 				Port_SetInputpin(PORT1, PIN0, 0);
 			}
 		}
 
+
+		sw2_prev_pressed = sw2_cur_pressed;  /* remember SW2 state for next-wake edge detect */
 
 	system_count++;
 
@@ -719,7 +775,7 @@ void hw_initial(void) {
 		| ( 0 << 6)       //P13  // 0 : I/O (EC1),	1 : (RXD/MISO)							// DSDA
 		| ( 0 << 4)       //P12  // 0 : I/O (EC0),	1 : (TXD/MOSI)								// DSCL
 		| ( 1 << 2)       //P11  // 0 : I/O (EINT10),	1 : T0O/PWM0O							// AUDIO SIG
-		| ( 0 << 0);      //P10  // 0 : I/O, 	1 : (SCK)										// SENSE PW
+		| ( 0 << 0);      //P10  // 0 : I/O, 	1 : (SCK)										// EMR_IO
 
 		P12DB	= 0
 		| ( 0 << 5) 	  //P21DB 	// 0 : Disable, 1 : Enable
@@ -1006,7 +1062,6 @@ void T2_init(void){
 void TIMER2_Int(void) interrupt T2_MATCH_VECT
 {
 	
-	char Gled_mode, GLED_CNT;
 	
 	/* Fire alarm LED_R: 0.2 s period (0.1 s on / 0.1 s off). Timer2 ticks
 	 * every 0.1 s, so toggle on each tick (even cnt = on, odd = off).
@@ -1022,45 +1077,17 @@ void TIMER2_Int(void) interrupt T2_MATCH_VECT
 		}
 	}
 
-	if(Timer2_cnt == 0){
-
-		if(Bat_Alarm_LED == 1){
-			//Port_SetOutputTogglepin(PORT0, PIN6);
-			if (Gled_mode == 0){
-				LED_G_ON;	
-				GLED_CNT++;
-				if(GLED_CNT > 1){
-					Gled_mode = 1;
-					GLED_CNT = 0;
-				}
-			}
-			else{
-				LED_G_OFF;	
-				Gled_mode = 0;
-			}
+	/* Low-battery LED_G: 0.2 s period (0.1 s on / 0.1 s off), same scheme as the
+	 * fire LED_R above - toggle on each 0.1 s Timer2 tick. Keeps blinking while a
+	 * blocking Play_Clip(AUDIO_CLIP_LOWBAT) runs (audio on Timer1 ISR keeps global
+	 * interrupts enabled, so Timer2 still fires). */
+	if(Bat_Alarm_LED == 1){
+		if((Timer2_cnt & 0x01) == 0){
+			LED_G_ON;
 		}
 		else{
-			GLED_CNT = 0;
-			LED_G_OFF;	
-			Gled_mode = 0;
+			LED_G_OFF;
 		}
-	
-	}
-	else{
-		//LED_G_OFF;
-
-		if(Bat_Alarm_LED == 1){
-			//Port_SetOutputTogglepin(PORT0, PIN6);
-			if (Gled_mode == 0){
-				LED_G_ON;	
-				//Gled_mode = 1;
-			}
-			else{
-				LED_G_OFF;	
-			}
-		}
-		
-	
 	}
 
 	Timer2_cnt++;

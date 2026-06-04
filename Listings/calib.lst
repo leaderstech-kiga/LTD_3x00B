@@ -1,4 +1,4 @@
-C51 COMPILER V9.54   CALIB                                                                 06/01/2026 16:26:20 PAGE 1   
+C51 COMPILER V9.54   CALIB                                                                 06/05/2026 08:42:21 PAGE 1   
 
 
 C51 COMPILER V9.54, COMPILATION OF MODULE CALIB
@@ -62,7 +62,7 @@ line level    source
   52           * relation with RAM nor program FLASH and "can be read by using DPTR",
   53           * i.e. with an XDATA (MOVX @DPTR) access - NOT MOVC. Reading it with a
   54           * 'code' pointer returns program-code space at 0x3000 (empty -> 0x00),
-C51 COMPILER V9.54   CALIB                                                                 06/01/2026 16:26:20 PAGE 2   
+C51 COMPILER V9.54   CALIB                                                                 06/05/2026 08:42:21 PAGE 2   
 
   55           * which is why earlier read-backs always came back 0. Use an 'xdata'
   56           * pointer so the DataFlash array is addressed correctly. */
@@ -126,7 +126,7 @@ line level    source
  114   2        }
  115   1      }
  116          
-C51 COMPILER V9.54   CALIB                                                                 06/01/2026 16:26:20 PAGE 3   
+C51 COMPILER V9.54   CALIB                                                                 06/05/2026 08:42:21 PAGE 3   
 
  117          /*----------------------------------------------------------------------------*
  118           * calib_save - erase + page-write the 32-byte calibration page, then verify *
@@ -190,7 +190,7 @@ line level    source
  176   1        scaled >>= 8;
  177   1        if (scaled > 0xFFFFu) {
  178   2          return 0xFFFFu;
-C51 COMPILER V9.54   CALIB                                                                 06/01/2026 16:26:20 PAGE 4   
+C51 COMPILER V9.54   CALIB                                                                 06/05/2026 08:42:21 PAGE 4   
 
  179   2        }
  180   1        return (uint16_t)scaled;
@@ -254,7 +254,7 @@ line level    source
  238          {
  239   1        LED_G_ON;
  240   1        LED_R_ON;
-C51 COMPILER V9.54   CALIB                                                                 06/01/2026 16:26:20 PAGE 5   
+C51 COMPILER V9.54   CALIB                                                                 06/05/2026 08:42:21 PAGE 5   
 
  241   1        Delay_ms(CALIB_BOOT_LED_MS);
  242   1        LED_G_OFF;
@@ -318,7 +318,7 @@ line level    source
  300          
  301          /*----------------------------------------------------------------------------*
  302           * calib_boot_init - STEP 2-2 (SW2 NOT held at power-up).                     *
-C51 COMPILER V9.54   CALIB                                                                 06/01/2026 16:26:20 PAGE 6   
+C51 COMPILER V9.54   CALIB                                                                 06/05/2026 08:42:21 PAGE 6   
 
  303           *                                                                            *
  304           *   Load the saved record from DataFlash and update the RAM globals          *
@@ -382,7 +382,7 @@ line level    source
  362   1      
  363   1        /* Step a: LED_R on, wait for SW2 release. */
  364   1        LED_R_ON;
-C51 COMPILER V9.54   CALIB                                                                 06/01/2026 16:26:20 PAGE 7   
+C51 COMPILER V9.54   CALIB                                                                 06/05/2026 08:42:21 PAGE 7   
 
  365   1        while (sw2_is_pressed()) {
  366   2          WD_Reset();
@@ -446,7 +446,7 @@ line level    source
  424   2          g_calib_needs_smoke = 1;
  425   2        }
  426   1      
-C51 COMPILER V9.54   CALIB                                                                 06/01/2026 16:26:20 PAGE 8   
+C51 COMPILER V9.54   CALIB                                                                 06/05/2026 08:42:21 PAGE 8   
 
  427   1        /* Fire monitoring after a successful calibration is done by the main
  428   1         * loop (STEP5 calls fire_monitor_step() right after this returns). */
